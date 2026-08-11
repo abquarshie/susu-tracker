@@ -52,26 +52,21 @@ st.title("Group Savings Dashboard")
 st.markdown("Track weekly contributions, payout rotations, and live member balances easily.")
 st.markdown("---")
 
-# --- INITIALIZE SESSION STATE FOR INPUTS ---
-if 'start_date_input' not in st.session_state:
-    st.session_state.start_date_input = "2026-08-12"
-if 'weekly_amount_input' not in st.session_state:
-    st.session_state.weekly_amount_input = 250
-if 'names_input_val' not in st.session_state:
-    st.session_state.names_input_val = "Alice, Bob, Charlie, Diana"
+# --- INITIALIZE SESSION STATE ---
+if 'start_date' not in st.session_state:
+    st.session_state.start_date = "2026-08-12"
+if 'weekly_amount' not in st.session_state:
+    st.session_state.weekly_amount = 250
+if 'names_input' not in st.session_state:
+    st.session_state.names_input = "Alice, Bob, Charlie, Diana"
 
 # --- ADMIN PANEL ---
 st.sidebar.header("⚙️ Admin Controls")
 st.sidebar.markdown("Manage group settings and check off weekly collections.")
 
-start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=st.session_state.start_date_input)
-weekly_amount = st.sidebar.number_input("Weekly Contribution (GH₵)", value=st.session_state.weekly_amount_input)
-names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=st.session_state.names_input_val)
-
-# Update session state values when changed
-st.session_state.start_date_input = start_date_str
-st.session_state.weekly_amount_input = weekly_amount
-st.session_state.names_input_val = names_input
+start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", key="start_date")
+weekly_amount = st.sidebar.number_input("Weekly Contribution (GH₵)", key="weekly_amount")
+names_input = st.sidebar.text_area("Participant Names (comma-separated)", key="names_input")
 
 # Process group details
 members = [n.strip() for n in names_input.split(",") if n.strip()]
@@ -84,12 +79,12 @@ if num_members < 4:
 total_weeks = num_members * num_members
 
 try:
-    start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+    start_dt = datetime.strptime(start_date_str, '%Y-%m-%d')
 except ValueError:
     st.error("⚠️ Incorrect date format. Use YYYY-MM-DD.")
     st.stop()
 
-end_date = start_date + timedelta(weeks=total_weeks)
+end_date = start_dt + timedelta(weeks=total_weeks)
 
 # --- SIMULATED PAYMENT STATE ---
 if 'payments' not in st.session_state or st.session_state.get('last_members') != members:
@@ -108,8 +103,8 @@ if st.sidebar.button("Save Payment Status", type="primary"):
 
 # --- CALCULATE CURRENT ELAPSED WEEKS ---
 today = datetime.today()
-days_passed = (today - start_date).days
-current_elapsed_week = max(0, days_passed // 7) + 1 if today >= start_date else 0
+days_passed = (today - start_dt).days
+current_elapsed_week = max(0, days_passed // 7) + 1 if today >= start_dt else 0
 current_elapsed_week = min(current_elapsed_week, total_weeks)
 
 # Top Metrics Overview (Compact Dark Mode Styled)
@@ -123,7 +118,7 @@ st.markdown("### 📅 Payout Schedule & Recipients")
 st.markdown("This timeline shows when each person collects the complete monthly pool.")
 
 schedule = []
-current_date = start_date
+current_date = start_dt
 for i in range(num_members):
     recipient = members[i]
     payout_date = current_date + timedelta(weeks=num_members)
