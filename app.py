@@ -8,7 +8,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Custom CSS for a clean, modern UI design
+# Custom CSS for dark metric cards and clean UI design
 st.markdown("""
     <style>
     .main {
@@ -18,19 +18,33 @@ st.markdown("""
         color: #1f2937;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
+    /* Dark Mode Metric Card Styling */
     div[data-testid="stMetric"] {
-        background-color: #ffffff;
-        border: 1px solid #e5e7eb;
+        background-color: #1f2937 !important;
+        border: 1px solid #374151;
         padding: 15px 20px;
         border-radius: 10px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     div[data-testid="stMetric"] label {
-        color: #4b5563 !important;
+        color: #9ca3af !important;
         font-weight: 600;
+    }
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+        color: #ffffff !important;
     }
     </style>
 """, unsafe_allow_html=True)
+
+# Helper function for clean date formatting (e.g., 1st Sep 2026)
+def format_date(dt):
+    day = dt.day
+    # Add ordinal suffixes
+    if 11 <= day <= 13:
+        suffix = 'th'
+    else:
+        suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+    return f"{day}{suffix} {dt.strftime('%b %Y')}"
 
 # App Header
 st.title("💰 Group Savings Dashboard")
@@ -80,16 +94,15 @@ if st.sidebar.button("Save Payment Status", type="primary"):
 
 # --- CALCULATE CURRENT ELAPSED WEEKS ---
 today = datetime.today()
-# Calculate how many weeks have passed since start date
 days_passed = (today - start_date).days
 current_elapsed_week = max(0, days_passed // 7) + 1 if today >= start_date else 0
 current_elapsed_week = min(current_elapsed_week, total_weeks)
 
-# Top Metrics Overview
+# Top Metrics Overview (Dark Mode Styled)
 col1, col2, col3 = st.columns(3)
 col1.metric("Group Size", f"{num_members} People")
 col2.metric("Current Week Reached", f"Week {current_elapsed_week} of {total_weeks}")
-col3.metric("Program End Date", end_date.strftime('%b %d, %Y'))
+col3.metric("Program End Date", format_date(end_date))
 
 st.markdown("")
 st.markdown("### 📅 Payout Schedule & Recipients")
@@ -102,8 +115,8 @@ for i in range(num_members):
     schedule.append({
         "Month Block": f"Month {i+1}",
         "Recipient": recipient,
-        "Cycle Start": current_date.strftime('%Y-%m-%d'),
-        "Payout Date": payout_date.strftime('%Y-%m-%d'),
+        "Cycle Start": format_date(current_date),
+        "Payout Date": format_date(payout_date),
         "Total Pool": f"GH₵ {pool_amount:,.2f}"
     })
     current_date = payout_date
@@ -115,7 +128,6 @@ st.markdown("Real-time view showing arrears based on weeks that have actually pa
 
 table_data = []
 for member in members:
-    # Count how many weeks up to the current elapsed week have been paid
     paid_passed_weeks = sum(1 for w in range(1, current_elapsed_week + 1) if st.session_state.payments[member][w])
     unpaid_passed_weeks = current_elapsed_week - paid_passed_weeks
     owing_amount = unpaid_passed_weeks * weekly_amount
