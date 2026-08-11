@@ -48,7 +48,7 @@ st.sidebar.header("⚙️ Admin Controls")
 st.sidebar.markdown("Manage group settings and check off weekly collections.")
 
 start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value="2026-08-12")
-weekly_amount = st.sidebar.number_input("Weekly Contribution ($)", value=250)
+weekly_amount = st.sidebar.number_input("Weekly Contribution (GH₵)", value=250)
 names_input = st.sidebar.text_area("Participant Names (comma-separated)", value="Alice, Bob, Charlie, Diana")
 
 # Process group details
@@ -107,7 +107,7 @@ for i in range(num_members):
         "Recipient": recipient,
         "Cycle Start": current_date.strftime('%Y-%m-%d'),
         "Payout Date": payout_date.strftime('%Y-%m-%d'),
-        "Total Pool": f"${pool_amount:,.2f}"
+        "Total Pool": f"GH₵{pool_amount:,.2f}"
     })
     current_date = payout_date
 
@@ -123,7 +123,7 @@ for member in members:
     paid_amount = paid_weeks * weekly_amount
     owing_amount = expected_total - paid_amount
     
-    status_text = "🟢 Fully Paid" if owing_amount == 0 else f"🔴 Owing ${owing_amount:,.2f}"
+    status_text = "🟢 Fully Paid" if owing_amount == 0 else f"🔴 Owing GH₵{owing_amount:,.2f}"
     
     row = {
         "Member": member, 
