@@ -1,5 +1,7 @@
 import streamlit as st
 from datetime import datetime, timedelta
+import json
+import os
 
 # Page Configuration
 st.set_page_config(
@@ -18,7 +20,6 @@ st.markdown("""
         color: #1f2937;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    /* Compact Dark Mode Metric Card Styling */
     div[data-testid="stMetric"] {
         background-color: #1f2937 !important;
         border: 1px solid #374151;
@@ -38,7 +39,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Helper function for clean date formatting (e.g., 1st Sep 2026)
+# Helper function for clean date formatting
 def format_date(dt):
     day = dt.day
     if 11 <= day <= 13:
@@ -47,28 +48,43 @@ def format_date(dt):
         suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
     return f"{day}{suffix} {dt.strftime('%b %Y')}"
 
+# File storage for persistence across relaunches
+DATA_FILE = "susu_data.json"
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {
+        "start_date": "2026-08-12",
+        "weekly_amount": 250,
+        "names_input": "Alice, Bob, Charlie, Diana",
+        "payments": {}
+    }
+
+def save_data(data):
+    with open(DATA_FILE, "w") as f:
+        json.dump(data, f)
+
+# Load saved settings
+saved_data = load_data()
+
 # App Header
 st.title("Group Savings Dashboard")
 st.markdown("Track weekly contributions, payout rotations, and live member balances easily.")
 st.markdown("---")
 
-# --- INITIALIZE SESSION STATE ---
-if 'start_date' not in st.session_state:
-    st.session_state.start_date = "2026-08-12"
-if 'weekly_amount' not in st.session_state:
-    st.session_state.weekly_amount = 250
-if 'names_input' not in st.session_state:
-    st.session_state.names_input = "Alice, Bob, Charlie, Diana"
-
 # --- ADMIN PANEL ---
 st.sidebar.header("⚙️ Admin Controls")
 st.sidebar.markdown("Manage group settings and check off weekly collections.")
 
-start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", key="start_date")
-weekly_amount = st.sidebar.number_input("Weekly Contribution (GH₵)", key="weekly_amount")
-names_input = st.sidebar.text_area("Participant Names (comma-separated)", key="names_input")
+start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
+weekly_amount = st.sidebar.number_input("Weekly Contribution (GH₵)", value=float(saved_data["weekly_amount"]))
+names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=saved_data["names_input"])
 
-# Process group details
 members = [n.strip() for n in names_input.split(",") if n.strip()]
 num_members = len(members)
 
@@ -86,20 +102,42 @@ except ValueError:
 
 end_date = start_dt + timedelta(weeks=total_weeks)
 
-# --- SIMULATED PAYMENT STATE ---
-if 'payments' not in st.session_state or st.session_state.get('last_members') != members:
-    st.session_state.payments = {m: {w: False for w in range(1, total_weeks + 1)} for m in members}
-    st.session_state.last_members = members
+# Initialize payment records if members changed or file is fresh
+payments = saved_data.get("payments", {})
+if not payments or list(payments.keys()) != members:
+    payments = {m: {str(w): False for w in range(1, total_weeks + 1)} for m in members}
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("Record Payment")
 selected_member = st.sidebar.selectbox("Select Member", members)
 selected_week = st.sidebar.selectbox("Select Week Number", list(range(1, total_weeks + 1)))
-payment_status = st.sidebar.checkbox(f"Has {selected_member} paid for Week {selected_week}?", value=st.session_state.payments[selected_member][selected_week])
+
+current_status = payments.get(selected_member, {}).get(str(selected_week), False)
+payment_status = st.sidebar.checkbox(f"Has {selected_member} paid for Week {selected_week}?", value=current_status)
 
 if st.sidebar.button("Save Payment Status", type="primary"):
-    st.session_state.payments[selected_member][selected_week] = payment_status
-    st.sidebar.success("Successfully updated!")
+    if selected_member not in payments:
+        payments[selected_member] = {}
+    payments[selected_member][str(selected_week)] = payment_status
+    
+    # Save everything permanently to disk
+    new_data = {
+        "start_date": start_date_str,
+        "weekly_amount": weekly_amount,
+        "names_input": names_input,
+        "payments": payments
+    }
+    save_data(new_data)
+    st.sidebar.success("Successfully updated and saved!")
+
+# Auto-save settings if admin changes them
+current_settings = {
+    "start_date": start_date_str,
+    "weekly_amount": weekly_amount,
+    "names_input": names_input,
+    "payments": payments
+}
+save_data(current_settings)
 
 # --- CALCULATE CURRENT ELAPSED WEEKS ---
 today = datetime.today()
@@ -107,7 +145,7 @@ days_passed = (today - start_dt).days
 current_elapsed_week = max(0, days_passed // 7) + 1 if today >= start_dt else 0
 current_elapsed_week = min(current_elapsed_week, total_weeks)
 
-# Top Metrics Overview (Compact Dark Mode Styled)
+# Top Metrics Overview
 col1, col2, col3 = st.columns(3)
 col1.metric("Group Size", f"{num_members} People")
 col2.metric("Current Week Reached", f"Week {current_elapsed_week} of {total_weeks}")
@@ -139,11 +177,12 @@ st.markdown("Real-time view showing arrears based on weeks that have actually pa
 
 table_data = []
 for member in members:
-    paid_passed_weeks = sum(1 for w in range(1, current_elapsed_week + 1) if st.session_state.payments[member][w])
+    member_payments = payments.get(member, {})
+    paid_passed_weeks = sum(1 for w in range(1, current_elapsed_week + 1) if member_payments.get(str(w), False))
     unpaid_passed_weeks = current_elapsed_week - paid_passed_weeks
     owing_amount = unpaid_passed_weeks * weekly_amount
     
-    total_paid_all = sum(1 for w in range(1, total_weeks + 1) if st.session_state.payments[member][w])
+    total_paid_all = sum(1 for w in range(1, total_weeks + 1) if member_payments.get(str(w), False))
     
     if owing_amount > 0:
         status_text = f"🔴 Owing GH₵ {owing_amount:,.2f}"
@@ -156,7 +195,7 @@ for member in members:
         "Account Status": status_text
     }
     for w in range(1, total_weeks + 1):
-        row[f"W{w}"] = "Paid" if st.session_state.payments[member][w] else "-"
+        row[f"W{w}"] = "Paid" if member_payments.get(str(w), False) else "-"
     table_data.append(row)
 
 st.dataframe(table_data, use_container_width=True, hide_index=True)
