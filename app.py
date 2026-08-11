@@ -62,7 +62,8 @@ def load_data():
         "start_date": "2026-08-12",
         "weekly_amount": 250,
         "names_input": "Alice, Bob, Charlie, Diana",
-        "payments": {}
+        "payments": {},
+        "payout_status": {}
     }
 
 def save_data(data):
@@ -79,7 +80,7 @@ st.markdown("---")
 
 # --- ADMIN PANEL ---
 st.sidebar.header("⚙️ Admin Controls")
-st.sidebar.markdown("Manage group settings and check off weekly collections.")
+st.sidebar.markdown("Manage group settings and check off collections.")
 
 start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
 weekly_amount = st.sidebar.number_input("Weekly Contribution (GH₵)", value=float(saved_data["weekly_amount"]))
@@ -102,40 +103,81 @@ except ValueError:
 
 end_date = start_dt + timedelta(weeks=total_weeks)
 
-# Initialize payment records if members changed or file is fresh
+# Initialize data states if members changed or file is fresh
 payments = saved_data.get("payments", {})
 if not payments or list(payments.keys()) != members:
     payments = {m: {str(w): False for w in range(1, total_weeks + 1)} for m in members}
 
+payout_status = saved_data.get("payout_status", {})
+if not payout_status:
+    payout_status = {f"Month {i+1}": {"status": "Waiting / Not Collected", "balance_left": 0.0} for i in range(num_members)}
+
+# --- RECORD WEEKLY PAYMENT ---
 st.sidebar.markdown("---")
-st.sidebar.subheader("Record Payment")
+st.sidebar.subheader("Record Weekly Payment")
 selected_member = st.sidebar.selectbox("Select Member", members)
 selected_week = st.sidebar.selectbox("Select Week Number", list(range(1, total_weeks + 1)))
 
-current_status = payments.get(selected_member, {}).get(str(selected_week), False)
-payment_status = st.sidebar.checkbox(f"Has {selected_member} paid for Week {selected_week}?", value=current_status)
+current_w_status = payments.get(selected_member, {}).get(str(selected_week), False)
+weekly_check = st.sidebar.checkbox(f"Has {selected_member} paid for Week {selected_week}?", value=current_w_status)
 
-if st.sidebar.button("Save Payment Status", type="primary"):
+if st.sidebar.button("Save Weekly Payment", type="primary"):
     if selected_member not in payments:
         payments[selected_member] = {}
-    payments[selected_member][str(selected_week)] = payment_status
+    payments[selected_member][str(selected_week)] = weekly_check
     
-    # Save everything permanently to disk
     new_data = {
         "start_date": start_date_str,
         "weekly_amount": weekly_amount,
         "names_input": names_input,
-        "payments": payments
+        "payments": payments,
+        "payout_status": payout_status
     }
     save_data(new_data)
-    st.sidebar.success("Successfully updated and saved!")
+    st.sidebar.success("Weekly payment updated!")
 
-# Auto-save settings if admin changes them
+# --- RECORD PAYOUT COLLECTION ---
+st.sidebar.markdown("---")
+st.sidebar.subheader("Record Payout Collection")
+month_options = [f"Month {i+1} ({members[i]})" for i in range(num_members)]
+selected_month_label = st.sidebar.selectbox("Select Payout Turn", month_options)
+month_key = selected_month_label.split(" (")[0]
+
+current_p_info = payout_status.get(month_key, {"status": "Waiting / Not Collected", "balance_left": 0.0})
+p_status_choice = st.sidebar.selectbox(
+    "Collection Status", 
+    ["Waiting / Not Collected", "Partially Collected", "Fully Collected"],
+    index=["Waiting / Not Collected", "Partially Collected", "Fully Collected"].index(current_p_info.get("status", "Waiting / Not Collected"))
+)
+
+p_balance_left = 0.0
+if p_status_choice == "Partially Collected":
+    max_pool = weekly_amount * num_members * num_members
+    p_balance_left = st.sidebar.number_input("Amount Left Behind (GH₵)", value=float(current_p_info.get("balance_left", 0.0)), min_value=0.0, max_value=float(max_pool))
+
+if st.sidebar.button("Save Payout Status", type="secondary"):
+    if month_key not in payout_status:
+        payout_status[month_key] = {}
+    payout_status[month_key]["status"] = p_status_choice
+    payout_status[month_key]["balance_left"] = p_balance_left
+    
+    new_data = {
+        "start_date": start_date_str,
+        "weekly_amount": weekly_amount,
+        "names_input": names_input,
+        "payments": payments,
+        "payout_status": payout_status
+    }
+    save_data(new_data)
+    st.sidebar.success("Payout collection status updated!")
+
+# Auto-save settings state
 current_settings = {
     "start_date": start_date_str,
     "weekly_amount": weekly_amount,
     "names_input": names_input,
-    "payments": payments
+    "payments": payments,
+    "payout_status": payout_status
 }
 save_data(current_settings)
 
@@ -153,20 +195,34 @@ col3.metric("Program End Date", format_date(end_date))
 
 st.markdown("")
 st.markdown("### 📅 Payout Schedule & Recipients")
-st.markdown("This timeline shows when each person collects the complete monthly pool.")
+st.markdown("Tracks when each person collects their pool and if any funds were left behind.")
 
 schedule = []
 current_date = start_dt
 for i in range(num_members):
+    month_lbl = f"Month {i+1}"
     recipient = members[i]
     payout_date = current_date + timedelta(weeks=num_members)
     pool_amount = weekly_amount * num_members * num_members
+    
+    # Get collection status info
+    p_info = payout_status.get(month_lbl, {"status": "Waiting / Not Collected", "balance_left": 0.0})
+    stat = p_info.get("status", "Waiting / Not Collected")
+    left_amt = p_info.get("balance_left", 0.0)
+    
+    if stat == "Fully Collected":
+        display_status = "✅ Fully Collected"
+    elif stat == "Partially Collected":
+        display_status = f"⏳ Partial (GH₵ {left_amt:,.2f} left)"
+    else:
+        display_status = "⏳ Waiting / Not Collected"
+        
     schedule.append({
-        "Month Block": f"Month {i+1}",
+        "Month Block": month_lbl,
         "Recipient": recipient,
-        "Cycle Start": format_date(current_date),
         "Payout Date": format_date(payout_date),
-        "Total Pool": f"GH₵ {pool_amount:,.2f}"
+        "Total Pool": f"GH₵ {pool_amount:,.2f}",
+        "Collection Status": display_status
     })
     current_date = payout_date
 
