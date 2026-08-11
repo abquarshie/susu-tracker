@@ -47,18 +47,31 @@ def format_date(dt):
         suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
     return f"{day}{suffix} {dt.strftime('%b %Y')}"
 
-# App Header (Icon removed for clean mobile layout alignment)
+# App Header
 st.title("Group Savings Dashboard")
 st.markdown("Track weekly contributions, payout rotations, and live member balances easily.")
 st.markdown("---")
+
+# --- INITIALIZE SESSION STATE FOR INPUTS ---
+if 'start_date_input' not in st.session_state:
+    st.session_state.start_date_input = "2026-08-12"
+if 'weekly_amount_input' not in st.session_state:
+    st.session_state.weekly_amount_input = 250
+if 'names_input_val' not in st.session_state:
+    st.session_state.names_input_val = "Alice, Bob, Charlie, Diana"
 
 # --- ADMIN PANEL ---
 st.sidebar.header("⚙️ Admin Controls")
 st.sidebar.markdown("Manage group settings and check off weekly collections.")
 
-start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value="2026-08-12")
-weekly_amount = st.sidebar.number_input("Weekly Contribution (GH₵)", value=250)
-names_input = st.sidebar.text_area("Participant Names (comma-separated)", value="Alice, Bob, Charlie, Diana")
+start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=st.session_state.start_date_input)
+weekly_amount = st.sidebar.number_input("Weekly Contribution (GH₵)", value=st.session_state.weekly_amount_input)
+names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=st.session_state.names_input_val)
+
+# Update session state values when changed
+st.session_state.start_date_input = start_date_str
+st.session_state.weekly_amount_input = weekly_amount
+st.session_state.names_input_val = names_input
 
 # Process group details
 members = [n.strip() for n in names_input.split(",") if n.strip()]
