@@ -8,7 +8,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Custom CSS for dark metric cards and clean UI design
+# Custom CSS for compact dark metric cards and clean UI design
 st.markdown("""
     <style>
     .main {
@@ -18,20 +18,22 @@ st.markdown("""
         color: #1f2937;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    /* Dark Mode Metric Card Styling */
+    /* Compact Dark Mode Metric Card Styling */
     div[data-testid="stMetric"] {
         background-color: #1f2937 !important;
         border: 1px solid #374151;
-        padding: 15px 20px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        padding: 10px 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     div[data-testid="stMetric"] label {
         color: #9ca3af !important;
         font-weight: 600;
+        font-size: 13px !important;
     }
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
         color: #ffffff !important;
+        font-size: 20px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -39,7 +41,6 @@ st.markdown("""
 # Helper function for clean date formatting (e.g., 1st Sep 2026)
 def format_date(dt):
     day = dt.day
-    # Add ordinal suffixes
     if 11 <= day <= 13:
         suffix = 'th'
     else:
@@ -98,7 +99,7 @@ days_passed = (today - start_date).days
 current_elapsed_week = max(0, days_passed // 7) + 1 if today >= start_date else 0
 current_elapsed_week = min(current_elapsed_week, total_weeks)
 
-# Top Metrics Overview (Dark Mode Styled)
+# Top Metrics Overview (Compact Dark Mode Styled)
 col1, col2, col3 = st.columns(3)
 col1.metric("Group Size", f"{num_members} People")
 col2.metric("Current Week Reached", f"Week {current_elapsed_week} of {total_weeks}")
