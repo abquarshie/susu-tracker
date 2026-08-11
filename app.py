@@ -107,6 +107,8 @@ col3.metric("Program End Date", format_date(end_date))
 
 st.markdown("")
 st.markdown("### 📅 Payout Schedule & Recipients")
+st.markdown("This timeline shows when each person collects the complete monthly pool.")
+
 schedule = []
 current_date = start_date
 for i in range(num_members):
@@ -122,7 +124,8 @@ for i in range(num_members):
     })
     current_date = payout_date
 
-st.table(schedule)
+# Changed from st.table to st.dataframe to enable horizontal scrolling on mobile
+st.dataframe(schedule, use_container_width=True, hide_index=True)
 
 st.markdown("### 📊 Member Balances & Weekly Logs")
 st.markdown("Real-time view showing arrears based on weeks that have actually passed.")
