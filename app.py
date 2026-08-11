@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 # Page Configuration
 st.set_page_config(
     page_title="Group Savings Tracker", 
+    page_icon="💰", 
     layout="centered"
 )
 
@@ -46,8 +47,8 @@ def format_date(dt):
         suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
     return f"{day}{suffix} {dt.strftime('%b %Y')}"
 
-# App Header
-st.title("💰 Group Savings Dashboard")
+# App Header (Icon removed for clean mobile layout alignment)
+st.title("Group Savings Dashboard")
 st.markdown("Track weekly contributions, payout rotations, and live member balances easily.")
 st.markdown("---")
 
@@ -123,7 +124,6 @@ for i in range(num_members):
     })
     current_date = payout_date
 
-# Changed from st.table to st.dataframe to enable horizontal scrolling on mobile
 st.dataframe(schedule, use_container_width=True, hide_index=True)
 
 st.markdown("### 📊 Member Balances & Weekly Logs")
