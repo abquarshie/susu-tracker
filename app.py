@@ -11,7 +11,6 @@ st.set_page_config(
 # Custom CSS for a clean, modern UI design
 st.markdown("""
     <style>
-    /* Main background and font styling */
     .main {
         background-color: #f8f9fa;
     }
@@ -19,7 +18,6 @@ st.markdown("""
         color: #1f2937;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
-    /* Metric Card Styling */
     div[data-testid="stMetric"] {
         background-color: #ffffff;
         border: 1px solid #e5e7eb;
@@ -31,10 +29,6 @@ st.markdown("""
         color: #4b5563 !important;
         font-weight: 600;
     }
-    /* Tables styling */
-    dataframe, table {
-        border-radius: 8px;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -43,7 +37,7 @@ st.title("💰 Group Savings Dashboard")
 st.markdown("Track weekly contributions, payout rotations, and live member balances easily.")
 st.markdown("---")
 
-# --- ADMIN PANEL (Sidebar for you to control the data) ---
+# --- ADMIN PANEL ---
 st.sidebar.header("⚙️ Admin Controls")
 st.sidebar.markdown("Manage group settings and check off weekly collections.")
 
@@ -84,18 +78,21 @@ if st.sidebar.button("Save Payment Status", type="primary"):
     st.session_state.payments[selected_member][selected_week] = payment_status
     st.sidebar.success("Successfully updated!")
 
-# --- MAIN DASHBOARD VIEW ---
+# --- CALCULATE CURRENT ELAPSED WEEKS ---
+today = datetime.today()
+# Calculate how many weeks have passed since start date
+days_passed = (today - start_date).days
+current_elapsed_week = max(0, days_passed // 7) + 1 if today >= start_date else 0
+current_elapsed_week = min(current_elapsed_week, total_weeks)
 
 # Top Metrics Overview
 col1, col2, col3 = st.columns(3)
 col1.metric("Group Size", f"{num_members} People")
-col2.metric("Total Duration", f"{total_weeks} Weeks")
+col2.metric("Current Week Reached", f"Week {current_elapsed_week} of {total_weeks}")
 col3.metric("Program End Date", end_date.strftime('%b %d, %Y'))
 
 st.markdown("")
 st.markdown("### 📅 Payout Schedule & Recipients")
-st.markdown("This timeline shows when each person collects the complete monthly pool.")
-
 schedule = []
 current_date = start_date
 for i in range(num_members):
@@ -107,27 +104,32 @@ for i in range(num_members):
         "Recipient": recipient,
         "Cycle Start": current_date.strftime('%Y-%m-%d'),
         "Payout Date": payout_date.strftime('%Y-%m-%d'),
-        "Total Pool": f"GH₵{pool_amount:,.2f}"
+        "Total Pool": f"GH₵ {pool_amount:,.2f}"
     })
     current_date = payout_date
 
 st.table(schedule)
 
 st.markdown("### 📊 Member Balances & Weekly Logs")
-st.markdown("Real-time view of who has paid and who has outstanding balances.")
+st.markdown("Real-time view showing arrears based on weeks that have actually passed.")
 
 table_data = []
 for member in members:
-    paid_weeks = sum(1 for w in range(1, total_weeks + 1) if st.session_state.payments[member][w])
-    expected_total = total_weeks * weekly_amount
-    paid_amount = paid_weeks * weekly_amount
-    owing_amount = expected_total - paid_amount
+    # Count how many weeks up to the current elapsed week have been paid
+    paid_passed_weeks = sum(1 for w in range(1, current_elapsed_week + 1) if st.session_state.payments[member][w])
+    unpaid_passed_weeks = current_elapsed_week - paid_passed_weeks
+    owing_amount = unpaid_passed_weeks * weekly_amount
     
-    status_text = "🟢 Fully Paid" if owing_amount == 0 else f"🔴 Owing GH₵{owing_amount:,.2f}"
+    total_paid_all = sum(1 for w in range(1, total_weeks + 1) if st.session_state.payments[member][w])
+    
+    if owing_amount > 0:
+        status_text = f"🔴 Owing GH₵ {owing_amount:,.2f}"
+    else:
+        status_text = "🟢 Up to Date"
     
     row = {
         "Member": member, 
-        "Progress": f"{paid_weeks} / {total_weeks} weeks", 
+        "Total Paid": f"{total_paid_all} / {total_weeks} weeks", 
         "Account Status": status_text
     }
     for w in range(1, total_weeks + 1):
