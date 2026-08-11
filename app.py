@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 # Page Configuration
 st.set_page_config(
     page_title="Group Savings Tracker", 
-    page_icon="💰", 
     layout="centered"
 )
 
