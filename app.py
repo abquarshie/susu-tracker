@@ -3,14 +3,15 @@ from datetime import datetime, timedelta
 import json
 import os
 
-# Page Configuration
+# Page Configuration - sidebar explicitly set to collapsed by default
 st.set_page_config(
     page_title="Group Savings Tracker", 
     page_icon="💰", 
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for compact dark metric cards and clean UI design
+# Custom CSS for clean layout, compact dark metrics, and mobile sidebar behavior
 st.markdown("""
     <style>
     .main {
@@ -78,13 +79,28 @@ st.title("Group Savings Dashboard")
 st.markdown("Track weekly contributions, payout rotations, and live member balances easily.")
 st.markdown("---")
 
-# --- ADMIN PANEL ---
-st.sidebar.header("⚙️ Admin Controls")
-st.sidebar.markdown("Manage group settings and check off collections.")
+# --- ADMIN SECURITY LOGIN IN SIDEBAR ---
+st.sidebar.header("⚙️ Admin Panel")
+admin_password_input = st.sidebar.text_input("Admin Passcode", type="password", placeholder="Enter passcode to edit")
 
-start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
-weekly_amount = st.sidebar.number_input("Weekly Contribution (GH₵)", value=float(saved_data["weekly_amount"]))
-names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=saved_data["names_input"])
+ADMIN_SECRET = "Susu2026" 
+is_admin = (admin_password_input == ADMIN_SECRET)
+
+if not is_admin:
+    st.sidebar.markdown("---")
+    st.sidebar.info("🔒 **View-Only Mode**\n\nEnter the correct Admin Passcode above to unlock settings and record payments.")
+
+# Process core group variables from saved file (read-only for normal viewers)
+start_date_str = saved_data["start_date"]
+weekly_amount = float(saved_data["weekly_amount"])
+names_input = saved_data["names_input"]
+
+if is_admin:
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Edit Group Settings")
+    start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
+    weekly_amount = st.sidebar.number_input("Weekly Contribution (GH₵)", value=float(saved_data["weekly_amount"]))
+    names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=saved_data["names_input"])
 
 members = [n.strip() for n in names_input.split(",") if n.strip()]
 num_members = len(members)
@@ -112,66 +128,66 @@ payout_status = saved_data.get("payout_status", {})
 if not payout_status:
     payout_status = {f"Month {i+1}": {"status": "Waiting / Not Collected", "balance_left": 0.0} for i in range(num_members)}
 
-# --- RECORD WEEKLY PAYMENT ---
-st.sidebar.markdown("---")
-st.sidebar.subheader("Record Weekly Payment")
-selected_member = st.sidebar.selectbox("Select Member", members)
-selected_week = st.sidebar.selectbox("Select Week Number", list(range(1, total_weeks + 1)))
+# --- ADMIN ACTIONS (Only shown if password matches) ---
+if is_admin:
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Record Weekly Payment")
+    selected_member = st.sidebar.selectbox("Select Member", members)
+    selected_week = st.sidebar.selectbox("Select Week Number", list(range(1, total_weeks + 1)))
 
-current_w_status = payments.get(selected_member, {}).get(str(selected_week), False)
-weekly_check = st.sidebar.checkbox(f"Has {selected_member} paid for Week {selected_week}?", value=current_w_status)
+    current_w_status = payments.get(selected_member, {}).get(str(selected_week), False)
+    weekly_check = st.sidebar.checkbox(f"Has {selected_member} paid for Week {selected_week}?", value=current_w_status)
 
-if st.sidebar.button("Save Weekly Payment", type="primary"):
-    if selected_member not in payments:
-        payments[selected_member] = {}
-    payments[selected_member][str(selected_week)] = weekly_check
-    
-    new_data = {
-        "start_date": start_date_str,
-        "weekly_amount": weekly_amount,
-        "names_input": names_input,
-        "payments": payments,
-        "payout_status": payout_status
-    }
-    save_data(new_data)
-    st.sidebar.success("Weekly payment updated!")
+    if st.sidebar.button("Save Weekly Payment", type="primary"):
+        if selected_member not in payments:
+            payments[selected_member] = {}
+        payments[selected_member][str(selected_week)] = weekly_check
+        
+        new_data = {
+            "start_date": start_date_str,
+            "weekly_amount": weekly_amount,
+            "names_input": names_input,
+            "payments": payments,
+            "payout_status": payout_status
+        }
+        save_data(new_data)
+        st.sidebar.success("Weekly payment updated!")
 
-# --- RECORD PAYOUT COLLECTION ---
-st.sidebar.markdown("---")
-st.sidebar.subheader("Record Payout Collection")
-month_options = [f"Month {i+1} ({members[i]})" for i in range(num_members)]
-selected_month_label = st.sidebar.selectbox("Select Payout Turn", month_options)
-month_key = selected_month_label.split(" (")[0]
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Record Payout Collection")
+    month_options = [f"Month {i+1} ({members[i]})" for i in range(num_members)]
+    selected_month_label = st.sidebar.selectbox("Select Payout Turn", month_options)
+    month_key = selected_month_label.split(" (")[0]
 
-current_p_info = payout_status.get(month_key, {"status": "Waiting / Not Collected", "balance_left": 0.0})
-p_status_choice = st.sidebar.selectbox(
-    "Collection Status", 
-    ["Waiting / Not Collected", "Partially Collected", "Fully Collected"],
-    index=["Waiting / Not Collected", "Partially Collected", "Fully Collected"].index(current_p_info.get("status", "Waiting / Not Collected"))
-)
+    current_p_info = payout_status.get(month_key, {"status": "Waiting / Not Collected", "balance_left": 0.0})
+    p_status_choice = st.sidebar.selectbox(
+        "Collection Status", 
+        ["Waiting / Not Collected", "Partially Collected", "Fully Collected"],
+        index=["Waiting / Not Collected", "Partially Collected", "Fully Collected"].index(current_p_info.get("status", "Waiting / Not Collected"))
+    )
 
-p_balance_left = 0.0
-if p_status_choice == "Partially Collected":
-    max_pool = weekly_amount * num_members * num_members
-    p_balance_left = st.sidebar.number_input("Amount Left Behind (GH₵)", value=float(current_p_info.get("balance_left", 0.0)), min_value=0.0, max_value=float(max_pool))
+    p_balance_left = 0.0
+    if p_status_choice == "Partially Collected":
+        max_pool = weekly_amount * num_members * num_members
+        p_balance_left = st.sidebar.number_input("Amount Left Behind (GH₵)", value=float(current_p_info.get("balance_left", 0.0)), min_value=0.0, max_value=float(max_pool))
 
-if st.sidebar.button("Save Payout Status", type="secondary"):
-    if month_key not in payout_status:
-        payout_status[month_key] = {}
-    payout_status[month_key]["status"] = p_status_choice
-    payout_status[month_key]["balance_left"] = p_balance_left
-    
-    new_data = {
-        "start_date": start_date_str,
-        "weekly_amount": weekly_amount,
-        "names_input": names_input,
-        "payments": payments,
-        "payout_status": payout_status
-    }
-    save_data(new_data)
-    st.sidebar.success("Payout collection status updated!")
+    if st.sidebar.button("Save Payout Status", type="secondary"):
+        if month_key not in payout_status:
+            payout_status[month_key] = {}
+        payout_status[month_key]["status"] = p_status_choice
+        payout_status[month_key]["balance_left"] = p_balance_left
+        
+        new_data = {
+            "start_date": start_date_str,
+            "weekly_amount": weekly_amount,
+            "names_input": names_input,
+            "payments": payments,
+            "payout_status": payout_status
+        }
+        save_data(new_data)
+        st.sidebar.success("Payout collection status updated!")
 
-# Auto-save settings state
+# Auto-save settings state whenever changed by admin
 current_settings = {
     "start_date": start_date_str,
     "weekly_amount": weekly_amount,
@@ -205,7 +221,6 @@ for i in range(num_members):
     payout_date = current_date + timedelta(weeks=num_members)
     pool_amount = weekly_amount * num_members * num_members
     
-    # Get collection status info
     p_info = payout_status.get(month_lbl, {"status": "Waiting / Not Collected", "balance_left": 0.0})
     stat = p_info.get("status", "Waiting / Not Collected")
     left_amt = p_info.get("balance_left", 0.0)
@@ -257,4 +272,4 @@ for member in members:
 st.dataframe(table_data, use_container_width=True, hide_index=True)
 
 st.markdown("---")
-st.caption("🔒 *Note: This link is view-only for group participants. Only the group administrator can modify payment records via the secure sidebar.*")
+st.caption("🔒 *Note: This link is view-only for group participants. Only the group administrator can modify payment records via the secure passcode.*")
