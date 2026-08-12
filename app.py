@@ -100,6 +100,11 @@ if is_admin:
     st.sidebar.subheader("Edit Group Settings")
     start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
     monthly_amount_per_person = st.sidebar.number_input("Monthly Contribution Per Person (GH₵)", value=monthly_amount_per_person, step=50.0)
+    
+    # Live preview helper showing weekly breakdown right in the sidebar
+    calc_weekly = monthly_amount_per_person / 4
+    st.sidebar.caption(f"💡 *Breakdown: GH₵ {calc_weekly:,.2f} / week per person*")
+    
     names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=saved_data["names_input"])
 
 members = [n.strip() for n in names_input.split(",") if n.strip()]
