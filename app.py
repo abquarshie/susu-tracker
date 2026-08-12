@@ -99,6 +99,7 @@ if is_admin:
     st.sidebar.markdown("---")
     st.sidebar.subheader("Edit Group Settings")
     start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
+    monthly_amount_per_person = st.sidebar.number_input("Monthly Contribution Per Person (GH₵)", value=monthly_amount_per_person, step=50.0)
     names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=saved_data["names_input"])
 
 members = [n.strip() for n in names_input.split(",") if n.strip()]
@@ -108,10 +109,9 @@ if num_members < 2:
     st.error("⚠️ Please enter at least 2 participant names in the sidebar.")
     st.stop()
 
-# Total months equals number of members, each month block is roughly 4 weeks (or 1 month)
 total_months = num_members
 total_weeks = total_months * 4  # Assuming 4 weeks per month block
-weekly_amount_per_person = monthly_amount_per_person / 4  # GH₵ 250 per week if splitting GH₵ 1000
+weekly_amount_per_person = monthly_amount_per_person / 4  # Automatically split weekly target
 
 try:
     start_dt = datetime.strptime(start_date_str, '%Y-%m-%d')
@@ -213,7 +213,7 @@ col3.metric("Program End Date", format_date(end_date))
 
 st.markdown("")
 st.markdown("### 📅 Payout Schedule & Recipients")
-st.markdown("Tracks when each person collects their monthly pool (GH₵ 1,000 per member).")
+st.markdown(f"Tracks when each person collects their monthly pool (GH₵ {monthly_amount_per_person:,.2f} per member).")
 
 schedule = []
 current_date = start_dt
@@ -246,7 +246,7 @@ for i in range(num_members):
 st.dataframe(schedule, use_container_width=True, hide_index=True)
 
 st.markdown("### 📊 Member Balances & Weekly Logs")
-st.markdown("Real-time view showing weekly breakdown (GH₵ 250/wk to meet the GH₵ 1,000 monthly target).")
+st.markdown(f"Real-time view showing weekly breakdown (GH₵ {weekly_amount_per_person:,.2f}/wk to meet the GH₵ {monthly_amount_per_person:,.2f} monthly target).")
 
 table_data = []
 for member in members:
