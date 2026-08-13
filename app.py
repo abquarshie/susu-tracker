@@ -185,9 +185,11 @@ if is_admin:
     recipient_idx = int(month_key.split(" ")[1]) - 1
     recipient_name = members[recipient_idx]
     rec_monthly = member_tiers.get(recipient_name, base_monthly)
-    max_possible_pool = rec_monthly * num_members
+    gross_pool = rec_monthly * num_members
+    fee_val = gross_pool * (admin_fee_percentage / 100.0)
+    net_pool = gross_pool - fee_val
 
-    input_collected = st.sidebar.number_input("Amount Collected (GH₵)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(max_possible_pool), step=50.0)
+    input_collected = st.sidebar.number_input("Amount Collected (GH₵)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(net_pool), step=50.0)
 
     if st.sidebar.button("Save Payout Amounts", type="secondary"):
         if month_key not in payout_status:
@@ -244,12 +246,12 @@ total_cash_held = total_cash_collected - total_payouts_distributed
 # Top Metrics Overview
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Cash Held", f"GH₵ {total_cash_held:,.2f}")
-col2.metric("Group Size", f"{num_members} People")
-col3.metric("Admin Fee Rate", f"{admin_fee_percentage}%")
+col2.metric("Admin Fee Rate", f"{admin_fee_percentage}%")
+col3.metric("Program End Date", format_date(end_date))
 
 st.markdown("")
 st.markdown("### 📅 Payout")
-st.markdown("Tracks payout rotation dates and exact collection amounts.")
+st.markdown("Tracks payout rotation dates, admin fee deductions, and remaining pool balances.")
 
 schedule = []
 current_date = start_dt
@@ -261,16 +263,17 @@ for i in range(num_members):
     rec_monthly = member_tiers.get(recipient, base_monthly)
     gross_pool = rec_monthly * num_members
     admin_fee_val = gross_pool * (admin_fee_percentage / 100.0)
-    full_pool_amount = gross_pool - admin_fee_val
+    net_pool_amount = gross_pool - admin_fee_val
     
     p_info = payout_status.get(month_lbl, {"amount_collected": 0.0})
     collected_amt = float(p_info.get("amount_collected", 0.0))
     
-    remaining_pool = max(0.0, full_pool_amount - collected_amt)
+    remaining_pool = max(0.0, net_pool_amount - collected_amt)
 
     schedule.append({
         "Recipient": recipient,
         "Payout Date": format_date(payout_date),
+        "Admin Fee": f"GH₵ {admin_fee_val:,.2f} ({admin_fee_percentage}%)",
         "Total Pool": f"GH₵ {remaining_pool:,.2f}",
         "Amount Collected": f"GH₵ {collected_amt:,.2f}"
     })
