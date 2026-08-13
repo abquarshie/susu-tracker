@@ -61,8 +61,10 @@ def load_data():
             pass
     return {
         "start_date": "2026-08-17",
-        "monthly_amount_per_person": 1000,
+        "base_monthly_amount": 1000,
+        "admin_fee_pct": 0.0,
         "names_input": "Alice, Bob, Charlie, Diana",
+        "member_tiers": {},
         "payments": {},
         "payout_status": {}
     }
@@ -76,7 +78,7 @@ saved_data = load_data()
 
 # App Header
 st.title("Group Savings Dashboard")
-st.markdown("Track monthly pools, weekly contributions, and payout rotations easily.")
+st.markdown("Track flexible contributions, total cash held, and payout rotations easily.")
 st.markdown("---")
 
 # --- ADMIN SECURITY LOGIN IN SIDEBAR ---
@@ -92,20 +94,9 @@ if not is_admin:
 
 # Process core group variables from saved file
 start_date_str = saved_data["start_date"]
-monthly_amount_per_person = float(saved_data.get("monthly_amount_per_person", 1000))
+base_monthly = float(saved_data.get("base_monthly_amount", 1000))
+admin_fee_pct = float(saved_data.get("admin_fee_pct", 0.0))
 names_input = saved_data["names_input"]
-
-if is_admin:
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Edit Group Settings")
-    start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
-    monthly_amount_per_person = st.sidebar.number_input("Monthly Contribution Per Person (GH₵)", value=monthly_amount_per_person, step=50.0)
-    
-    # Live preview helper showing weekly breakdown right in the sidebar
-    calc_weekly = monthly_amount_per_person / 4
-    st.sidebar.caption(f"💡 *Breakdown: GH₵ {calc_weekly:,.2f} / week per person*")
-    
-    names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=saved_data["names_input"])
 
 members = [n.strip() for n in names_input.split(",") if n.strip()]
 num_members = len(members)
@@ -114,9 +105,31 @@ if num_members < 2:
     st.error("⚠️ Please enter at least 2 participant names in the sidebar.")
     st.stop()
 
+# Initialize or clean member tiers dictionary
+member_tiers = saved_data.get("member_tiers", {})
+for m in members:
+    if m not in member_tiers:
+        member_tiers[m] = base_monthly
+
+if is_admin:
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Edit Group Settings")
+    start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
+    base_monthly = st.sidebar.number_input("Standard Base Monthly Target (GH₵)", value=base_monthly, step=50.0)
+    admin_fee_pct = st.sidebar.number_input("Admin Holding Fee (%)", value=admin_fee_pct, min_value=0.0, max_value=20.0, step=0.5)
+    names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=saved_data["names_input"])
+    
+    # Update member tiers configuration if admin wants custom values per person
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Custom Monthly Tiers per Member")
+    updated_tiers = {}
+    for m in members:
+        current_val = float(member_tiers.get(m, base_monthly))
+        updated_tiers[m] = st.sidebar.number_input(f"{m}'s Monthly Contribution (GH₵)", value=current_val, step=50.0, key=f"tier_{m}")
+    member_tiers = updated_tiers
+
 total_months = num_members
-total_weeks = total_months * 4  # Assuming 4 weeks per month block
-weekly_amount_per_person = monthly_amount_per_person / 4  # Automatically split weekly target
+total_weeks = total_months * 4  # 4 weeks per month block
 
 try:
     start_dt = datetime.strptime(start_date_str, '%Y-%m-%d')
@@ -152,8 +165,10 @@ if is_admin:
         
         new_data = {
             "start_date": start_date_str,
-            "monthly_amount_per_person": monthly_amount_per_person,
+            "base_monthly_amount": base_monthly,
+            "admin_fee_pct": admin_fee_pct,
             "names_input": names_input,
+            "member_tiers": member_tiers,
             "payments": payments,
             "payout_status": payout_status
         }
@@ -173,10 +188,16 @@ if is_admin:
         index=["Waiting / Not Collected", "Partially Collected", "Fully Collected"].index(current_p_info.get("status", "Waiting / Not Collected"))
     )
 
+    # Calculate max pool for this specific member's month block
+    recipient_idx = int(month_key.split(" ")[1]) - 1
+    recipient_name = members[recipient_idx]
+    rec_monthly = member_tiers.get(recipient_name, base_monthly)
+    standard_full_pool = base_monthly * num_members
+    member_full_pool = rec_monthly * num_members
+
     p_balance_left = 0.0
     if p_status_choice == "Partially Collected":
-        max_pool = monthly_amount_per_person * num_members
-        p_balance_left = st.sidebar.number_input("Amount Left Behind (GH₵)", value=float(current_p_info.get("balance_left", 0.0)), min_value=0.0, max_value=float(max_pool))
+        p_balance_left = st.sidebar.number_input("Amount Left Behind (GH₵)", value=float(current_p_info.get("balance_left", 0.0)), min_value=0.0, max_value=float(member_full_pool))
 
     if st.sidebar.button("Save Payout Status", type="secondary"):
         if month_key not in payout_status:
@@ -186,8 +207,10 @@ if is_admin:
         
         new_data = {
             "start_date": start_date_str,
-            "monthly_amount_per_person": monthly_amount_per_person,
+            "base_monthly_amount": base_monthly,
+            "admin_fee_pct": admin_fee_pct,
             "names_input": names_input,
+            "member_tiers": member_tiers,
             "payments": payments,
             "payout_status": payout_status
         }
@@ -197,28 +220,59 @@ if is_admin:
 # Auto-save settings state
 current_settings = {
     "start_date": start_date_str,
-    "monthly_amount_per_person": monthly_amount_per_person,
+    "base_monthly_amount": base_monthly,
+    "admin_fee_pct": admin_fee_pct,
     "names_input": names_input,
+    "member_tiers": member_tiers,
     "payments": payments,
     "payout_status": payout_status
 }
 save_data(current_settings)
 
-# --- CALCULATE CURRENT ELAPSED WEEKS ---
+# --- CALCULATE CURRENT ELAPSED WEEKS & TOTAL CASH HELD ---
 today = datetime.today()
 days_passed = (today - start_dt).days
 current_elapsed_week = max(0, days_passed // 7) + 1 if today >= start_dt else 0
 current_elapsed_week = min(current_elapsed_week, total_weeks)
 
+# Calculate total cash actually paid in by all members across all weeks so far
+total_cash_collected = 0.0
+for m in members:
+    m_monthly = member_tiers.get(m, base_monthly)
+    m_weekly = m_monthly / 4.0
+    m_payments = payments.get(m, {})
+    paid_count = sum(1 for w in range(1, total_weeks + 1) if m_payments.get(str(w), False))
+    total_cash_collected += paid_count * m_weekly
+
+# Subtract payouts that have already been fully or partially taken out of your hands
+total_payouts_distributed = 0.0
+for i in range(num_members):
+    m_lbl = f"Month {i+1}"
+    rec_name = members[i]
+    rec_monthly = member_tiers.get(rec_name, base_monthly)
+    full_pool = rec_monthly * num_members
+    
+    p_info = payout_status.get(m_lbl, {"status": "Waiting / Not Collected", "balance_left": 0.0})
+    stat = p_info.get("status", "Waiting / Not Collected")
+    left_amt = p_info.get("balance_left", 0.0)
+    
+    if stat == "Fully Collected":
+        total_payouts_distributed += full_pool
+    elif stat == "Partially Collected":
+        # Amount given out is full pool minus what's left behind
+        total_payouts_distributed += (full_pool - left_amt)
+
+total_cash_held = total_cash_collected - total_payouts_distributed
+
 # Top Metrics Overview
 col1, col2, col3 = st.columns(3)
-col1.metric("Group Size", f"{num_members} People")
-col2.metric("Monthly Pool Target", f"GH₵ {monthly_amount_per_person * num_members:,.2f}")
+col1.metric("Total Cash Held by Admin", f"GH₵ {total_cash_held:,.2f}")
+col2.metric("Group Size", f"{num_members} People")
 col3.metric("Program End Date", format_date(end_date))
 
 st.markdown("")
 st.markdown("### 📅 Payout Schedule & Recipients")
-st.markdown(f"Tracks when each person collects their monthly pool (GH₵ {monthly_amount_per_person:,.2f} per member).")
+st.markdown("Tracks proportional monthly pools based on each member's custom contribution tier.")
 
 schedule = []
 current_date = start_dt
@@ -226,7 +280,11 @@ for i in range(num_members):
     month_lbl = f"Month {i+1}"
     recipient = members[i]
     payout_date = current_date + timedelta(weeks=4)
-    pool_amount = monthly_amount_per_person * num_members
+    
+    rec_monthly = member_tiers.get(recipient, base_monthly)
+    pool_amount = rec_monthly * num_members
+    fee_amount = pool_amount * (admin_fee_pct / 100.0)
+    net_pool_amount = pool_amount - fee_amount
     
     p_info = payout_status.get(month_lbl, {"status": "Waiting / Not Collected", "balance_left": 0.0})
     stat = p_info.get("status", "Waiting / Not Collected")
@@ -239,11 +297,16 @@ for i in range(num_members):
     else:
         display_status = "⏳ Waiting / Not Collected"
         
+    pool_text = f"GH₵ {pool_amount:,.2f}"
+    if admin_fee_pct > 0:
+        pool_text += f" (Net: {net_pool_amount:,.2f} after {admin_fee_pct}% fee)"
+
     schedule.append({
         "Month Block": month_lbl,
         "Recipient": recipient,
+        "Monthly Tier": f"GH₵ {rec_monthly:,.2f}",
         "Payout Date": format_date(payout_date),
-        "Total Pool": f"GH₵ {pool_amount:,.2f}",
+        "Total Pool": pool_text,
         "Collection Status": display_status
     })
     current_date = payout_date
@@ -251,14 +314,17 @@ for i in range(num_members):
 st.dataframe(schedule, use_container_width=True, hide_index=True)
 
 st.markdown("### 📊 Member Balances & Weekly Logs")
-st.markdown(f"Real-time view showing weekly breakdown (GH₵ {weekly_amount_per_person:,.2f}/wk to meet the GH₵ {monthly_amount_per_person:,.2f} monthly target).")
+st.markdown("Real-time view showing weekly breakdown and arrears based on each member's personal tier.")
 
 table_data = []
 for member in members:
+    m_monthly = member_tiers.get(member, base_monthly)
+    m_weekly = m_monthly / 4.0
+    
     member_payments = payments.get(member, {})
     paid_passed_weeks = sum(1 for w in range(1, current_elapsed_week + 1) if member_payments.get(str(w), False))
     unpaid_passed_weeks = current_elapsed_week - paid_passed_weeks
-    owing_amount = unpaid_passed_weeks * weekly_amount_per_person
+    owing_amount = unpaid_passed_weeks * m_weekly
     
     total_paid_all = sum(1 for w in range(1, total_weeks + 1) if member_payments.get(str(w), False))
     
@@ -269,7 +335,8 @@ for member in members:
     
     row = {
         "Member": member, 
-        "Total Paid": f"{total_paid_all} / {total_weeks} weeks", 
+        "Tier / Wk": f"GH₵ {m_weekly:,.2f}/wk",
+        "Total Paid": f"{total_paid_all} / {total_weeks} wks", 
         "Account Status": status_text
     }
     for w in range(1, total_weeks + 1):
