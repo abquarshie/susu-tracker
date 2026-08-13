@@ -145,7 +145,7 @@ if not payments or list(payments.keys()) != members:
 
 payout_status = saved_data.get("payout_status", {})
 if not payout_status:
-    payout_status = {f"Month {i+1}": {"amount_collected": 0.0, "balance_left": 0.0} for i in range(num_members)}
+    payout_status = {f"Month {i+1}": {"amount_collected": 0.0} for i in range(num_members)}
 
 # --- ADMIN ACTIONS (Only shown if password matches) ---
 if is_admin:
@@ -180,7 +180,7 @@ if is_admin:
     selected_month_label = st.sidebar.selectbox("Select Payout Turn", month_options)
     month_key = selected_month_label.split(" (")[0]
 
-    current_p_info = payout_status.get(month_key, {"amount_collected": 0.0, "balance_left": 0.0})
+    current_p_info = payout_status.get(month_key, {"amount_collected": 0.0})
     
     recipient_idx = int(month_key.split(" ")[1]) - 1
     recipient_name = members[recipient_idx]
@@ -188,13 +188,11 @@ if is_admin:
     max_possible_pool = rec_monthly * num_members
 
     input_collected = st.sidebar.number_input("Amount Collected (GH₵)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(max_possible_pool), step=50.0)
-    input_left = st.sidebar.number_input("Amount Left Behind (GH₵)", value=float(current_p_info.get("balance_left", 0.0)), min_value=0.0, max_value=float(max_possible_pool), step=50.0)
 
     if st.sidebar.button("Save Payout Amounts", type="secondary"):
         if month_key not in payout_status:
             payout_status[month_key] = {}
         payout_status[month_key]["amount_collected"] = input_collected
-        payout_status[month_key]["balance_left"] = input_left
         
         new_data = {
             "start_date": start_date_str,
@@ -237,7 +235,7 @@ for m in members:
 total_payouts_distributed = 0.0
 for i in range(num_members):
     m_lbl = f"Month {i+1}"
-    p_info = payout_status.get(m_lbl, {"amount_collected": 0.0, "balance_left": 0.0})
+    p_info = payout_status.get(m_lbl, {"amount_collected": 0.0})
     collected_amt = float(p_info.get("amount_collected", 0.0))
     total_payouts_distributed += collected_amt
 
@@ -261,18 +259,19 @@ for i in range(num_members):
     payout_date = current_date + timedelta(weeks=4)
     
     rec_monthly = member_tiers.get(recipient, base_monthly)
-    pool_amount = rec_monthly * num_members
+    full_pool_amount = rec_monthly * num_members
     
-    p_info = payout_status.get(month_lbl, {"amount_collected": 0.0, "balance_left": 0.0})
+    p_info = payout_status.get(month_lbl, {"amount_collected": 0.0})
     collected_amt = float(p_info.get("amount_collected", 0.0))
-    left_amt = float(p_info.get("balance_left", 0.0))
+    
+    # Total pool serves as the amount left (Full Pool minus Amount Collected)
+    remaining_pool = max(0.0, full_pool_amount - collected_amt)
 
     schedule.append({
         "Recipient": recipient,
         "Payout Date": format_date(payout_date),
-        "Total Pool": f"GH₵ {pool_amount:,.2f}",
-        "Amount Collected": f"GH₵ {collected_amt:,.2f}",
-        "Amount Left": f"GH₵ {left_amt:,.2f}"
+        "Total Pool": f"GH₵ {remaining_pool:,.2f}",
+        "Amount Collected": f"GH₵ {collected_amt:,.2f}"
     })
     current_date = payout_date
 
