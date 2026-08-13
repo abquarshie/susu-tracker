@@ -145,7 +145,7 @@ if not payments or list(payments.keys()) != members:
 
 payout_status = saved_data.get("payout_status", {})
 if not payout_status:
-    payout_status = {f"Month {i+1}": {"status": "Waiting / Not Collected", "balance_left": 0.0} for i in range(num_members)}
+    payout_status = {f"Month {i+1}": {"amount_collected": 0.0, "balance_left": 0.0} for i in range(num_members)}
 
 # --- ADMIN ACTIONS (Only shown if password matches) ---
 if is_admin:
@@ -180,27 +180,21 @@ if is_admin:
     selected_month_label = st.sidebar.selectbox("Select Payout Turn", month_options)
     month_key = selected_month_label.split(" (")[0]
 
-    current_p_info = payout_status.get(month_key, {"status": "Waiting / Not Collected", "balance_left": 0.0})
-    p_status_choice = st.sidebar.selectbox(
-        "Collection Status", 
-        ["Waiting / Not Collected", "Partially Collected", "Fully Collected"],
-        index=["Waiting / Not Collected", "Partially Collected", "Fully Collected"].index(current_p_info.get("status", "Waiting / Not Collected"))
-    )
-
+    current_p_info = payout_status.get(month_key, {"amount_collected": 0.0, "balance_left": 0.0})
+    
     recipient_idx = int(month_key.split(" ")[1]) - 1
     recipient_name = members[recipient_idx]
     rec_monthly = member_tiers.get(recipient_name, base_monthly)
-    member_full_pool = rec_monthly * num_members
+    max_possible_pool = rec_monthly * num_members
 
-    p_balance_left = 0.0
-    if p_status_choice == "Partially Collected":
-        p_balance_left = st.sidebar.number_input("Amount Left Behind (GH₵)", value=float(current_p_info.get("balance_left", 0.0)), min_value=0.0, max_value=float(member_full_pool))
+    input_collected = st.sidebar.number_input("Amount Collected (GH₵)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(max_possible_pool), step=50.0)
+    input_left = st.sidebar.number_input("Amount Left Behind (GH₵)", value=float(current_p_info.get("balance_left", 0.0)), min_value=0.0, max_value=float(max_possible_pool), step=50.0)
 
-    if st.sidebar.button("Save Payout Status", type="secondary"):
+    if st.sidebar.button("Save Payout Amounts", type="secondary"):
         if month_key not in payout_status:
             payout_status[month_key] = {}
-        payout_status[month_key]["status"] = p_status_choice
-        payout_status[month_key]["balance_left"] = p_balance_left
+        payout_status[month_key]["amount_collected"] = input_collected
+        payout_status[month_key]["balance_left"] = input_left
         
         new_data = {
             "start_date": start_date_str,
@@ -212,7 +206,7 @@ if is_admin:
             "payout_status": payout_status
         }
         save_data(new_data)
-        st.sidebar.success("Payout collection status updated!")
+        st.sidebar.success("Payout amounts updated!")
 
 # Auto-save settings state
 current_settings = {
@@ -243,18 +237,9 @@ for m in members:
 total_payouts_distributed = 0.0
 for i in range(num_members):
     m_lbl = f"Month {i+1}"
-    rec_name = members[i]
-    rec_monthly = member_tiers.get(rec_name, base_monthly)
-    full_pool = rec_monthly * num_members
-    
-    p_info = payout_status.get(m_lbl, {"status": "Waiting / Not Collected", "balance_left": 0.0})
-    stat = p_info.get("status", "Waiting / Not Collected")
-    left_amt = p_info.get("balance_left", 0.0)
-    
-    if stat == "Fully Collected":
-        total_payouts_distributed += full_pool
-    elif stat == "Partially Collected":
-        total_payouts_distributed += (full_pool - left_amt)
+    p_info = payout_status.get(m_lbl, {"amount_collected": 0.0, "balance_left": 0.0})
+    collected_amt = float(p_info.get("amount_collected", 0.0))
+    total_payouts_distributed += collected_amt
 
 total_cash_held = total_cash_collected - total_payouts_distributed
 
@@ -266,7 +251,7 @@ col3.metric("Program End Date", format_date(end_date))
 
 st.markdown("")
 st.markdown("### 📅 Payout Schedule & Recipients")
-st.markdown("Tracks payout rotation dates and pool amounts.")
+st.markdown("Tracks payout rotation dates and exact collection amounts.")
 
 schedule = []
 current_date = start_dt
@@ -278,23 +263,17 @@ for i in range(num_members):
     rec_monthly = member_tiers.get(recipient, base_monthly)
     pool_amount = rec_monthly * num_members
     
-    p_info = payout_status.get(month_lbl, {"status": "Waiting / Not Collected", "balance_left": 0.0})
-    stat = p_info.get("status", "Waiting / Not Collected")
-    left_amt = p_info.get("balance_left", 0.0)
-    
-    if stat == "Fully Collected":
-        display_status = "✅ Fully Collected"
-    elif stat == "Partially Collected":
-        display_status = f"⏳ Partial (GH₵ {left_amt:,.2f} left)"
-    else:
-        display_status = "⏳ Waiting / Not Collected"
+    p_info = payout_status.get(month_lbl, {"amount_collected": 0.0, "balance_left": 0.0})
+    collected_amt = float(p_info.get("amount_collected", 0.0))
+    left_amt = float(p_info.get("balance_left", 0.0))
 
     schedule.append({
         "Month Block": month_lbl,
         "Recipient": recipient,
         "Payout Date": format_date(payout_date),
         "Total Pool": f"GH₵ {pool_amount:,.2f}",
-        "Collection Status": display_status
+        "Amount Collected": f"GH₵ {collected_amt:,.2f}",
+        "Amount Left": f"GH₵ {left_amt:,.2f}"
     })
     current_date = payout_date
 
