@@ -62,7 +62,7 @@ def load_data():
     return {
         "start_date": "2026-08-17",
         "base_monthly_amount": 1000,
-        "admin_fee_amount": 0.0,
+        "admin_fee_percentage": 0.0,
         "names_input": "Alice, Bob, Charlie, Diana",
         "member_tiers": {},
         "payments": {},
@@ -95,7 +95,7 @@ if not is_admin:
 # Process core group variables from saved file
 start_date_str = saved_data["start_date"]
 base_monthly = float(saved_data.get("base_monthly_amount", 1000))
-admin_fee_amount = float(saved_data.get("admin_fee_amount", 0.0))
+admin_fee_percentage = float(saved_data.get("admin_fee_percentage", saved_data.get("admin_fee_amount", 0.0)))
 names_input = saved_data["names_input"]
 
 members = [n.strip() for n in names_input.split(",") if n.strip()]
@@ -116,7 +116,7 @@ if is_admin:
     st.sidebar.subheader("Edit Group Settings")
     start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
     base_monthly = st.sidebar.number_input("Standard Base Monthly Target (GH₵)", value=base_monthly, step=50.0)
-    admin_fee_amount = st.sidebar.number_input("Admin Holding Fee per Payout (GH₵)", value=admin_fee_amount, min_value=0.0, step=10.0)
+    admin_fee_percentage = st.sidebar.number_input("Admin Holding Fee per Payout (%)", value=admin_fee_percentage, min_value=0.0, max_value=100.0, step=0.5)
     names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=saved_data["names_input"])
     
     st.sidebar.markdown("---")
@@ -165,7 +165,7 @@ if is_admin:
         new_data = {
             "start_date": start_date_str,
             "base_monthly_amount": base_monthly,
-            "admin_fee_amount": admin_fee_amount,
+            "admin_fee_percentage": admin_fee_percentage,
             "names_input": names_input,
             "member_tiers": member_tiers,
             "payments": payments,
@@ -197,7 +197,7 @@ if is_admin:
         new_data = {
             "start_date": start_date_str,
             "base_monthly_amount": base_monthly,
-            "admin_fee_amount": admin_fee_amount,
+            "admin_fee_percentage": admin_fee_percentage,
             "names_input": names_input,
             "member_tiers": member_tiers,
             "payments": payments,
@@ -210,7 +210,7 @@ if is_admin:
 current_settings = {
     "start_date": start_date_str,
     "base_monthly_amount": base_monthly,
-    "admin_fee_amount": admin_fee_amount,
+    "admin_fee_percentage": admin_fee_percentage,
     "names_input": names_input,
     "member_tiers": member_tiers,
     "payments": payments,
@@ -245,7 +245,7 @@ total_cash_held = total_cash_collected - total_payouts_distributed
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Cash Held", f"GH₵ {total_cash_held:,.2f}")
 col2.metric("Group Size", f"{num_members} People")
-col3.metric("Program End Date", format_date(end_date))
+col3.metric("Admin Fee Rate", f"{admin_fee_percentage}%")
 
 st.markdown("")
 st.markdown("### 📅 Payout")
@@ -259,12 +259,13 @@ for i in range(num_members):
     payout_date = current_date + timedelta(weeks=4)
     
     rec_monthly = member_tiers.get(recipient, base_monthly)
-    full_pool_amount = rec_monthly * num_members
+    gross_pool = rec_monthly * num_members
+    admin_fee_val = gross_pool * (admin_fee_percentage / 100.0)
+    full_pool_amount = gross_pool - admin_fee_val
     
     p_info = payout_status.get(month_lbl, {"amount_collected": 0.0})
     collected_amt = float(p_info.get("amount_collected", 0.0))
     
-    # Total pool serves as the amount left (Full Pool minus Amount Collected)
     remaining_pool = max(0.0, full_pool_amount - collected_amt)
 
     schedule.append({
