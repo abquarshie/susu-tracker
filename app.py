@@ -81,6 +81,17 @@ st.title("Group Savings Dashboard")
 st.markdown("Track flexible contributions, total cash held, and payout rotations easily.")
 st.markdown("---")
 
+# --- ADMIN SECURITY LOGIN IN SIDEBAR ---
+st.sidebar.header("⚙️ Admin Panel")
+admin_password_input = st.sidebar.text_input("Admin Passcode", type="password", placeholder="Enter passcode to edit")
+
+ADMIN_SECRET = "Susu2026" 
+is_admin = (admin_password_input == ADMIN_SECRET)
+
+if not is_admin:
+    st.sidebar.markdown("---")
+    st.sidebar.info("🔒 **View-Only Mode**\n\nEnter the correct Admin Passcode above to unlock settings and record payments.")
+
 # Process core group variables from saved file
 start_date_str = saved_data["start_date"]
 base_monthly = float(saved_data.get("base_monthly_amount", 1000))
@@ -91,7 +102,7 @@ members = [n.strip() for n in names_input.split(",") if n.strip()]
 num_members = len(members)
 
 if num_members < 2:
-    st.error("⚠️ Please enter at least 2 participant names.")
+    st.error("⚠️ Please enter at least 2 participant names in the sidebar.")
     st.stop()
 
 # Initialize or clean member tiers dictionary
@@ -100,31 +111,21 @@ for m in members:
     if m not in member_tiers:
         member_tiers[m] = base_monthly
 
-# --- SIMPLIFIED ADMIN ACCESS VIA COLLAPSIBLE EXPANDER ---
-ADMIN_SECRET = "Susu2026" 
-
-with st.expander("⚙️ Admin Panel & Advanced Settings (Passcode Required)", expanded=False):
-    admin_password_input = st.text_input("Admin Passcode", type="password", placeholder="Enter passcode to unlock admin tools")
-    is_admin = (admin_password_input == ADMIN_SECRET)
-
-    if not is_admin:
-        st.info("🔒 Enter the correct passcode above to edit settings, record weekly payments, or log payouts.")
-    else:
-        st.success("✅ Admin mode unlocked!")
-        st.markdown("---")
-        st.subheader("Edit Group Settings")
-        start_date_str = st.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
-        base_monthly = st.number_input("Standard Base Monthly Target (GH₵)", value=base_monthly, step=50.0)
-        admin_fee_amount = st.number_input("Admin Holding Fee Amount per Payout (GH₵)", value=admin_fee_amount, min_value=0.0, step=10.0)
-        names_input = st.text_area("Participant Names (comma-separated)", value=saved_data["names_input"])
-        
-        st.markdown("---")
-        st.subheader("Custom Monthly Tiers per Member")
-        updated_tiers = {}
-        for m in members:
-            current_val = float(member_tiers.get(m, base_monthly))
-            updated_tiers[m] = st.number_input(f"{m}'s Monthly Contribution (GH₵)", value=current_val, step=50.0, key=f"tier_{m}")
-        member_tiers = updated_tiers
+if is_admin:
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Edit Group Settings")
+    start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
+    base_monthly = st.sidebar.number_input("Standard Base Monthly Target (GH₵)", value=base_monthly, step=50.0)
+    admin_fee_amount = st.sidebar.number_input("Admin Holding Fee per Payout (GH₵)", value=admin_fee_amount, min_value=0.0, step=10.0)
+    names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=saved_data["names_input"])
+    
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Custom Monthly Tiers per Member")
+    updated_tiers = {}
+    for m in members:
+        current_val = float(member_tiers.get(m, base_monthly))
+        updated_tiers[m] = st.sidebar.number_input(f"{m}'s Monthly Contribution (GH₵)", value=current_val, step=50.0, key=f"tier_{m}")
+    member_tiers = updated_tiers
 
 total_months = num_members
 total_weeks = total_months * 4  # 4 weeks per month block
@@ -146,73 +147,72 @@ payout_status = saved_data.get("payout_status", {})
 if not payout_status:
     payout_status = {f"Month {i+1}": {"status": "Waiting / Not Collected", "balance_left": 0.0} for i in range(num_members)}
 
-# --- ADMIN ACTIONS (Only active if unlocked inside expander) ---
+# --- ADMIN ACTIONS (Only shown if password matches) ---
 if is_admin:
-    with st.expander("📝 Record Payments & Payouts (Admin Only)", expanded=True):
-        st.subheader("Record Weekly Payment")
-        selected_member = st.selectbox("Select Member", members, key="sel_mem")
-        selected_week = st.selectbox("Select Week Number", list(range(1, total_weeks + 1)), key="sel_wk")
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Record Weekly Payment")
+    selected_member = st.sidebar.selectbox("Select Member", members)
+    selected_week = st.sidebar.selectbox("Select Week Number", list(range(1, total_weeks + 1)))
 
-        current_w_status = payments.get(selected_member, {}).get(str(selected_week), False)
-        weekly_check = st.checkbox(f"Has {selected_member} paid for Week {selected_week}?", value=current_w_status, key="chk_wk")
+    current_w_status = payments.get(selected_member, {}).get(str(selected_week), False)
+    weekly_check = st.sidebar.checkbox(f"Has {selected_member} paid for Week {selected_week}?", value=current_w_status)
 
-        if st.button("Save Weekly Payment", type="primary"):
-            if selected_member not in payments:
-                payments[selected_member] = {}
-            payments[selected_member][str(selected_week)] = weekly_check
-            
-            new_data = {
-                "start_date": start_date_str,
-                "base_monthly_amount": base_monthly,
-                "admin_fee_amount": admin_fee_amount,
-                "names_input": names_input,
-                "member_tiers": member_tiers,
-                "payments": payments,
-                "payout_status": payout_status
-            }
-            save_data(new_data)
-            st.success("Weekly payment updated successfully!")
+    if st.sidebar.button("Save Weekly Payment", type="primary"):
+        if selected_member not in payments:
+            payments[selected_member] = {}
+        payments[selected_member][str(selected_week)] = weekly_check
+        
+        new_data = {
+            "start_date": start_date_str,
+            "base_monthly_amount": base_monthly,
+            "admin_fee_amount": admin_fee_amount,
+            "names_input": names_input,
+            "member_tiers": member_tiers,
+            "payments": payments,
+            "payout_status": payout_status
+        }
+        save_data(new_data)
+        st.sidebar.success("Weekly payment updated!")
 
-        st.markdown("---")
-        st.subheader("Record Payout Collection")
-        month_options = [f"Month {i+1} ({members[i]})" for i in range(num_members)]
-        selected_month_label = st.selectbox("Select Payout Turn", month_options, key="sel_m_opt")
-        month_key = selected_month_label.split(" (")[0]
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Record Payout Collection")
+    month_options = [f"Month {i+1} ({members[i]})" for i in range(num_members)]
+    selected_month_label = st.sidebar.selectbox("Select Payout Turn", month_options)
+    month_key = selected_month_label.split(" (")[0]
 
-        current_p_info = payout_status.get(month_key, {"status": "Waiting / Not Collected", "balance_left": 0.0})
-        p_status_choice = st.selectbox(
-            "Collection Status", 
-            ["Waiting / Not Collected", "Partially Collected", "Fully Collected"],
-            index=["Waiting / Not Collected", "Partially Collected", "Fully Collected"].index(current_p_info.get("status", "Waiting / Not Collected")),
-            key="sel_stat"
-        )
+    current_p_info = payout_status.get(month_key, {"status": "Waiting / Not Collected", "balance_left": 0.0})
+    p_status_choice = st.sidebar.selectbox(
+        "Collection Status", 
+        ["Waiting / Not Collected", "Partially Collected", "Fully Collected"],
+        index=["Waiting / Not Collected", "Partially Collected", "Fully Collected"].index(current_p_info.get("status", "Waiting / Not Collected"))
+    )
 
-        recipient_idx = int(month_key.split(" ")[1]) - 1
-        recipient_name = members[recipient_idx]
-        rec_monthly = member_tiers.get(recipient_name, base_monthly)
-        member_full_pool = rec_monthly * num_members
+    recipient_idx = int(month_key.split(" ")[1]) - 1
+    recipient_name = members[recipient_idx]
+    rec_monthly = member_tiers.get(recipient_name, base_monthly)
+    member_full_pool = rec_monthly * num_members
 
-        p_balance_left = 0.0
-        if p_status_choice == "Partially Collected":
-            p_balance_left = st.number_input("Amount Left Behind (GH₵)", value=float(current_p_info.get("balance_left", 0.0)), min_value=0.0, max_value=float(member_full_pool), key="num_left")
+    p_balance_left = 0.0
+    if p_status_choice == "Partially Collected":
+        p_balance_left = st.sidebar.number_input("Amount Left Behind (GH₵)", value=float(current_p_info.get("balance_left", 0.0)), min_value=0.0, max_value=float(member_full_pool))
 
-        if st.button("Save Payout Status", type="secondary"):
-            if month_key not in payout_status:
-                payout_status[month_key] = {}
-            payout_status[month_key]["status"] = p_status_choice
-            payout_status[month_key]["balance_left"] = p_balance_left
-            
-            new_data = {
-                "start_date": start_date_str,
-                "base_monthly_amount": base_monthly,
-                "admin_fee_amount": admin_fee_amount,
-                "names_input": names_input,
-                "member_tiers": member_tiers,
-                "payments": payments,
-                "payout_status": payout_status
-            }
-            save_data(new_data)
-            st.success("Payout collection status updated successfully!")
+    if st.sidebar.button("Save Payout Status", type="secondary"):
+        if month_key not in payout_status:
+            payout_status[month_key] = {}
+        payout_status[month_key]["status"] = p_status_choice
+        payout_status[month_key]["balance_left"] = p_balance_left
+        
+        new_data = {
+            "start_date": start_date_str,
+            "base_monthly_amount": base_monthly,
+            "admin_fee_amount": admin_fee_amount,
+            "names_input": names_input,
+            "member_tiers": member_tiers,
+            "payments": payments,
+            "payout_status": payout_status
+        }
+        save_data(new_data)
+        st.sidebar.success("Payout collection status updated!")
 
 # Auto-save settings state
 current_settings = {
@@ -258,7 +258,7 @@ for i in range(num_members):
 
 total_cash_held = total_cash_collected - total_payouts_distributed
 
-# Top Metrics Overview (Total Cash Held featured prominently)
+# Top Metrics Overview
 col1, col2, col3 = st.columns(3)
 col1.metric("Total Cash Held", f"GH₵ {total_cash_held:,.2f}")
 col2.metric("Group Size", f"{num_members} People")
@@ -266,7 +266,7 @@ col3.metric("Program End Date", format_date(end_date))
 
 st.markdown("")
 st.markdown("### 📅 Payout Schedule & Recipients")
-st.markdown("Tracks proportional monthly pools based on each member's custom contribution tier.")
+st.markdown("Tracks payout rotation dates and pool amounts.")
 
 schedule = []
 current_date = start_dt
@@ -277,7 +277,6 @@ for i in range(num_members):
     
     rec_monthly = member_tiers.get(recipient, base_monthly)
     pool_amount = rec_monthly * num_members
-    net_pool_amount = pool_amount - admin_fee_amount
     
     p_info = payout_status.get(month_lbl, {"status": "Waiting / Not Collected", "balance_left": 0.0})
     stat = p_info.get("status", "Waiting / Not Collected")
@@ -289,25 +288,20 @@ for i in range(num_members):
         display_status = f"⏳ Partial (GH₵ {left_amt:,.2f} left)"
     else:
         display_status = "⏳ Waiting / Not Collected"
-        
-    pool_text = f"GH₵ {pool_amount:,.2f}"
-    if admin_fee_amount > 0:
-        pool_text += f" (Net: GH₵ {net_pool_amount:,.2f} after GH₵ {admin_fee_amount:,.2f} fee)"
 
     schedule.append({
         "Month Block": month_lbl,
         "Recipient": recipient,
-        "Monthly Tier": f"GH₵ {rec_monthly:,.2f}",
         "Payout Date": format_date(payout_date),
-        "Total Pool": pool_text,
+        "Total Pool": f"GH₵ {pool_amount:,.2f}",
         "Collection Status": display_status
     })
     current_date = payout_date
 
 st.dataframe(schedule, use_container_width=True, hide_index=True)
 
-st.markdown("### 📊 Member Balances & Weekly Logs")
-st.markdown("Real-time view showing weekly breakdown and arrears based on each member's personal tier.")
+st.markdown("### 📊 Member Balances & Contribution Summary")
+st.markdown("Overview of member contribution tiers and payment statuses.")
 
 table_data = []
 for member in members:
@@ -328,15 +322,14 @@ for member in members:
     
     row = {
         "Member": member, 
-        "Tier / Wk": f"GH₵ {m_weekly:,.2f}/wk",
-        "Total Paid": f"{total_paid_all} / {total_weeks} wks", 
-        "Account Status": status_text
+        "Monthly Tier": f"GH₵ {m_monthly:,.2f}",
+        "Weekly Target": f"GH₵ {m_weekly:,.2f} / wk",
+        "Progress": f"{total_paid_all} / {total_weeks} weeks paid",
+        "Status": status_text
     }
-    for w in range(1, total_weeks + 1):
-        row[f"W{w}"] = "Paid" if member_payments.get(str(w), False) else "-"
     table_data.append(row)
 
 st.dataframe(table_data, use_container_width=True, hide_index=True)
 
 st.markdown("---")
-st.caption("🔒 *Note: This dashboard is simplified for participants. Administrative passcode required only for updating records or settings.*")
+st.caption("🔒 *Note: This dashboard is simplified for participants. Administrative passcode required only in the sidebar for updating records or settings.*")
