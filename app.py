@@ -278,7 +278,7 @@ for i in range(num_members):
 
 st.dataframe(schedule, use_container_width=True, hide_index=True)
 
-st.markdown("### 📊 Contributions")
+st.markdown("### 📊 Contribution")
 st.markdown("Overview of member contribution tiers and payment statuses.")
 
 table_data = []
