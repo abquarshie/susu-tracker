@@ -250,7 +250,7 @@ col2.metric("Group Size", f"{num_members} People")
 col3.metric("Program End Date", format_date(end_date))
 
 st.markdown("")
-st.markdown("### 📅 Payout Schedule & Recipients")
+st.markdown("### 📅 Payout")
 st.markdown("Tracks payout rotation dates and exact collection amounts.")
 
 schedule = []
@@ -268,7 +268,6 @@ for i in range(num_members):
     left_amt = float(p_info.get("balance_left", 0.0))
 
     schedule.append({
-        "Month Block": month_lbl,
         "Recipient": recipient,
         "Payout Date": format_date(payout_date),
         "Total Pool": f"GH₵ {pool_amount:,.2f}",
@@ -279,7 +278,7 @@ for i in range(num_members):
 
 st.dataframe(schedule, use_container_width=True, hide_index=True)
 
-st.markdown("### 📊 Member Balances & Contribution Summary")
+st.markdown("### 📊 Contributions")
 st.markdown("Overview of member contribution tiers and payment statuses.")
 
 table_data = []
