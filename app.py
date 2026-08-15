@@ -432,12 +432,47 @@ buf.write("\n🎁 *PAYOUTS*\n")
 for r in wa_payout_rows:
     buf.write(f"{r['recipient']} · {r['date']} · GHS {r['balance']}\n")
 
-st.download_button(
-    label="📥 Download WhatsApp Update",
-    data=buf.getvalue(),
-    file_name=f"Susu_W{current_elapsed_week}.txt",
-    mime="text/plain",
-)
+col_dl1, col_dl2 = st.columns(2)
+with col_dl1:
+    st.download_button(
+        label="📥 Weekly Update",
+        data=buf.getvalue(),
+        file_name=f"Susu_W{current_elapsed_week}.txt",
+        mime="text/plain",
+    )
+
+# ── onboarding export ─────────────────────────────────────────────────────────
+ob = io.StringIO()
+ob.write("📋 *SUSU GROUP — ONBOARDING DETAILS*\n")
+ob.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
+ob.write("👤 *MEMBER DETAILS*\n")
+for member in members:
+    m_monthly = st.session_state.member_tiers.get(member, st.session_state.base_monthly)
+    m_weekly  = m_monthly / 4.0
+    ob.write(f"*{member}*\n")
+    ob.write(f"  • Monthly Tier: GHS {fmt_num(m_monthly)}\n")
+    ob.write(f"  • Weekly Target: GHS {fmt_num(m_weekly)}\n\n")
+ob.write("🎁 *PAYOUT SCHEDULE*\n")
+cur_date = start_dt
+for i in range(num_members):
+    recipient    = members[i]
+    payout_date  = cur_date + timedelta(weeks=4)
+    rec_monthly  = st.session_state.member_tiers.get(recipient, st.session_state.base_monthly)
+    gross_pool   = rec_monthly * num_members
+    admin_fee_v  = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
+    net_pool_amt = gross_pool - admin_fee_v
+    ob.write(f"*Month {i+1} — {recipient}*\n")
+    ob.write(f"  • Payout Date: {format_date(payout_date)}\n")
+    ob.write(f"  • Net Pool: GHS {fmt_num(net_pool_amt)}\n\n")
+    cur_date = payout_date
+
+with col_dl2:
+    st.download_button(
+        label="📋 Onboarding Details",
+        data=ob.getvalue(),
+        file_name="Susu_Onboarding.txt",
+        mime="text/plain",
+    )
 
 
 # ── admin panel ───────────────────────────────────────────────────────────────
