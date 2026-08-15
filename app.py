@@ -4,13 +4,11 @@ import pandas as pd
 import io
 import json
 import os
-import time
 
 st.set_page_config(
     page_title="Susu Savings",
     page_icon="💸",
-    layout="centered",
-    initial_sidebar_state="expanded"
+    layout="centered"
 )
 
 st.markdown("""
@@ -78,6 +76,25 @@ st.markdown("""
         color: #38bdf8;
     }
 
+    /* Main Dashboard Interactive Tiles */
+    .dashboard-tile-normal {
+        background: #161d27;
+        border: 1px solid #1e2d3d;
+        border-radius: 14px;
+        padding: 20px 24px;
+        margin-bottom: 20px;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    .dashboard-tile-hidden {
+        background: transparent !important;
+        border-color: transparent !important;
+        margin-bottom: 20px;
+        padding: 20px 24px;
+    }
+    .dashboard-tile-hidden * {
+        opacity: 0.15;
+    }
+
     /* Section headers */
     .section-eyebrow {
         font-size: 10px;
@@ -132,39 +149,22 @@ st.markdown("""
         border: 1px solid #1e2d3d;
     }
 
-    /* Sidebar container cards */
-    section[data-testid="stSidebar"] { background: #0d1117 !important; }
-    section[data-testid="stSidebar"] * { color: #94a3b8 !important; }
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3 { color: #e2e8f0 !important; }
-    
-    .sidebar-card {
-        background: #161d27;
-        border: 1px solid #1e2d3d;
-        border-radius: 12px;
-        padding: 14px 16px;
-        margin-bottom: 14px;
-    }
-
-    section[data-testid="stSidebar"] .stTextInput input,
-    section[data-testid="stSidebar"] .stNumberInput input,
-    section[data-testid="stSidebar"] .stTextArea textarea {
-        background: #0d1117 !important;
+    /* Inputs & Buttons globally */
+    .stTextInput input, .stNumberInput input, .stTextArea textarea {
+        background: #161d27 !important;
         border: 1px solid #1e2d3d !important;
         color: #e2e8f0 !important;
         border-radius: 8px !important;
     }
-    section[data-testid="stSidebar"] .stButton > button {
+    .stButton > button {
         background: #1d4ed8 !important;
         color: white !important;
         border: none !important;
         border-radius: 8px !important;
         font-weight: 600 !important;
         font-size: 13px !important;
-        width: 100%;
     }
-    section[data-testid="stSidebar"] .stCheckbox label { color: #94a3b8 !important; }
+    .stCheckbox label { color: #94a3b8 !important; }
 
     /* Footer */
     .footer-note {
@@ -230,6 +230,15 @@ if "initialized" not in st.session_state:
         st.session_state.payout_status = {}
     st.session_state.initialized = True
 
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if "payment_saved" not in st.session_state:
+    st.session_state.payment_saved = False
+
+if "payout_saved" not in st.session_state:
+    st.session_state.payout_saved = False
+
 def persist_current_state():
     save_data({
         "start_date": st.session_state.start_date,
@@ -242,8 +251,30 @@ def persist_current_state():
     })
 
 
-# --- SIDEBAR ---
-st.sidebar.header("⚙️ Group Setup & Logs")
+# --- PASSWORD PROTECTION SCREEN ---
+if not st.session_state.authenticated:
+    st.markdown("""
+        <div class="page-header" style="max-width: 400px; margin: 80px auto 20px auto; text-align: center;">
+            <h1>🔒 Admin Access</h1>
+            <p>Enter your password to unlock the management dashboard</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    col_l, col_m, col_r = st.columns([1, 1.2, 1])
+    with col_m:
+        pwd_input = st.text_input("Password", type="password", key="admin_pwd")
+        if st.button("Unlock Dashboard", use_container_width=True):
+            # Change "admin123" to whatever default password you prefer
+            if pwd_input == "admin123":
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("Incorrect password.")
+    st.stop()
+
+
+# --- SIDEBAR (Global Group Settings & Configuration) ---
+st.sidebar.header("⚙️ Configuration")
 
 with st.sidebar.expander("Group Settings", expanded=False):
     start_date_str = st.text_input("Start Date (YYYY-MM-DD)", value=st.session_state.start_date)
@@ -281,6 +312,10 @@ with st.sidebar.expander("Custom Monthly Tiers", expanded=False):
         st.success("Tiers saved successfully!")
         st.rerun()
 
+if st.sidebar.button("Lock Dashboard"):
+    st.session_state.authenticated = False
+    st.rerun()
+
 total_weeks = num_members * 4
 
 try:
@@ -296,48 +331,6 @@ if not st.session_state.payments or list(st.session_state.payments.keys()) != me
 
 if not st.session_state.payout_status:
     st.session_state.payout_status = {f"Month {i+1}": {"amount_collected": 0.0} for i in range(num_members)}
-
-st.sidebar.markdown("---")
-
-# --- SAVE PAYMENT TILE ---
-st.sidebar.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
-st.sidebar.subheader("Record Weekly Payment")
-selected_member = st.sidebar.selectbox("Member", members, key="pay_member")
-selected_week = st.sidebar.selectbox("Week", list(range(1, total_weeks + 1)), key="pay_week")
-current_w_status = st.session_state.payments.get(selected_member, {}).get(str(selected_week), False)
-weekly_check = st.sidebar.checkbox(f"Week {selected_week} paid?", value=current_w_status, key="pay_check")
-
-if st.sidebar.button("Save Payment"):
-    st.session_state.payments[selected_member][str(selected_week)] = weekly_check
-    persist_current_state()
-    st.success(f"Saved Week {selected_week} for {selected_member}!")
-    time.sleep(0.5)
-    st.rerun()
-st.sidebar.markdown('</div>', unsafe_allow_html=True)
-
-
-# --- SAVE PAYOUT TILE ---
-st.sidebar.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
-st.sidebar.subheader("Record Payout")
-month_options = [f"Month {i+1} — {members[i]}" for i in range(num_members)]
-selected_month_label = st.sidebar.selectbox("Payout Turn", month_options, key="payout_month_label")
-month_key = selected_month_label.split(" —")[0]
-current_p_info = st.session_state.payout_status.get(month_key, {"amount_collected": 0.0})
-recipient_idx = int(month_key.split(" ")[1]) - 1
-recipient_name = members[recipient_idx]
-rec_monthly = st.session_state.member_tiers.get(recipient_name, st.session_state.base_monthly)
-gross_pool = rec_monthly * num_members
-fee_val = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
-net_pool = gross_pool - fee_val
-input_collected = st.sidebar.number_input("Amount Collected (GHS)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(net_pool), step=50.0, key="payout_amount_input")
-
-if st.sidebar.button("Save Payout"):
-    st.session_state.payout_status[month_key]["amount_collected"] = input_collected
-    persist_current_state()
-    st.success(f"Saved payout collection for {month_key}!")
-    time.sleep(0.5)
-    st.rerun()
-st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 
 # --- CALCULATIONS ---
@@ -361,7 +354,7 @@ total_payouts_distributed = sum(
 total_cash_held = total_cash_collected - total_payouts_distributed
 
 
-# --- MAIN VIEW ---
+# --- MAIN VIEW HEADER & METRICS ---
 st.markdown(f"""
     <div class="page-header">
         <h1>💸 Susu Savings Dashboard</h1>
@@ -386,6 +379,55 @@ st.markdown(f"""
         </div>
     </div>
 """, unsafe_allow_html=True)
+
+
+# --- MAIN DASHBOARD INTERACTIVE TILES ---
+st.markdown('<p class="section-eyebrow">Actions</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-heading">Record Transactions</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-sub">Update weekly member contributions and turn payouts directly below</p>', unsafe_allow_html=True)
+
+col_tile1, col_tile2 = st.columns(2)
+
+# --- PAYMENT TILE (MAIN) ---
+with col_tile1:
+    pay_tile_class = "dashboard-tile-hidden" if st.session_state.payment_saved else "dashboard-tile-normal"
+    st.markdown(f'<div class="{pay_tile_class}">', unsafe_allow_html=True)
+    st.subheader("📥 Record Weekly Payment")
+    selected_member = st.selectbox("Member", members, key="main_pay_member", on_change=lambda: st.session_state.update({"payment_saved": False}))
+    selected_week = st.selectbox("Week", list(range(1, total_weeks + 1)), key="main_pay_week", on_change=lambda: st.session_state.update({"payment_saved": False}))
+    current_w_status = st.session_state.payments.get(selected_member, {}).get(str(selected_week), False)
+    weekly_check = st.checkbox(f"Week {selected_week} paid?", value=current_w_status, key="main_pay_chk", on_change=lambda: st.session_state.update({"payment_saved": False}))
+
+    if st.button("Save Payment", key="main_btn_save_pay"):
+        st.session_state.payments[selected_member][str(selected_week)] = weekly_check
+        st.session_state.payment_saved = True
+        persist_current_state()
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# --- PAYOUT TILE (MAIN) ---
+with col_tile2:
+    payout_tile_class = "dashboard-tile-hidden" if st.session_state.payout_saved else "dashboard-tile-normal"
+    st.markdown(f'<div class="{payout_tile_class}">', unsafe_allow_html=True)
+    st.subheader("📤 Record Payout")
+    month_options = [f"Month {i+1} — {members[i]}" for i in range(num_members)]
+    selected_month_label = st.selectbox("Payout Turn", month_options, key="main_payout_turn", on_change=lambda: st.session_state.update({"payout_saved": False}))
+    month_key = selected_month_label.split(" —")[0]
+    current_p_info = st.session_state.payout_status.get(month_key, {"amount_collected": 0.0})
+    recipient_idx = int(month_key.split(" ")[1]) - 1
+    recipient_name = members[recipient_idx]
+    rec_monthly = st.session_state.member_tiers.get(recipient_name, st.session_state.base_monthly)
+    gross_pool = rec_monthly * num_members
+    fee_val = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
+    net_pool = gross_pool - fee_val
+    input_collected = st.number_input("Amount Collected (GHS)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(net_pool), step=50.0, key="main_payout_amt", on_change=lambda: st.session_state.update({"payout_saved": False}))
+
+    if st.button("Save Payout", key="main_btn_save_payout"):
+        st.session_state.payout_status[month_key]["amount_collected"] = input_collected
+        st.session_state.payout_saved = True
+        persist_current_state()
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # --- BUILD DATA ---
