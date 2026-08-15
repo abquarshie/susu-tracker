@@ -8,7 +8,7 @@ st.set_page_config(
     page_title="Susu Savings", 
     page_icon="💸", 
     layout="centered",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # Modern UI Styling with Clean Cards, Smooth Fonts, and Hidden Streamlit Decor
@@ -280,9 +280,12 @@ for i in range(num_members):
 
 total_cash_held = total_cash_collected - total_payouts_distributed
 
-# Quick helper button for mobile users to open sidebar
-if st.button("Open Admin Panel"):
-    st.info("👆 Look at the very top-left corner of your browser window to see if the sidebar panel slid open!")
+# Main App Header / Expander to open Admin Panel directly on mobile views
+with st.expander("⚙️ Admin Panel Access (Tap to Open)", expanded=False):
+    st.info("Since mobile browsers hide the top-left sidebar button, use the toggle options below or enter your passcode directly in the sidebar settings if visible.")
+    mobile_passcode = st.text_input("Enter Admin Passcode to Unlock", type="password", key="mobile_admin_pass")
+    if mobile_passcode == ADMIN_SECRET:
+        st.success("Passcode accepted! Scroll down or check your sidebar to edit settings.")
 
 # Compact Combined Metric Card with Title Included Inside
 st.markdown(f"""
