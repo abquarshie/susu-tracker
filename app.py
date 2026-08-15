@@ -207,16 +207,6 @@ for i in range(num_members):
 
 total_cash_held = total_cash_collected - total_payouts_distributed
 
-# Determine current active collector based on dates
-current_active_collector = "None (Between cycles)"
-cycle_date = start_dt
-for i in range(num_members):
-    payout_date = cycle_date + timedelta(weeks=4)
-    if cycle_date <= today <= payout_date:
-        current_active_collector = members[i]
-        break
-    cycle_date = payout_date
-
 # --- MAIN DASHBOARD VIEW ---
 st.markdown(f"""
     <div class="metric-card">
@@ -238,9 +228,11 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# Build table records
+# Build table records and text report data
 schedule_data = []
+whatsapp_payout_rows = []
 current_date = start_dt
+
 for i in range(num_members):
     month_lbl = f"Month {i+1}"
     recipient = members[i]
@@ -260,10 +252,17 @@ for i in range(num_members):
         "Total Pool": f"GHS {fmt_num(remaining_pool)}",
         "Amount Collected": f"GHS {fmt_num(collected_amt)}"
     })
+    
+    whatsapp_payout_rows.append({
+        "recipient": recipient,
+        "date": format_date(payout_date),
+        "balance": fmt_num(remaining_pool)
+    })
+    
     current_date = payout_date
 
 contrib_data = []
-summary_rows = []
+whatsapp_contrib_rows = []
 for member in members:
     m_monthly = st.session_state.member_tiers.get(member, st.session_state.base_monthly)
     m_weekly = m_monthly / 4.0
@@ -286,33 +285,37 @@ for member in members:
         "Status": status_text
     })
     
-    summary_rows.append({
-        "Member": member,
-        "Week Status": week_status,
-        "Account Standing": status_text
+    whatsapp_contrib_rows.append({
+        "member": member,
+        "week_status": week_status,
+        "standing": status_text
     })
 
 df_sched = pd.DataFrame(schedule_data)
 df_contrib = pd.DataFrame(contrib_data)
 
-# --- REVISED SIMPLIFIED TEXT REPORT DOWNLOAD ---
+# --- EMOJI-RICH WHATSAPP TEXT REPORT DOWNLOAD ---
 st.markdown("### Weekly Standings Text Report")
-st.info("Download a simple text summary showing total cash at hand, who is collecting, who has paid this week, and who is owing.")
+st.info("Download the emoji-styled text update for WhatsApp, featuring total cash at hand, member weekly statuses, and each member's payout schedule with remaining pool balances.")
 
 report_buffer = io.StringIO()
-report_buffer.write(f"--- SUSU WEEKLY UPDATE (WEEK {current_elapsed_week}) ---\n")
-report_buffer.write(f"Date: {datetime.today().strftime('%Y-%m-%d')}\n")
-report_buffer.write(f"Total Cash at Hand: GHS {fmt_num(total_cash_held)}\n")
-report_buffer.write(f"Collecting This Period: {current_active_collector}\n\n")
+report_buffer.write(f"📊 *SUSU WEEKLY UPDATE (WEEK {current_elapsed_week})* 📊\n")
+report_buffer.write(f"📅 Date: {datetime.today().strftime('%Y-%m-%d')}\n")
+report_buffer.write(f"💰 *Total Cash at Hand:* GHS {fmt_num(total_cash_held)}\n\n")
 
-report_buffer.write("--- MEMBER STATUS ---\n")
-for row in summary_rows:
-    report_buffer.write(f"- {row['Member']}: {row['Week Status']} | {row['Account Standing']}\n")
+report_buffer.write("👥 *MEMBER STATUS* 👥\n")
+for row in whatsapp_contrib_rows:
+    icon = "✅" if "Paid" in row["week_status"] else "❌"
+    report_buffer.write(f"• {row['member']}: {icon} {row['week_status']} | 📌 {row['standing']}\n")
+
+report_buffer.write("\n🎁 *PAYOUT SCHEDULE & POOL BALANCE* 🎁\n")
+for prow in whatsapp_payout_rows:
+    report_buffer.write(f"• *{prow['recipient']}* ➔ Date: {prow['date']} | Balance Pool: GHS {prow['balance']}\n")
 
 st.download_button(
-    label="📥 Download Simple Weekly Update (WhatsApp Ready)",
+    label="📥 Download WhatsApp Update (Emoji Styled)",
     data=report_buffer.getvalue(),
-    file_name=f"Susu_Update_Week_{current_elapsed_week}.txt",
+    file_name=f"Susu_WhatsApp_Update_Week_{current_elapsed_week}.txt",
     mime="text/plain",
     type="primary"
 )
