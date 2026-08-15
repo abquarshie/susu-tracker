@@ -2,6 +2,8 @@ import streamlit as st
 from datetime import datetime, timedelta
 import pandas as pd
 import io
+import json
+import os
 
 # Page Configuration
 st.set_page_config(
@@ -87,16 +89,58 @@ def format_date(dt):
         suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
     return f"{day}{suffix} {dt.strftime('%b %Y')}"
 
-# --- INITIALIZE SESSION STATE ---
+# --- FILE PERSISTENCE HELPERS ---
+DATA_FILE = "susu_data.json"
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return None
+
+def save_data(data_dict):
+    try:
+        with open(DATA_FILE, "w") as f:
+            json.dump(data_dict, f, indent=4)
+    except Exception as e:
+        st.error(f"Error saving data: {e}")
+
+# --- INITIALIZE SESSION STATE WITH PERSISTENCE ---
+saved_state = load_data()
+
 if "initialized" not in st.session_state:
-    st.session_state.start_date = "2026-08-17"
-    st.session_state.base_monthly = 1000
-    st.session_state.admin_fee_percentage = 0.0
-    st.session_state.names_input = "Alice, Bob, Charlie, Diana, Frank, Grace"
-    st.session_state.member_tiers = {}
-    st.session_state.payments = {}
-    st.session_state.payout_status = {}
+    if saved_state:
+        st.session_state.start_date = saved_state.get("start_date", "2026-08-17")
+        st.session_state.base_monthly = saved_state.get("base_monthly", 1000)
+        st.session_state.admin_fee_percentage = saved_state.get("admin_fee_percentage", 0.0)
+        st.session_state.names_input = saved_state.get("names_input", "Alice, Bob, Charlie, Diana, Frank, Grace")
+        st.session_state.member_tiers = saved_state.get("member_tiers", {})
+        st.session_state.payments = saved_state.get("payments", {})
+        st.session_state.payout_status = saved_state.get("payout_status", {})
+    else:
+        st.session_state.start_date = "2026-08-17"
+        st.session_state.base_monthly = 1000
+        st.session_state.admin_fee_percentage = 0.0
+        st.session_state.names_input = "Alice, Bob, Charlie, Diana, Frank, Grace"
+        st.session_state.member_tiers = {}
+        st.session_state.payments = {}
+        st.session_state.payout_status = {}
     st.session_state.initialized = True
+
+def persist_current_state():
+    data = {
+        "start_date": st.session_state.start_date,
+        "base_monthly": st.session_state.base_monthly,
+        "admin_fee_percentage": st.session_state.admin_fee_percentage,
+        "names_input": st.session_state.names_input,
+        "member_tiers": st.session_state.member_tiers,
+        "payments": st.session_state.payments,
+        "payout_status": st.session_state.payout_status
+    }
+    save_data(data)
 
 # --- APP SIDEBAR (Group Management & Weekly Logging) ---
 st.sidebar.header("Group Setup & Logs")
@@ -112,6 +156,7 @@ with st.sidebar.expander("Group Settings", expanded=False):
         st.session_state.base_monthly = base_monthly
         st.session_state.admin_fee_percentage = admin_fee_percentage
         st.session_state.names_input = names_input
+        persist_current_state()
         st.rerun()
 
 members = [n.strip() for n in st.session_state.names_input.split(",") if n.strip()]
@@ -132,6 +177,7 @@ with st.sidebar.expander("Custom Monthly Tiers", expanded=False):
         updated_tiers[m] = st.number_input(f"{m}'s Monthly (GHS)", value=current_val, step=50.0, key=f"tier_{m}")
     if st.button("Save Tiers"):
         st.session_state.member_tiers = updated_tiers
+        persist_current_state()
         st.rerun()
 
 total_weeks = num_members * 4
@@ -161,6 +207,7 @@ weekly_check = st.sidebar.checkbox(f"Has {selected_member} paid for Week {select
 
 if st.sidebar.button("Save Weekly Payment"):
     st.session_state.payments[selected_member][str(selected_week)] = weekly_check
+    persist_current_state()
     st.sidebar.success("Saved!")
     st.rerun()
 
@@ -182,6 +229,7 @@ input_collected = st.sidebar.number_input("Amount Collected (GHS)", value=float(
 
 if st.sidebar.button("Save Payout Amounts"):
     st.session_state.payout_status[month_key]["amount_collected"] = input_collected
+    persist_current_state()
     st.sidebar.success("Saved!")
     st.rerun()
 
@@ -296,7 +344,7 @@ df_contrib = pd.DataFrame(contrib_data)
 
 # --- SIMPLIFIED EMOJI WHATSAPP TEXT REPORT DOWNLOAD ---
 st.markdown("### Weekly Standings Text Report")
-st.info("Download the simplified text update for WhatsApp with clear 'Up to date' or 'Owing' member statuses.")
+st.info("Download the simplified text update for WhatsApp with persistent history saving.")
 
 report_buffer = io.StringIO()
 report_buffer.write(f"📌 *WK {current_elapsed_week} UPDATE*\n")
@@ -327,4 +375,4 @@ st.markdown("### Contributions")
 st.dataframe(df_contrib, use_container_width=True, hide_index=True)
 
 st.markdown("---")
-st.caption("Running completely offline in local memory session. No passcode required.")
+st.caption("History is automatically saved locally.")
