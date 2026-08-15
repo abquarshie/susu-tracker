@@ -30,17 +30,28 @@ st.markdown("""
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     
-    /* Compact Combined Metric Card */
+    /* Compact Combined Metric Card with Title Included */
     .metric-card {
         background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
         border: 1px solid #334155;
-        padding: 14px 18px;
+        padding: 16px 18px;
         border-radius: 12px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
+    }
+    .card-title {
+        color: #f8fafc;
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        text-align: center;
+        border-bottom: 1px solid #334155;
+        padding-bottom: 8px;
+    }
+    .metric-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
     }
     .metric-item {
         text-align: center;
@@ -107,10 +118,6 @@ def save_data(data):
 
 # Load saved settings
 saved_data = load_data()
-
-# App Header
-st.title("Susu Savings")
-st.markdown("---")
 
 # --- ADMIN SECURITY LOGIN IN SIDEBAR ---
 st.sidebar.header("Admin Panel")
@@ -273,25 +280,27 @@ for i in range(num_members):
 
 total_cash_held = total_cash_collected - total_payouts_distributed
 
-# Compact Combined Metric Card
+# Compact Combined Metric Card with Title Included Inside
 st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-item">
-            <div class="metric-label">Total Cash Held</div>
-            <div class="metric-value">GH₵ {fmt_num(total_cash_held)}</div>
-        </div>
-        <div class="metric-item">
-            <div class="metric-label">Admin Fee Rate</div>
-            <div class="metric-value">{fmt_num(admin_fee_percentage)}%</div>
-        </div>
-        <div class="metric-item">
-            <div class="metric-label">End Date</div>
-            <div class="metric-value">{format_date(end_date)}</div>
+        <div class="card-title">Susu Savings</div>
+        <div class="metric-row">
+            <div class="metric-item">
+                <div class="metric-label">Total Cash Held</div>
+                <div class="metric-value">GH₵ {fmt_num(total_cash_held)}</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-label">Admin Fee Rate</div>
+                <div class="metric-value">{fmt_num(admin_fee_percentage)}%</div>
+            </div>
+            <div class="metric-item">
+                <div class="metric-label">End Date</div>
+                <div class="metric-value">{format_date(end_date)}</div>
+            </div>
         </div>
     </div>
 """, unsafe_allow_html=True)
 
-st.markdown("")
 st.markdown("### Payout")
 
 schedule = []
