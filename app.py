@@ -274,8 +274,8 @@ for member in members:
     owing_amount = unpaid_passed_weeks * m_weekly
     total_paid_all = sum(1 for w in range(1, total_weeks + 1) if member_payments.get(str(w), False))
     
-    week_status = "Paid This Week" if paid_this_week else "Not Paid Yet"
-    status_text = f"Owing GHS {fmt_num(owing_amount)}" if owing_amount > 0 else "Up to Date"
+    week_status = "Paid" if paid_this_week else "Not Paid"
+    status_text = f"Owing {fmt_num(owing_amount)}" if owing_amount > 0 else "Clear"
     
     contrib_data.append({
         "Member": member, 
@@ -294,28 +294,27 @@ for member in members:
 df_sched = pd.DataFrame(schedule_data)
 df_contrib = pd.DataFrame(contrib_data)
 
-# --- EMOJI-RICH WHATSAPP TEXT REPORT DOWNLOAD ---
+# --- CLEANER, SHORTER WHATSAPP TEXT REPORT DOWNLOAD ---
 st.markdown("### Weekly Standings Text Report")
-st.info("Download the emoji-styled text update for WhatsApp, featuring total cash at hand, member weekly statuses, and each member's payout schedule with remaining pool balances.")
+st.info("Download the simplified, clean emoji text update for WhatsApp.")
 
 report_buffer = io.StringIO()
-report_buffer.write(f"📊 *SUSU WEEKLY UPDATE (WEEK {current_elapsed_week})* 📊\n")
-report_buffer.write(f"📅 Date: {datetime.today().strftime('%Y-%m-%d')}\n")
-report_buffer.write(f"💰 *Total Cash at Hand:* GHS {fmt_num(total_cash_held)}\n\n")
+report_buffer.write(f"📌 *WK {current_elapsed_week} UPDATE*\n")
+report_buffer.write(f"💰 *Cash at Hand:* GHS {fmt_num(total_cash_held)}\n\n")
 
-report_buffer.write("👥 *MEMBER STATUS* 👥\n")
+report_buffer.write("👥 *MEMBERS*\n")
 for row in whatsapp_contrib_rows:
-    icon = "✅" if "Paid" in row["week_status"] else "❌"
-    report_buffer.write(f"• {row['member']}: {icon} {row['week_status']} | 📌 {row['standing']}\n")
+    icon = "✅" if row["week_status"] == "Paid" else "❌"
+    report_buffer.write(f"{icon} *{row['member']}*: {row['week_status']} | {row['standing']}\n")
 
-report_buffer.write("\n🎁 *PAYOUT SCHEDULE & POOL BALANCE* 🎁\n")
+report_buffer.write("\n🎁 *PAYOUTS*\n")
 for prow in whatsapp_payout_rows:
-    report_buffer.write(f"• *{prow['recipient']}* ➔ Date: {prow['date']} | Balance Pool: GHS {prow['balance']}\n")
+    report_buffer.write(f"• *{prow['recipient']}* ({prow['date']}) ➔ GHS {prow['balance']}\n")
 
 st.download_button(
-    label="📥 Download WhatsApp Update (Emoji Styled)",
+    label="📥 Download Simple WhatsApp Update",
     data=report_buffer.getvalue(),
-    file_name=f"Susu_WhatsApp_Update_Week_{current_elapsed_week}.txt",
+    file_name=f"Susu_Update_W{current_elapsed_week}.txt",
     mime="text/plain",
     type="primary"
 )
