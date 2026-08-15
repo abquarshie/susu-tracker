@@ -280,6 +280,10 @@ for i in range(num_members):
 
 total_cash_held = total_cash_collected - total_payouts_distributed
 
+# Quick helper button for mobile users to open sidebar
+if st.button("Open Admin Panel"):
+    st.info("👆 Look at the very top-left corner of your browser window to see if the sidebar panel slid open!")
+
 # Compact Combined Metric Card with Title Included Inside
 st.markdown(f"""
     <div class="metric-card">
