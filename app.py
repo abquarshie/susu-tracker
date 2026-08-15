@@ -268,35 +268,35 @@ for member in members:
     m_weekly = m_monthly / 4.0
     member_payments = st.session_state.payments.get(member, {})
     
-    paid_this_week = member_payments.get(str(current_elapsed_week), False) if current_elapsed_week > 0 else False
     paid_passed_weeks = sum(1 for w in range(1, current_elapsed_week + 1) if member_payments.get(str(w), False))
     unpaid_passed_weeks = current_elapsed_week - paid_passed_weeks
     owing_amount = unpaid_passed_weeks * m_weekly
     total_paid_all = sum(1 for w in range(1, total_weeks + 1) if member_payments.get(str(w), False))
     
-    week_status = "Paid" if paid_this_week else "Not Paid"
-    status_text = f"Owing {fmt_num(owing_amount)}" if owing_amount > 0 else "Clear"
+    if owing_amount > 0:
+        standing_text = f"Owing GHS {fmt_num(owing_amount)}"
+    else:
+        standing_text = "Up to date"
     
     contrib_data.append({
         "Member": member, 
         "Monthly Tier": f"GHS {fmt_num(m_monthly)}",
         "Weekly Target": f"GHS {fmt_num(m_weekly)} / wk",
         "Progress": f"{total_paid_all} / {total_weeks} weeks paid",
-        "Status": status_text
+        "Status": standing_text
     })
     
     whatsapp_contrib_rows.append({
         "member": member,
-        "week_status": week_status,
-        "standing": status_text
+        "standing": standing_text
     })
 
 df_sched = pd.DataFrame(schedule_data)
 df_contrib = pd.DataFrame(contrib_data)
 
-# --- CLEANER, SHORTER WHATSAPP TEXT REPORT DOWNLOAD ---
+# --- SIMPLIFIED EMOJI WHATSAPP TEXT REPORT DOWNLOAD ---
 st.markdown("### Weekly Standings Text Report")
-st.info("Download the simplified, clean emoji text update for WhatsApp.")
+st.info("Download the simplified text update for WhatsApp with clear 'Up to date' or 'Owing' member statuses.")
 
 report_buffer = io.StringIO()
 report_buffer.write(f"📌 *WK {current_elapsed_week} UPDATE*\n")
@@ -304,8 +304,8 @@ report_buffer.write(f"💰 *Cash at Hand:* GHS {fmt_num(total_cash_held)}\n\n")
 
 report_buffer.write("👥 *MEMBERS*\n")
 for row in whatsapp_contrib_rows:
-    icon = "✅" if row["week_status"] == "Paid" else "❌"
-    report_buffer.write(f"{icon} *{row['member']}*: {row['week_status']} | {row['standing']}\n")
+    icon = "📌" if "Owing" in row["standing"] else "✅"
+    report_buffer.write(f"{icon} *{row['member']}*: {row['standing']}\n")
 
 report_buffer.write("\n🎁 *PAYOUTS*\n")
 for prow in whatsapp_payout_rows:
