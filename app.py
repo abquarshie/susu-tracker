@@ -12,15 +12,35 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# Inject JS to fully remove sidebar toggle and section from the DOM
+st.markdown("""
+    <script>
+    const removeSidebar = () => {
+        const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+        const toggle  = window.parent.document.querySelector('[data-testid="collapsedControl"]');
+        const header  = window.parent.document.querySelector('[data-testid="stHeader"]');
+        if (sidebar) sidebar.remove();
+        if (toggle)  toggle.remove();
+        if (header)  header.style.display = 'none';
+    };
+    removeSidebar();
+    setTimeout(removeSidebar, 300);
+    setTimeout(removeSidebar, 800);
+    </script>
+""", unsafe_allow_html=True)
+
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-    header {visibility: hidden !important;}
+    header {visibility: hidden !important; height: 0 !important;}
     #MainMenu {visibility: hidden !important;}
     .stDeployButton {display: none !important;}
     footer {visibility: hidden !important;}
-    [data-testid="collapsedControl"] {display: none !important;}
+    section[data-testid="stSidebar"] {display: none !important; width: 0 !important;}
+    [data-testid="collapsedControl"] {display: none !important; width: 0 !important;}
+    [data-testid="stSidebarNav"] {display: none !important;}
+    button[kind="header"] {display: none !important;}
     .block-container {padding-top: 1.8rem !important; padding-bottom: 3rem !important; max-width: 780px !important;}
 
     html, body, [class*="css"] {
