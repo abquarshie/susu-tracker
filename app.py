@@ -344,11 +344,12 @@ df_contrib = pd.DataFrame(contrib_data)
 
 # --- SIMPLIFIED EMOJI WHATSAPP TEXT REPORT DOWNLOAD ---
 st.markdown("### Weekly Standings Text Report")
-st.info("Download the simplified text update for WhatsApp with compact single-line payouts.")
+st.info("Download the simplified text update for WhatsApp including the cycle End Date.")
 
 report_buffer = io.StringIO()
 report_buffer.write(f"📌 *WK {current_elapsed_week} UPDATE*\n")
-report_buffer.write(f"💰 *Cash at Hand:* GHS {fmt_num(total_cash_held)}\n\n")
+report_buffer.write(f"💰 *Cash at Hand:* GHS {fmt_num(total_cash_held)}\n")
+report_buffer.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
 
 report_buffer.write("👥 *MEMBERS*\n")
 for row in whatsapp_contrib_rows:
