@@ -12,27 +12,35 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Hide the default Streamlit sidebar container via CSS completely
+# Inject JS to fully remove sidebar toggle and section from the DOM
+st.markdown("""
+    <script>
+    const removeSidebar = () => {
+        const sidebar = window.parent.document.querySelector('[data-testid="stSidebar"]');
+        const toggle  = window.parent.document.querySelector('[data-testid="collapsedControl"]');
+        const header  = window.parent.document.querySelector('[data-testid="stHeader"]');
+        if (sidebar) sidebar.remove();
+        if (toggle)  toggle.remove();
+        if (header)  header.style.display = 'none';
+    };
+    removeSidebar();
+    setTimeout(removeSidebar, 300);
+    setTimeout(removeSidebar, 800);
+    </script>
+""", unsafe_allow_html=True)
+
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-    /* Completely hide sidebar elements across all Streamlit versions */
-    [data-testid="stSidebar"], 
-    section[data-testid="stSidebar"], 
-    div[data-testid="stSidebarNav"], 
-    [data-testid="collapsedControl"],
-    button[kind="header"] {
-        display: none !important;
-        width: 0 !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-    }
 
     header {visibility: hidden !important; height: 0 !important;}
     #MainMenu {visibility: hidden !important;}
     .stDeployButton {display: none !important;}
     footer {visibility: hidden !important;}
+    section[data-testid="stSidebar"] {display: none !important; width: 0 !important;}
+    [data-testid="collapsedControl"] {display: none !important; width: 0 !important;}
+    [data-testid="stSidebarNav"] {display: none !important;}
+    button[kind="header"] {display: none !important;}
     .block-container {padding-top: 1.8rem !important; padding-bottom: 3rem !important; max-width: 780px !important;}
 
     html, body, [class*="css"] {
@@ -225,12 +233,12 @@ def save_data(d):
 
 def persist():
     save_data({
-        "start_date":            st.session_state.start_date,
-        "base_monthly":          st.session_state.base_monthly,
+        "start_date":           st.session_state.start_date,
+        "base_monthly":         st.session_state.base_monthly,
         "admin_fee_percentage": st.session_state.admin_fee_percentage,
         "names_input":          st.session_state.names_input,
-        "member_tiers":          st.session_state.member_tiers,
-        "payments":              st.session_state.payments,
+        "member_tiers":         st.session_state.member_tiers,
+        "payments":             st.session_state.payments,
         "payout_status":        st.session_state.payout_status,
     })
 
@@ -238,15 +246,15 @@ def persist():
 # ── session init ─────────────────────────────────────────────────────────────
 if "initialized" not in st.session_state:
     saved = load_data() or {}
-    st.session_state.start_date             = saved.get("start_date", "2026-08-17")
-    st.session_state.base_monthly          = saved.get("base_monthly", 1000)
+    st.session_state.start_date           = saved.get("start_date", "2026-08-17")
+    st.session_state.base_monthly         = saved.get("base_monthly", 1000)
     st.session_state.admin_fee_percentage = saved.get("admin_fee_percentage", 0.0)
-    st.session_state.names_input            = saved.get("names_input", "Alice, Bob, Charlie, Diana, Frank, Grace")
-    st.session_state.member_tiers          = saved.get("member_tiers", {})
-    st.session_state.payments              = saved.get("payments", {})
+    st.session_state.names_input          = saved.get("names_input", "Alice, Bob, Charlie, Diana, Frank, Grace")
+    st.session_state.member_tiers         = saved.get("member_tiers", {})
+    st.session_state.payments             = saved.get("payments", {})
     st.session_state.payout_status        = saved.get("payout_status", {})
-    st.session_state.authenticated         = False
-    st.session_state.initialized           = True
+    st.session_state.authenticated        = False
+    st.session_state.initialized          = True
 
 
 # ── auth gate ─────────────────────────────────────────────────────────────────
@@ -445,10 +453,10 @@ with st.expander("⚙️ Group Settings"):
         new_fee = st.number_input("Admin Fee (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
     new_names = st.text_area("Members (comma-separated)", value=st.session_state.names_input)
     if st.button("Save Settings", key="save_settings"):
-        st.session_state.start_date             = new_start
-        st.session_state.base_monthly          = new_base
+        st.session_state.start_date           = new_start
+        st.session_state.base_monthly         = new_base
         st.session_state.admin_fee_percentage = new_fee
-        st.session_state.names_input            = new_names
+        st.session_state.names_input          = new_names
         persist()
         st.success("Settings saved.")
         st.rerun()
