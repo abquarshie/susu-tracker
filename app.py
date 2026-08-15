@@ -66,6 +66,12 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Helper function for clean number formatting (removes decimals if whole numbers)
+def fmt_num(val):
+    if val.is_integer():
+        return f"{int(val):,}"
+    return f"{val:,.2f}"
+
 # Helper function for clean date formatting
 def format_date(dt):
     day = dt.day
@@ -272,11 +278,11 @@ st.markdown(f"""
     <div class="metric-card">
         <div class="metric-item">
             <div class="metric-label">Total Cash Held</div>
-            <div class="metric-value">GH₵ {total_cash_held:,.2f}</div>
+            <div class="metric-value">GH₵ {fmt_num(total_cash_held)}</div>
         </div>
         <div class="metric-item">
             <div class="metric-label">Admin Fee Rate</div>
-            <div class="metric-value">{admin_fee_percentage}%</div>
+            <div class="metric-value">{fmt_num(admin_fee_percentage)}%</div>
         </div>
         <div class="metric-item">
             <div class="metric-label">End Date</div>
@@ -308,9 +314,9 @@ for i in range(num_members):
     schedule.append({
         "Recipient": recipient,
         "Payout Date": format_date(payout_date),
-        "Admin Fee": f"GH₵ {admin_fee_val:,.2f} ({admin_fee_percentage}%)",
-        "Total Pool": f"GH₵ {remaining_pool:,.2f}",
-        "Amount Collected": f"GH₵ {collected_amt:,.2f}"
+        "Admin Fee": f"GH₵ {fmt_num(admin_fee_val)} ({fmt_num(admin_fee_percentage)}%)",
+        "Total Pool": f"GH₵ {fmt_num(remaining_pool)}",
+        "Amount Collected": f"GH₵ {fmt_num(collected_amt)}"
     })
     current_date = payout_date
 
@@ -331,14 +337,14 @@ for member in members:
     total_paid_all = sum(1 for w in range(1, total_weeks + 1) if member_payments.get(str(w), False))
     
     if owing_amount > 0:
-        status_text = f"Owing GH₵ {owing_amount:,.2f}"
+        status_text = f"Owing GH₵ {fmt_num(owing_amount)}"
     else:
         status_text = "Up to Date"
     
     row = {
         "Member": member, 
-        "Monthly Tier": f"GH₵ {m_monthly:,.2f}",
-        "Weekly Target": f"GH₵ {m_weekly:,.2f} / wk",
+        "Monthly Tier": f"GH₵ {fmt_num(m_monthly)}",
+        "Weekly Target": f"GH₵ {fmt_num(m_weekly)} / wk",
         "Progress": f"{total_paid_all} / {total_weeks} weeks paid",
         "Status": status_text
     }
