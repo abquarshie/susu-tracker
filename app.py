@@ -444,6 +444,7 @@ with col_dl1:
 # ── onboarding export ─────────────────────────────────────────────────────────
 ob = io.StringIO()
 ob.write("📋 *SUSU GROUP — ONBOARDING DETAILS*\n")
+ob.write(f"🗓️ *Start Date:* {format_date(start_dt)}\n")
 ob.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
 ob.write("👤 *MEMBER DETAILS*\n")
 for member in members:
