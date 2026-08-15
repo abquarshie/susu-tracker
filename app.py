@@ -62,6 +62,14 @@ st.markdown("""
         border: 1px solid #1e2d3d;
         border-radius: 10px;
         padding: 10px 14px;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    .metric-chip.saved-flash {
+        background: transparent !important;
+        border-color: transparent !important;
+    }
+    .metric-chip.saved-flash * {
+        opacity: 0.2;
     }
     .metric-chip-label {
         font-size: 10px;
@@ -219,6 +227,9 @@ if "initialized" not in st.session_state:
         st.session_state.payout_status = {}
     st.session_state.initialized = True
 
+if "payment_saved" not in st.session_state:
+    st.session_state.payment_saved = False
+
 def persist_current_state():
     save_data({
         "start_date": st.session_state.start_date,
@@ -240,15 +251,12 @@ with st.sidebar.expander("Group Settings", expanded=False):
     admin_fee_percentage = st.number_input("Admin Fee per Payout (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
     names_input = st.text_area("Members (comma-separated)", value=st.session_state.names_input)
     if st.button("Save Settings"):
-        with st.spinner("Saving settings..."):
-            time.sleep(0.4)
         st.session_state.start_date = start_date_str
         st.session_state.base_monthly = base_monthly
         st.session_state.admin_fee_percentage = admin_fee_percentage
         st.session_state.names_input = names_input
         persist_current_state()
         st.success("Settings saved successfully!")
-        time.sleep(0.4)
         st.rerun()
 
 members = [n.strip() for n in st.session_state.names_input.split(",") if n.strip()]
@@ -268,12 +276,9 @@ with st.sidebar.expander("Custom Monthly Tiers", expanded=False):
         current_val = float(st.session_state.member_tiers.get(m, st.session_state.base_monthly))
         updated_tiers[m] = st.number_input(f"{m} (GHS)", value=current_val, step=50.0, key=f"tier_{m}")
     if st.button("Save Tiers"):
-        with st.spinner("Updating tiers..."):
-            time.sleep(0.4)
         st.session_state.member_tiers = updated_tiers
         persist_current_state()
         st.success("Tiers saved successfully!")
-        time.sleep(0.4)
         st.rerun()
 
 total_weeks = num_members * 4
@@ -294,23 +299,15 @@ if not st.session_state.payout_status:
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("Record Weekly Payment")
-selected_member = st.sidebar.selectbox("Member", members)
-selected_week = st.sidebar.selectbox("Week", list(range(1, total_weeks + 1)))
+selected_member = st.sidebar.selectbox("Member", members, on_change=lambda: st.session_state.update({"payment_saved": False}))
+selected_week = st.sidebar.selectbox("Week", list(range(1, total_weeks + 1)), on_change=lambda: st.session_state.update({"payment_saved": False}))
 current_w_status = st.session_state.payments.get(selected_member, {}).get(str(selected_week), False)
-weekly_check = st.sidebar.checkbox(f"Week {selected_week} paid?", value=current_w_status)
+weekly_check = st.sidebar.checkbox(f"Week {selected_week} paid?", value=current_w_status, on_change=lambda: st.session_state.update({"payment_saved": False}))
+
 if st.sidebar.button("Save Payment"):
-    progress_bar = st.sidebar.progress(0, text="Processing payment...")
-    for percent_complete in range(100):
-        time.sleep(0.003)
-        progress_bar.progress(percent_complete + 1, text="Processing payment...")
-    progress_bar.empty()
-    
     st.session_state.payments[selected_member][str(selected_week)] = weekly_check
+    st.session_state.payment_saved = True
     persist_current_state()
-    
-    st.sidebar.balloons()
-    st.sidebar.success(f"✓ Payment saved for {selected_member} (Week {selected_week})!")
-    time.sleep(1.2)
     st.rerun()
 
 st.sidebar.markdown("---")
@@ -327,18 +324,9 @@ fee_val = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
 net_pool = gross_pool - fee_val
 input_collected = st.sidebar.number_input("Amount Collected (GHS)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(net_pool), step=50.0)
 if st.sidebar.button("Save Payout"):
-    progress_bar = st.sidebar.progress(0, text="Processing payout...")
-    for percent_complete in range(100):
-        time.sleep(0.003)
-        progress_bar.progress(percent_complete + 1, text="Processing payout...")
-    progress_bar.empty()
-    
     st.session_state.payout_status[month_key]["amount_collected"] = input_collected
     persist_current_state()
-    
-    st.sidebar.snow()
-    st.sidebar.success(f"✓ Payout recorded for {recipient_name} ({month_key})!")
-    time.sleep(1.2)
+    st.sidebar.success("✓ Payout recorded successfully!")
     st.rerun()
 
 
@@ -364,13 +352,15 @@ total_cash_held = total_cash_collected - total_payouts_distributed
 
 
 # --- MAIN VIEW ---
+chip_class_saved = "metric-chip saved-flash" if st.session_state.payment_saved else "metric-chip"
+
 st.markdown(f"""
     <div class="page-header">
         <h1>💸 Susu Savings Dashboard</h1>
         <p>{num_members} members &nbsp;·&nbsp; Week {current_elapsed_week} of {total_weeks} &nbsp;·&nbsp; Ends {format_date(end_date)}</p>
     </div>
     <div class="metric-strip">
-        <div class="metric-chip">
+        <div class="{chip_class_saved}">
             <div class="metric-chip-label">Cash Held</div>
             <div class="metric-chip-value">GHS {fmt_num(total_cash_held)}</div>
         </div>
