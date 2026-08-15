@@ -509,7 +509,7 @@ with col_exp2:
 
     st.download_button(
         label="📥 Download Weekly Status Update",
-        data=report_buffer.venv if hasattr(report_buffer, "venv") else report_buffer.getvalue(),
+        data=report_buffer.getvalue(),
         file_name=f"Susu_Update_W{current_elapsed_week}.txt",
         mime="text/plain",
         type="secondary"
