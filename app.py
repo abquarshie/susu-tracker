@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import datetime, timedelta
 import pandas as pd
 import io
+import matplotlib.pyplot as plt
 
 # Page Configuration
 st.set_page_config(
@@ -87,7 +88,7 @@ def format_date(dt):
         suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
     return f"{day}{suffix} {dt.strftime('%b %Y')}"
 
-# --- INITIALIZE SESSION STATE (Fully Offline / Local Memory) ---
+# --- INITIALIZE SESSION STATE ---
 if "initialized" not in st.session_state:
     st.session_state.start_date = "2026-08-17"
     st.session_state.base_monthly = 1000
@@ -99,9 +100,9 @@ if "initialized" not in st.session_state:
     st.session_state.initialized = True
 
 # --- APP SIDEBAR (Group Management & Weekly Logging) ---
-st.sidebar.header("🛠️ Group Setup & Logs")
+st.sidebar.header("Group Setup & Logs")
 
-with st.sidebar.expander("⚙️ Group Settings", expanded=False):
+with st.sidebar.expander("Group Settings", expanded=False):
     start_date_str = st.text_input("Start Date (YYYY-MM-DD)", value=st.session_state.start_date)
     base_monthly = st.number_input("Standard Base Monthly Target (GH₵)", value=float(st.session_state.base_monthly), step=50.0)
     admin_fee_percentage = st.number_input("Admin Holding Fee per Payout (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
@@ -121,12 +122,11 @@ if num_members < 2:
     st.error("Please enter at least 2 participant names in the sidebar settings.")
     st.stop()
 
-# Initialize member tiers
 for m in members:
     if m not in st.session_state.member_tiers:
         st.session_state.member_tiers[m] = st.session_state.base_monthly
 
-with st.sidebar.expander("🎛️ Custom Monthly Tiers", expanded=False):
+with st.sidebar.expander("Custom Monthly Tiers", expanded=False):
     updated_tiers = {}
     for m in members:
         current_val = float(st.session_state.member_tiers.get(m, st.session_state.base_monthly))
@@ -145,7 +145,6 @@ except ValueError:
 
 end_date = start_dt + timedelta(weeks=total_weeks)
 
-# Initialize payment logs & payout status structures
 if not st.session_state.payments or list(st.session_state.payments.keys()) != members:
     st.session_state.payments = {m: {str(w): False for w in range(1, total_weeks + 1)} for m in members}
 
@@ -154,7 +153,7 @@ if not st.session_state.payout_status:
 
 # --- LOGGING ACTIONS IN SIDEBAR ---
 st.sidebar.markdown("---")
-st.sidebar.subheader("📅 Record Weekly Payment")
+st.sidebar.subheader("Record Weekly Payment")
 selected_member = st.sidebar.selectbox("Select Member", members)
 selected_week = st.sidebar.selectbox("Select Week Number", list(range(1, total_weeks + 1)))
 
@@ -167,7 +166,7 @@ if st.sidebar.button("Save Weekly Payment"):
     st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.subheader("💰 Record Payout Collection")
+st.sidebar.subheader("Record Payout Collection")
 month_options = [f"Month {i+1} ({members[i]})" for i in range(num_members)]
 selected_month_label = st.sidebar.selectbox("Select Payout Turn", month_options)
 month_key = selected_month_label.split(" (")[0]
@@ -230,11 +229,7 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# --- WEEKLY STANDINGS REPORT GENERATOR (CSV Download - opens directly in Excel to print/save as PDF) ---
-st.markdown("### 📄 Weekly Standings Report")
-st.info("Click the button below to download your complete weekly standing sheet. You can open it instantly in Excel or Google Sheets to view, print, or save as a clean PDF report.")
-
-# Build detailed report dataframes
+# Build table records
 schedule_data = []
 current_date = start_dt
 for i in range(num_members):
@@ -278,27 +273,51 @@ for member in members:
         "Status": status_text
     })
 
-# Compile CSV bundle download
 df_sched = pd.DataFrame(schedule_data)
 df_contrib = pd.DataFrame(contrib_data)
 
-csv_buffer = io.StringIO()
-csv_buffer.write(f"SUSU SAVINGS WEEKLY STANDINGS REPORT - {datetime.today().strftime('%Y-%m-%d')}\n\n")
-csv_buffer.write("--- SUMMARY METRICS ---\n")
-csv_buffer.write(f"Total Cash Held,GH₵ {fmt_num(total_cash_held)}\n")
-csv_buffer.write(f"Admin Fee Rate,{fmt_num(st.session_state.admin_fee_percentage)}%\n")
-csv_buffer.write(f"End Date,{format_date(end_date)}\n\n")
+# --- IMAGE (JPG) GENERATOR FOR VISUAL SHARING ---
+st.markdown("### Visual Standings Image (Easy for WhatsApp & Mobile Viewing)")
+st.info("You can download this image card as a JPG to easily share via WhatsApp or show directly from your phone gallery.")
 
-csv_buffer.write("--- CONTRIBUTIONS STATUS ---\n")
-df_contrib.to_csv(csv_buffer, index=False)
-csv_buffer.write("\n--- PAYOUT SCHEDULE ---\n")
-df_sched.to_csv(csv_buffer, index=False)
+fig, ax = plt.subplots(figsize=(8, 6), dpi=200)
+fig.patch.set_facecolor('#0f172a')
+ax.set_facecolor('#1e293b')
+
+ax.axis('off')
+ax.text(0.5, 0.92, "SUSU SAVINGS STATUS REPORT", color='#f8fafc', fontsize=16, fontweight='bold', ha='center', transform=ax.transAxes)
+ax.text(0.5, 0.85, f"Total Cash Held: GH₵ {fmt_num(total_cash_held)}  |  End Date: {format_date(end_date)}", color='#38bdf8', fontsize=11, ha='center', transform=ax.transAxes)
+
+# Draw Contributions summary table text onto image
+y_pos = 0.72
+ax.text(0.1, y_pos, "MEMBER CONTRIBUTIONS PROGRESS:", color='#94a3b8', fontsize=10, fontweight='bold', transform=ax.transAxes)
+y_pos -= 0.06
+
+for idx, row in df_contrib.iterrows():
+    line_text = f"{row['Member']}: {row['Progress']} ({row['Status']})"
+    ax.text(0.1, y_pos, line_text, color='#f8fafc', fontsize=10, transform=ax.transAxes)
+    y_pos -= 0.055
+
+# Draw Payout summary text onto image
+y_pos -= 0.04
+ax.text(0.1, y_pos, "UPCOMING PAYOUT SCHEDULE:", color='#94a3b8', fontsize=10, fontweight='bold', transform=ax.transAxes)
+y_pos -= 0.06
+
+for idx, row in df_sched.head(3).iterrows(): # Show top upcoming payouts
+    line_text = f"{row['Recipient']} - {row['Payout Date']} ({row['Total Pool']})"
+    ax.text(0.1, y_pos, line_text, color='#f8fafc', fontsize=10, transform=ax.transAxes)
+    y_pos -= 0.055
+
+img_buffer = io.BytesIO()
+plt.savefig(img_buffer, format='jpg', facecolor=fig.get_facecolor(), edgecolor='none', bbox_inches='tight')
+img_buffer.seek(0)
+plt.close(fig)
 
 st.download_button(
-    label="📥 Download Weekly Standings Spreadsheet (Excel/PDF Ready)",
-    data=csv_buffer.getvalue(),
-    file_name=f"Susu_Standings_Week_{current_elapsed_week}_{datetime.today().strftime('%Y-%m-%d')}.csv",
-    mime="text/csv",
+    label="Download Visual Standings Card (JPG)",
+    data=img_buffer,
+    file_name=f"Susu_Card_Week_{current_elapsed_week}.jpg",
+    mime="image/jpeg",
     type="primary"
 )
 
