@@ -9,7 +9,8 @@ import time
 st.set_page_config(
     page_title="Susu Savings",
     page_icon="💸",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="expanded"
 )
 
 st.markdown("""
@@ -77,25 +78,6 @@ st.markdown("""
         color: #38bdf8;
     }
 
-    /* Sidebar Section Tiles (Containers for Record Weekly Payment / Record Payout) */
-    .sidebar-tile-normal {
-        background: #161d27;
-        border: 1px solid #1e2d3d;
-        border-radius: 12px;
-        padding: 14px 16px;
-        margin-bottom: 14px;
-        transition: background-color 0.3s ease, border-color 0.3s ease;
-    }
-    .sidebar-tile-hidden {
-        background: transparent !important;
-        border-color: transparent !important;
-        margin-bottom: 14px;
-        padding: 14px 16px;
-    }
-    .sidebar-tile-hidden * {
-        opacity: 0.15;
-    }
-
     /* Section headers */
     .section-eyebrow {
         font-size: 10px;
@@ -150,16 +132,25 @@ st.markdown("""
         border: 1px solid #1e2d3d;
     }
 
-    /* Sidebar */
+    /* Sidebar container cards */
     section[data-testid="stSidebar"] { background: #0d1117 !important; }
     section[data-testid="stSidebar"] * { color: #94a3b8 !important; }
     section[data-testid="stSidebar"] h1,
     section[data-testid="stSidebar"] h2,
     section[data-testid="stSidebar"] h3 { color: #e2e8f0 !important; }
+    
+    .sidebar-card {
+        background: #161d27;
+        border: 1px solid #1e2d3d;
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-bottom: 14px;
+    }
+
     section[data-testid="stSidebar"] .stTextInput input,
     section[data-testid="stSidebar"] .stNumberInput input,
     section[data-testid="stSidebar"] .stTextArea textarea {
-        background: #161d27 !important;
+        background: #0d1117 !important;
         border: 1px solid #1e2d3d !important;
         color: #e2e8f0 !important;
         border-radius: 8px !important;
@@ -171,6 +162,7 @@ st.markdown("""
         border-radius: 8px !important;
         font-weight: 600 !important;
         font-size: 13px !important;
+        width: 100%;
     }
     section[data-testid="stSidebar"] .stCheckbox label { color: #94a3b8 !important; }
 
@@ -237,12 +229,6 @@ if "initialized" not in st.session_state:
         st.session_state.payments = {}
         st.session_state.payout_status = {}
     st.session_state.initialized = True
-
-if "payment_saved" not in st.session_state:
-    st.session_state.payment_saved = False
-
-if "payout_saved" not in st.session_state:
-    st.session_state.payout_saved = False
 
 def persist_current_state():
     save_data({
@@ -313,31 +299,28 @@ if not st.session_state.payout_status:
 
 st.sidebar.markdown("---")
 
-# --- PAYMENT TILE ---
-pay_tile_class = "sidebar-tile-hidden" if st.session_state.payment_saved else "sidebar-tile-normal"
-st.sidebar.markdown(f'<div class="{pay_tile_class}">', unsafe_allow_html=True)
+# --- SAVE PAYMENT TILE ---
+st.sidebar.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
 st.sidebar.subheader("Record Weekly Payment")
-selected_member = st.sidebar.selectbox("Member", members, on_change=lambda: st.session_state.update({"payment_saved": False}))
-selected_week = st.sidebar.selectbox("Week", list(range(1, total_weeks + 1)), on_change=lambda: st.session_state.update({"payment_saved": False}))
+selected_member = st.sidebar.selectbox("Member", members, key="pay_member")
+selected_week = st.sidebar.selectbox("Week", list(range(1, total_weeks + 1)), key="pay_week")
 current_w_status = st.session_state.payments.get(selected_member, {}).get(str(selected_week), False)
-weekly_check = st.sidebar.checkbox(f"Week {selected_week} paid?", value=current_w_status, on_change=lambda: st.session_state.update({"payment_saved": False}))
+weekly_check = st.sidebar.checkbox(f"Week {selected_week} paid?", value=current_w_status, key="pay_check")
 
 if st.sidebar.button("Save Payment"):
     st.session_state.payments[selected_member][str(selected_week)] = weekly_check
-    st.session_state.payment_saved = True
     persist_current_state()
+    st.success(f"Saved Week {selected_week} for {selected_member}!")
+    time.sleep(0.5)
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 
-st.sidebar.markdown("---")
-
-# --- PAYOUT TILE ---
-payout_tile_class = "sidebar-tile-hidden" if st.session_state.payout_saved else "sidebar-tile-normal"
-st.sidebar.markdown(f'<div class="{payout_tile_class}">', unsafe_allow_html=True)
+# --- SAVE PAYOUT TILE ---
+st.sidebar.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
 st.sidebar.subheader("Record Payout")
 month_options = [f"Month {i+1} — {members[i]}" for i in range(num_members)]
-selected_month_label = st.sidebar.selectbox("Payout Turn", month_options, on_change=lambda: st.session_state.update({"payout_saved": False}))
+selected_month_label = st.sidebar.selectbox("Payout Turn", month_options, key="payout_month_label")
 month_key = selected_month_label.split(" —")[0]
 current_p_info = st.session_state.payout_status.get(month_key, {"amount_collected": 0.0})
 recipient_idx = int(month_key.split(" ")[1]) - 1
@@ -346,12 +329,13 @@ rec_monthly = st.session_state.member_tiers.get(recipient_name, st.session_state
 gross_pool = rec_monthly * num_members
 fee_val = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
 net_pool = gross_pool - fee_val
-input_collected = st.sidebar.number_input("Amount Collected (GHS)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(net_pool), step=50.0, on_change=lambda: st.session_state.update({"payout_saved": False}))
+input_collected = st.sidebar.number_input("Amount Collected (GHS)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(net_pool), step=50.0, key="payout_amount_input")
 
 if st.sidebar.button("Save Payout"):
     st.session_state.payout_status[month_key]["amount_collected"] = input_collected
-    st.session_state.payout_saved = True
     persist_current_state()
+    st.success(f"Saved payout collection for {month_key}!")
+    time.sleep(0.5)
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
