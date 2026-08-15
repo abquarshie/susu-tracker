@@ -344,7 +344,7 @@ df_contrib = pd.DataFrame(contrib_data)
 
 # --- SIMPLIFIED EMOJI WHATSAPP TEXT REPORT DOWNLOAD ---
 st.markdown("### Weekly Standings Text Report")
-st.info("Download the simplified text update for WhatsApp with persistent history saving.")
+st.info("Download the simplified text update for WhatsApp with correct 'Up to date' or 'Owing' statuses and persistent storage.")
 
 report_buffer = io.StringIO()
 report_buffer.write(f"📌 *WK {current_elapsed_week} UPDATE*\n")
