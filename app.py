@@ -5,57 +5,194 @@ import os
 
 # Page Configuration
 st.set_page_config(
-    page_title="Group Savings Tracker", 
-    page_icon="💰", 
+    page_title="Susu Tracker",
+    page_icon="💰",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for clean layout, compact dark metrics, and hiding Streamlit branding/headers
 st.markdown("""
     <style>
-    /* Hide Streamlit Header, Main Menu, Deploy Button, and Footer Branding */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    /* Hide Streamlit chrome */
     header {visibility: hidden !important;}
     #MainMenu {visibility: hidden !important;}
     .stDeployButton {display: none !important;}
     footer {visibility: hidden !important;}
-    
-    .main {
-        background-color: #f8f9fa;
+    .block-container {padding-top: 2rem !important; padding-bottom: 3rem !important;}
+
+    /* Base */
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
-    h1, h2, h3 {
-        color: #1f2937;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    .main {background-color: #f0f2f6;}
+
+    /* Page title area */
+    .page-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+        border-radius: 16px;
+        padding: 32px 36px;
+        margin-bottom: 28px;
+        color: white;
     }
+    .page-header h1 {
+        font-size: 26px;
+        font-weight: 700;
+        color: white !important;
+        margin: 0 0 6px 0;
+        letter-spacing: -0.3px;
+    }
+    .page-header p {
+        font-size: 14px;
+        color: #94a3b8;
+        margin: 0;
+        font-weight: 400;
+    }
+
+    /* Metric cards */
     div[data-testid="stMetric"] {
-        background-color: #1f2937 !important;
-        border: 1px solid #374151;
-        padding: 10px 15px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        padding: 18px 20px !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06) !important;
     }
     div[data-testid="stMetric"] label {
-        color: #9ca3af !important;
-        font-weight: 600;
-        font-size: 13px !important;
+        color: #64748b !important;
+        font-weight: 500 !important;
+        font-size: 12px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
     }
-    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #ffffff !important;
-        font-size: 20px !important;
+    div[data-testid="stMetricValue"] {
+        color: #0f172a !important;
+        font-size: 22px !important;
+        font-weight: 700 !important;
+    }
+
+    /* Section headings */
+    .section-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        margin: 28px 0 4px 0;
+    }
+    .section-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0 0 4px 0;
+    }
+    .section-subtitle {
+        font-size: 13px;
+        color: #94a3b8;
+        margin: 0 0 16px 0;
+    }
+
+    /* Dataframe styling overrides */
+    div[data-testid="stDataFrame"] {
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* Divider */
+    .divider {
+        height: 1px;
+        background: #e2e8f0;
+        margin: 28px 0;
+    }
+
+    /* Info badge */
+    .cash-badge {
+        display: inline-block;
+        background: #dcfce7;
+        color: #166534;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+
+    /* Sidebar polish */
+    section[data-testid="stSidebar"] {
+        background: #0f172a !important;
+    }
+    section[data-testid="stSidebar"] * {
+        color: #cbd5e1 !important;
+    }
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        color: #f1f5f9 !important;
+    }
+    section[data-testid="stSidebar"] .stTextInput input,
+    section[data-testid="stSidebar"] .stNumberInput input,
+    section[data-testid="stSidebar"] .stTextArea textarea {
+        background: #1e293b !important;
+        border: 1px solid #334155 !important;
+        color: #f1f5f9 !important;
+        border-radius: 8px !important;
+    }
+    section[data-testid="stSidebar"] .stSelectbox select {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+    }
+    section[data-testid="stSidebar"] .stButton > button {
+        background: #3b82f6 !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+    }
+    section[data-testid="stSidebar"] .stButton > button[kind="secondary"] {
+        background: #1e293b !important;
+        color: #94a3b8 !important;
+        border: 1px solid #334155 !important;
+    }
+
+    /* Status pills */
+    .pill-green {
+        background: #dcfce7;
+        color: #166534;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .pill-red {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    /* Caption area */
+    .footer-note {
+        text-align: center;
+        font-size: 12px;
+        color: #94a3b8;
+        margin-top: 32px;
+        padding-top: 20px;
+        border-top: 1px solid #e2e8f0;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Helper function for clean date formatting
+
 def format_date(dt):
     day = dt.day
-    if 11 <= day <= 13:
-        suffix = 'th'
-    else:
-        suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+    suffix = 'th' if 11 <= day <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
     return f"{day}{suffix} {dt.strftime('%b %Y')}"
 
-# File storage for persistence across relaunches
+
 DATA_FILE = "susu_data.json"
 
 def load_data():
@@ -79,39 +216,32 @@ def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f)
 
-# Load saved settings
+
 saved_data = load_data()
 
-# App Header
-st.title("Group Savings Dashboard")
-st.markdown("Track flexible contributions, total cash held, and payout rotations easily.")
-st.markdown("---")
-
-# --- ADMIN SECURITY LOGIN IN SIDEBAR ---
+# --- SIDEBAR ADMIN ---
 st.sidebar.header("⚙️ Admin Panel")
-admin_password_input = st.sidebar.text_input("Admin Passcode", type="password", placeholder="Enter passcode to edit")
+admin_password_input = st.sidebar.text_input("Passcode", type="password", placeholder="Enter to unlock")
 
-ADMIN_SECRET = "Susu2026" 
+ADMIN_SECRET = "Susu2026"
 is_admin = (admin_password_input == ADMIN_SECRET)
 
 if not is_admin:
     st.sidebar.markdown("---")
-    st.sidebar.info("🔒 **View-Only Mode**\n\nEnter the correct Admin Passcode above to unlock settings and record payments.")
+    st.sidebar.info("🔒 **View-Only Mode**\n\nEnter the passcode above to unlock settings and record payments.")
 
-# Process core group variables from saved file
 start_date_str = saved_data["start_date"]
 base_monthly = float(saved_data.get("base_monthly_amount", 1000))
-admin_fee_percentage = float(saved_data.get("admin_fee_percentage", saved_data.get("admin_fee_amount", 0.0)))
+admin_fee_percentage = float(saved_data.get("admin_fee_percentage", 0.0))
 names_input = saved_data["names_input"]
 
 members = [n.strip() for n in names_input.split(",") if n.strip()]
 num_members = len(members)
 
 if num_members < 2:
-    st.error("⚠️ Please enter at least 2 participant names in the sidebar.")
+    st.error("⚠️ Please enter at least 2 participant names.")
     st.stop()
 
-# Initialize or clean member tiers dictionary
 member_tiers = saved_data.get("member_tiers", {})
 for m in members:
     if m not in member_tiers:
@@ -119,31 +249,30 @@ for m in members:
 
 if is_admin:
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Edit Group Settings")
+    st.sidebar.subheader("Group Settings")
     start_date_str = st.sidebar.text_input("Start Date (YYYY-MM-DD)", value=saved_data["start_date"])
-    base_monthly = st.sidebar.number_input("Standard Base Monthly Target (GH₵)", value=base_monthly, step=50.0)
-    admin_fee_percentage = st.sidebar.number_input("Admin Holding Fee per Payout (%)", value=admin_fee_percentage, min_value=0.0, max_value=100.0, step=0.5)
-    names_input = st.sidebar.text_area("Participant Names (comma-separated)", value=saved_data["names_input"])
-    
+    base_monthly = st.sidebar.number_input("Base Monthly Target (GH₵)", value=base_monthly, step=50.0)
+    admin_fee_percentage = st.sidebar.number_input("Admin Fee per Payout (%)", value=admin_fee_percentage, min_value=0.0, max_value=100.0, step=0.5)
+    names_input = st.sidebar.text_area("Members (comma-separated)", value=saved_data["names_input"])
+
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Custom Monthly Tiers per Member")
+    st.sidebar.subheader("Monthly Tiers")
     updated_tiers = {}
     for m in members:
         current_val = float(member_tiers.get(m, base_monthly))
-        updated_tiers[m] = st.sidebar.number_input(f"{m}'s Monthly Contribution (GH₵)", value=current_val, step=50.0, key=f"tier_{m}")
+        updated_tiers[m] = st.sidebar.number_input(f"{m} (GH₵)", value=current_val, step=50.0, key=f"tier_{m}")
     member_tiers = updated_tiers
 
-total_weeks = num_members * 4  # 4 weeks per month block
+total_weeks = num_members * 4
 
 try:
     start_dt = datetime.strptime(start_date_str, '%Y-%m-%d')
 except ValueError:
-    st.error("⚠️ Incorrect date format. Use YYYY-MM-DD.")
+    st.error("⚠️ Date format must be YYYY-MM-DD.")
     st.stop()
 
 end_date = start_dt + timedelta(weeks=total_weeks)
 
-# Initialize data states if members changed or file is fresh
 payments = saved_data.get("payments", {})
 if not payments or list(payments.keys()) != members:
     payments = {m: {str(w): False for w in range(1, total_weeks + 1)} for m in members}
@@ -152,22 +281,19 @@ payout_status = saved_data.get("payout_status", {})
 if not payout_status:
     payout_status = {f"Month {i+1}": {"amount_collected": 0.0} for i in range(num_members)}
 
-# --- ADMIN ACTIONS (Only shown if password matches) ---
 if is_admin:
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Record Weekly Payment")
-    selected_member = st.sidebar.selectbox("Select Member", members)
-    selected_week = st.sidebar.selectbox("Select Week Number", list(range(1, total_weeks + 1)))
-
+    st.sidebar.subheader("Record Payment")
+    selected_member = st.sidebar.selectbox("Member", members)
+    selected_week = st.sidebar.selectbox("Week", list(range(1, total_weeks + 1)))
     current_w_status = payments.get(selected_member, {}).get(str(selected_week), False)
-    weekly_check = st.sidebar.checkbox(f"Has {selected_member} paid for Week {selected_week}?", value=current_w_status)
+    weekly_check = st.sidebar.checkbox(f"Week {selected_week} paid?", value=current_w_status)
 
-    if st.sidebar.button("Save Weekly Payment", type="primary"):
+    if st.sidebar.button("Save Payment", type="primary"):
         if selected_member not in payments:
             payments[selected_member] = {}
         payments[selected_member][str(selected_week)] = weekly_check
-        
-        new_data = {
+        save_data({
             "start_date": start_date_str,
             "base_monthly_amount": base_monthly,
             "admin_fee_percentage": admin_fee_percentage,
@@ -175,18 +301,16 @@ if is_admin:
             "member_tiers": member_tiers,
             "payments": payments,
             "payout_status": payout_status
-        }
-        save_data(new_data)
-        st.sidebar.success("Weekly payment updated!")
+        })
+        st.sidebar.success("✓ Payment saved")
 
     st.sidebar.markdown("---")
-    st.sidebar.subheader("Record Payout Collection")
-    month_options = [f"Month {i+1} ({members[i]})" for i in range(num_members)]
-    selected_month_label = st.sidebar.selectbox("Select Payout Turn", month_options)
-    month_key = selected_month_label.split(" (")[0]
+    st.sidebar.subheader("Record Payout")
+    month_options = [f"Month {i+1} — {members[i]}" for i in range(num_members)]
+    selected_month_label = st.sidebar.selectbox("Payout Turn", month_options)
+    month_key = selected_month_label.split(" —")[0]
 
     current_p_info = payout_status.get(month_key, {"amount_collected": 0.0})
-    
     recipient_idx = int(month_key.split(" ")[1]) - 1
     recipient_name = members[recipient_idx]
     rec_monthly = member_tiers.get(recipient_name, base_monthly)
@@ -196,12 +320,11 @@ if is_admin:
 
     input_collected = st.sidebar.number_input("Amount Collected (GH₵)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(net_pool), step=50.0)
 
-    if st.sidebar.button("Save Payout Amounts", type="secondary"):
+    if st.sidebar.button("Save Payout", type="secondary"):
         if month_key not in payout_status:
             payout_status[month_key] = {}
         payout_status[month_key]["amount_collected"] = input_collected
-        
-        new_data = {
+        save_data({
             "start_date": start_date_str,
             "base_monthly_amount": base_monthly,
             "admin_fee_percentage": admin_fee_percentage,
@@ -209,12 +332,11 @@ if is_admin:
             "member_tiers": member_tiers,
             "payments": payments,
             "payout_status": payout_status
-        }
-        save_data(new_data)
-        st.sidebar.success("Payout amounts updated!")
+        })
+        st.sidebar.success("✓ Payout saved")
 
-# Auto-save settings state
-current_settings = {
+# Autosave settings
+save_data({
     "start_date": start_date_str,
     "base_monthly_amount": base_monthly,
     "admin_fee_percentage": admin_fee_percentage,
@@ -222,10 +344,9 @@ current_settings = {
     "member_tiers": member_tiers,
     "payments": payments,
     "payout_status": payout_status
-}
-save_data(current_settings)
+})
 
-# --- CALCULATE CURRENT ELAPSED WEEKS & TOTAL CASH HELD ---
+# --- CALCULATIONS ---
 today = datetime.today()
 days_passed = (today - start_dt).days
 current_elapsed_week = max(0, days_passed // 7) + 1 if today >= start_dt else 0
@@ -239,24 +360,31 @@ for m in members:
     paid_count = sum(1 for w in range(1, total_weeks + 1) if m_payments.get(str(w), False))
     total_cash_collected += paid_count * m_weekly
 
-total_payouts_distributed = 0.0
-for i in range(num_members):
-    m_lbl = f"Month {i+1}"
-    p_info = payout_status.get(m_lbl, {"amount_collected": 0.0})
-    collected_amt = float(p_info.get("amount_collected", 0.0))
-    total_payouts_distributed += collected_amt
-
+total_payouts_distributed = sum(
+    float(payout_status.get(f"Month {i+1}", {}).get("amount_collected", 0.0))
+    for i in range(num_members)
+)
 total_cash_held = total_cash_collected - total_payouts_distributed
 
-# Top Metrics Overview
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Cash Held", f"GH₵ {total_cash_held:,.2f}")
-col2.metric("Admin Fee Rate", f"{admin_fee_percentage}%")
-col3.metric("Program End Date", format_date(end_date))
+# --- PAGE HEADER ---
+st.markdown(f"""
+    <div class="page-header">
+        <h1>💰 Group Savings Tracker</h1>
+        <p>Track contributions, payouts and balances — {num_members} members · ends {format_date(end_date)}</p>
+    </div>
+""", unsafe_allow_html=True)
 
-st.markdown("")
-st.markdown("### 📅 Payout")
-st.markdown("Tracks payout rotation dates, admin fee deductions, and remaining pool balances.")
+# --- METRICS ---
+col1, col2, col3 = st.columns(3)
+col1.metric("Cash Held", f"GH₵ {total_cash_held:,.2f}")
+col2.metric("Admin Fee", f"{admin_fee_percentage}%")
+col3.metric("Program Ends", format_date(end_date))
+
+# --- PAYOUT SCHEDULE ---
+st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+st.markdown('<p class="section-label">Rotation</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-title">Payout Schedule</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-subtitle">Dates, admin fee deductions and remaining pool per turn</p>', unsafe_allow_html=True)
 
 schedule = []
 current_date = start_dt
@@ -264,58 +392,63 @@ for i in range(num_members):
     month_lbl = f"Month {i+1}"
     recipient = members[i]
     payout_date = current_date + timedelta(weeks=4)
-    
+
     rec_monthly = member_tiers.get(recipient, base_monthly)
     gross_pool = rec_monthly * num_members
     admin_fee_val = gross_pool * (admin_fee_percentage / 100.0)
     net_pool_amount = gross_pool - admin_fee_val
-    
+
     p_info = payout_status.get(month_lbl, {"amount_collected": 0.0})
     collected_amt = float(p_info.get("amount_collected", 0.0))
-    
     remaining_pool = max(0.0, net_pool_amount - collected_amt)
 
     schedule.append({
+        "Turn": f"Month {i+1}",
         "Recipient": recipient,
         "Payout Date": format_date(payout_date),
-        "Admin Fee": f"GH₵ {admin_fee_val:,.2f} ({admin_fee_percentage}%)",
-        "Total Pool": f"GH₵ {remaining_pool:,.2f}",
-        "Amount Collected": f"GH₵ {collected_amt:,.2f}"
+        "Admin Fee": f"GH₵ {admin_fee_val:,.2f}",
+        "Net Pool": f"GH₵ {net_pool_amount:,.2f}",
+        "Collected": f"GH₵ {collected_amt:,.2f}",
+        "Remaining": f"GH₵ {remaining_pool:,.2f}",
     })
     current_date = payout_date
 
 st.dataframe(schedule, use_container_width=True, hide_index=True)
 
-st.markdown("### 📊 Contribution")
-st.markdown("Overview of member contribution tiers and payment statuses.")
+# --- CONTRIBUTIONS ---
+st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+st.markdown('<p class="section-label">Members</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-title">Contributions</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-subtitle">Tiers, progress and payment status per member</p>', unsafe_allow_html=True)
 
 table_data = []
 for member in members:
     m_monthly = member_tiers.get(member, base_monthly)
     m_weekly = m_monthly / 4.0
-    
+
     member_payments = payments.get(member, {})
-    paid_passed_weeks = sum(1 for w in range(1, current_elapsed_week + 1) if member_payments.get(str(w), False))
-    unpaid_passed_weeks = current_elapsed_week - paid_passed_weeks
-    owing_amount = unpaid_passed_weeks * m_weekly
-    
+    paid_passed = sum(1 for w in range(1, current_elapsed_week + 1) if member_payments.get(str(w), False))
+    unpaid_passed = current_elapsed_week - paid_passed
+    owing = unpaid_passed * m_weekly
+
     total_paid_all = sum(1 for w in range(1, total_weeks + 1) if member_payments.get(str(w), False))
-    
-    if owing_amount >0:
-        status_text = f"🔴 Owing GH₵ {owing_amount:,.2f}"
-    else:
-        status_text = "🟢 Up to Date"
-    
-    row = {
-        "Member": member, 
+    pct = int((total_paid_all / total_weeks) * 100) if total_weeks > 0 else 0
+
+    status = "🔴 Owing GH₵ {:.2f}".format(owing) if owing > 0 else "🟢 Up to Date"
+
+    table_data.append({
+        "Member": member,
         "Monthly Tier": f"GH₵ {m_monthly:,.2f}",
-        "Weekly Target": f"GH₵ {m_weekly:,.2f} / wk",
-        "Progress": f"{total_paid_all} / {total_weeks} weeks paid",
-        "Status": status_text
-    }
-    table_data.append(row)
+        "Weekly Target": f"GH₵ {m_weekly:,.2f}",
+        "Weeks Paid": f"{total_paid_all} / {total_weeks}",
+        "Progress": f"{pct}%",
+        "Status": status,
+    })
 
 st.dataframe(table_data, use_container_width=True, hide_index=True)
 
-st.markdown("---")
-st.caption("🔒 *Note: This dashboard is simplified for participants. Administrative passcode required only in the sidebar for updating records or settings.*")
+st.markdown("""
+    <div class="footer-note">
+        🔒 View-only by default · Admin passcode required to update records
+    </div>
+""", unsafe_allow_html=True)
