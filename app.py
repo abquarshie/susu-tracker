@@ -2,7 +2,6 @@ import streamlit as st
 from datetime import datetime, timedelta
 import pandas as pd
 import io
-import matplotlib.pyplot as plt
 
 # Page Configuration
 st.set_page_config(
@@ -276,48 +275,29 @@ for member in members:
 df_sched = pd.DataFrame(schedule_data)
 df_contrib = pd.DataFrame(contrib_data)
 
-# --- IMAGE (JPG) GENERATOR FOR VISUAL SHARING ---
-st.markdown("### Visual Standings Image (Easy for WhatsApp & Mobile Viewing)")
-st.info("You can download this image card as a JPG to easily share via WhatsApp or show directly from your phone gallery.")
+# --- TEXT REPORT DOWNLOAD (Simple text format that opens anywhere without external libraries) ---
+st.markdown("### Weekly Standings Text Report")
+st.info("Download a plain text summary report that you can easily view, text, or print out for members.")
 
-fig, ax = plt.subplots(figsize=(8, 6), dpi=200)
-fig.patch.set_facecolor('#0f172a')
-ax.set_facecolor('#1e293b')
+report_buffer = io.StringIO()
+report_buffer.write(f"=== SUSU SAVINGS REPORT (WEEK {current_elapsed_week}) ===\n")
+report_buffer.write(f"Date: {datetime.today().strftime('%Y-%m-%d')}\n")
+report_buffer.write(f"Total Cash Held: GH₵ {fmt_num(total_cash_held)}\n")
+report_buffer.write(f"End Date: {format_date(end_date)}\n\n")
 
-ax.axis('off')
-ax.text(0.5, 0.92, "SUSU SAVINGS STATUS REPORT", color='#f8fafc', fontsize=16, fontweight='bold', ha='center', transform=ax.transAxes)
-ax.text(0.5, 0.85, f"Total Cash Held: GH₵ {fmt_num(total_cash_held)}  |  End Date: {format_date(end_date)}", color='#38bdf8', fontsize=11, ha='center', transform=ax.transAxes)
-
-# Draw Contributions summary table text onto image
-y_pos = 0.72
-ax.text(0.1, y_pos, "MEMBER CONTRIBUTIONS PROGRESS:", color='#94a3b8', fontsize=10, fontweight='bold', transform=ax.transAxes)
-y_pos -= 0.06
-
+report_buffer.write("--- MEMBER CONTRIBUTIONS ---\n")
 for idx, row in df_contrib.iterrows():
-    line_text = f"{row['Member']}: {row['Progress']} ({row['Status']})"
-    ax.text(0.1, y_pos, line_text, color='#f8fafc', fontsize=10, transform=ax.transAxes)
-    y_pos -= 0.055
+    report_buffer.write(f"- {row['Member']}: {row['Progress']} | Status: {row['Status']}\n")
 
-# Draw Payout summary text onto image
-y_pos -= 0.04
-ax.text(0.1, y_pos, "UPCOMING PAYOUT SCHEDULE:", color='#94a3b8', fontsize=10, fontweight='bold', transform=ax.transAxes)
-y_pos -= 0.06
-
-for idx, row in df_sched.head(3).iterrows(): # Show top upcoming payouts
-    line_text = f"{row['Recipient']} - {row['Payout Date']} ({row['Total Pool']})"
-    ax.text(0.1, y_pos, line_text, color='#f8fafc', fontsize=10, transform=ax.transAxes)
-    y_pos -= 0.055
-
-img_buffer = io.BytesIO()
-plt.savefig(img_buffer, format='jpg', facecolor=fig.get_facecolor(), edgecolor='none', bbox_inches='tight')
-img_buffer.seek(0)
-plt.close(fig)
+report_buffer.write("\n--- PAYOUT SCHEDULE ---\n")
+for idx, row in df_sched.iterrows():
+    report_buffer.write(f"- Month {idx+1} ({row['Recipient']}): Payout Date: {row['Payout Date']} | Pool: {row['Total Pool']}\n")
 
 st.download_button(
-    label="Download Visual Standings Card (JPG)",
-    data=img_buffer,
-    file_name=f"Susu_Card_Week_{current_elapsed_week}.jpg",
-    mime="image/jpeg",
+    label="📥 Download Weekly Report (Text File)",
+    data=report_buffer.getvalue(),
+    file_name=f"Susu_Report_Week_{current_elapsed_week}.txt",
+    mime="text/plain",
     type="primary"
 )
 
