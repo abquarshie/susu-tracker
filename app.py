@@ -4,6 +4,7 @@ import pandas as pd
 import io
 import json
 import os
+import time
 
 st.set_page_config(
     page_title="Susu Savings",
@@ -239,11 +240,15 @@ with st.sidebar.expander("Group Settings", expanded=False):
     admin_fee_percentage = st.number_input("Admin Fee per Payout (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
     names_input = st.text_area("Members (comma-separated)", value=st.session_state.names_input)
     if st.button("Save Settings"):
+        with st.spinner("Saving settings..."):
+            time.sleep(0.4)
         st.session_state.start_date = start_date_str
         st.session_state.base_monthly = base_monthly
         st.session_state.admin_fee_percentage = admin_fee_percentage
         st.session_state.names_input = names_input
         persist_current_state()
+        st.success("Settings saved successfully!")
+        time.sleep(0.4)
         st.rerun()
 
 members = [n.strip() for n in st.session_state.names_input.split(",") if n.strip()]
@@ -263,8 +268,12 @@ with st.sidebar.expander("Custom Monthly Tiers", expanded=False):
         current_val = float(st.session_state.member_tiers.get(m, st.session_state.base_monthly))
         updated_tiers[m] = st.number_input(f"{m} (GHS)", value=current_val, step=50.0, key=f"tier_{m}")
     if st.button("Save Tiers"):
+        with st.spinner("Updating tiers..."):
+            time.sleep(0.4)
         st.session_state.member_tiers = updated_tiers
         persist_current_state()
+        st.success("Tiers saved successfully!")
+        time.sleep(0.4)
         st.rerun()
 
 total_weeks = num_members * 4
@@ -290,9 +299,18 @@ selected_week = st.sidebar.selectbox("Week", list(range(1, total_weeks + 1)))
 current_w_status = st.session_state.payments.get(selected_member, {}).get(str(selected_week), False)
 weekly_check = st.sidebar.checkbox(f"Week {selected_week} paid?", value=current_w_status)
 if st.sidebar.button("Save Payment"):
+    progress_bar = st.sidebar.progress(0, text="Processing payment...")
+    for percent_complete in range(100):
+        time.sleep(0.003)
+        progress_bar.progress(percent_complete + 1, text="Processing payment...")
+    progress_bar.empty()
+    
     st.session_state.payments[selected_member][str(selected_week)] = weekly_check
     persist_current_state()
-    st.sidebar.success("✓ Saved")
+    
+    st.sidebar.balloons()
+    st.sidebar.success(f"✓ Payment saved for {selected_member} (Week {selected_week})!")
+    time.sleep(1.2)
     st.rerun()
 
 st.sidebar.markdown("---")
@@ -309,9 +327,18 @@ fee_val = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
 net_pool = gross_pool - fee_val
 input_collected = st.sidebar.number_input("Amount Collected (GHS)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(net_pool), step=50.0)
 if st.sidebar.button("Save Payout"):
+    progress_bar = st.sidebar.progress(0, text="Processing payout...")
+    for percent_complete in range(100):
+        time.sleep(0.003)
+        progress_bar.progress(percent_complete + 1, text="Processing payout...")
+    progress_bar.empty()
+    
     st.session_state.payout_status[month_key]["amount_collected"] = input_collected
     persist_current_state()
-    st.sidebar.success("✓ Saved")
+    
+    st.sidebar.snow()
+    st.sidebar.success(f"✓ Payout recorded for {recipient_name} ({month_key})!")
+    time.sleep(1.2)
     st.rerun()
 
 
@@ -392,7 +419,6 @@ for i in range(num_members):
     })
     whatsapp_payout_rows.append({"recipient": recipient, "date": format_date(payout_date), "balance": fmt_num(remaining_pool)})
     
-    # Onboarding details per member
     m_monthly = st.session_state.member_tiers.get(recipient, st.session_state.base_monthly)
     m_weekly = m_monthly / 4.0
     whatsapp_onboarding_rows.append({
@@ -437,7 +463,6 @@ st.markdown('<p class="section-sub">Download ready-to-paste messages for onboard
 col_exp1, col_exp2 = st.columns(2)
 
 with col_exp1:
-    # Onboarding / Beginning Export (Monthly, Weekly, Payout Date & Net Payout Amount)
     onboard_buffer = io.StringIO()
     onboard_buffer.write("🚀 *SUSU SAVINGS - ONBOARDING DETAILS*\n")
     onboard_buffer.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
@@ -456,7 +481,6 @@ with col_exp1:
     )
 
 with col_exp2:
-    # Weekly Status Update Export
     report_buffer = io.StringIO()
     report_buffer.write(f"📌 *WK {current_elapsed_week} UPDATE*\n")
     report_buffer.write(f"💰 *Cash at Hand:* GHS {fmt_num(total_cash_held)}\n")
