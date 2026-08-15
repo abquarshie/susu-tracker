@@ -5,13 +5,13 @@ import os
 
 # Page Configuration
 st.set_page_config(
-    page_title="Group Savings Tracker", 
-    page_icon="💰", 
+    page_title="Susu Savings Hub", 
+    page_icon="💸", 
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for clean layout, compact dark metrics, and hiding Streamlit branding/headers
+# Modern UI Styling with Clean Cards, Smooth Fonts, and Hidden Streamlit Decor
 st.markdown("""
     <style>
     /* Hide Streamlit Header, Main Menu, Deploy Button, and Footer Branding */
@@ -20,28 +20,44 @@ st.markdown("""
     .stDeployButton {display: none !important;}
     footer {visibility: hidden !important;}
     
+    /* Clean Modern Background and Typography */
     .main {
-        background-color: #f8f9fa;
+        background-color: #0f172a;
+        color: #f8fafc;
     }
     h1, h2, h3 {
-        color: #1f2937;
+        color: #f8fafc;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
+    
+    /* Sleek Modern Metric Cards */
     div[data-testid="stMetric"] {
-        background-color: #1f2937 !important;
-        border: 1px solid #374151;
-        padding: 10px 15px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+        border: 1px solid #334155;
+        padding: 16px 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
     }
     div[data-testid="stMetric"] label {
-        color: #9ca3af !important;
-        font-weight: 600;
+        color: #94a3b8 !important;
+        font-weight: 500;
         font-size: 13px !important;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
     }
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #ffffff !important;
-        font-size: 20px !important;
+        color: #38bdf8 !important;
+        font-size: 24px !important;
+        font-weight: 700;
+    }
+    
+    /* Custom Container Box Styling */
+    .card-container {
+        background-color: #1e293b;
+        border: 1px solid #334155;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -69,7 +85,7 @@ def load_data():
         "start_date": "2026-08-17",
         "base_monthly_amount": 1000,
         "admin_fee_percentage": 0.0,
-        "names_input": "Alice, Bob, Charlie, Diana",
+        "names_input": "Alice, Bob, Charlie, Diana, Frank, Grace",
         "member_tiers": {},
         "payments": {},
         "payout_status": {}
@@ -83,8 +99,8 @@ def save_data(data):
 saved_data = load_data()
 
 # App Header
-st.title("Group Savings Dashboard")
-st.markdown("Track flexible contributions, total cash held, and payout rotations easily.")
+st.title("💸 Susu Savings Hub")
+st.markdown("Track group contributions, pool balances, and payout rotations seamlessly.")
 st.markdown("---")
 
 # --- ADMIN SECURITY LOGIN IN SIDEBAR ---
@@ -96,7 +112,7 @@ is_admin = (admin_password_input == ADMIN_SECRET)
 
 if not is_admin:
     st.sidebar.markdown("---")
-    st.sidebar.info("🔒 **View-Only Mode**\n\nEnter the correct Admin Passcode above to unlock settings and record payments.")
+    st.sidebar.info("🔒 **View-Only Mode**\n\nEnter the correct Admin Passcode above to unlock settings and record updates.")
 
 # Process core group variables from saved file
 start_date_str = saved_data["start_date"]
@@ -255,8 +271,8 @@ col2.metric("Admin Fee Rate", f"{admin_fee_percentage}%")
 col3.metric("Program End Date", format_date(end_date))
 
 st.markdown("")
-st.markdown("### 📅 Payout")
-st.markdown("Tracks payout rotation dates, admin fee deductions, and remaining pool balances.")
+st.markdown("### 📅 Payout Rotation & Fee Breakdown")
+st.markdown("Track payout schedule dates, automatic admin fee deductions, and remaining pools clearly.")
 
 schedule = []
 current_date = start_dt
@@ -286,8 +302,8 @@ for i in range(num_members):
 
 st.dataframe(schedule, use_container_width=True, hide_index=True)
 
-st.markdown("### 📊 Contribution")
-st.markdown("Overview of member contribution tiers and payment statuses.")
+st.markdown("### 📊 Member Contributions")
+st.markdown("Overview of member contribution tiers, weekly targets, and live standings.")
 
 table_data = []
 for member in members:
@@ -301,7 +317,7 @@ for member in members:
     
     total_paid_all = sum(1 for w in range(1, total_weeks + 1) if member_payments.get(str(w), False))
     
-    if owing_amount >0:
+    if owing_amount > 0:
         status_text = f"🔴 Owing GH₵ {owing_amount:,.2f}"
     else:
         status_text = "🟢 Up to Date"
@@ -318,4 +334,4 @@ for member in members:
 st.dataframe(table_data, use_container_width=True, hide_index=True)
 
 st.markdown("---")
-st.caption("🔒 *Note: This dashboard is simplified for participants. Administrative passcode required only in the sidebar for updating records or settings.*")
+st.caption("🔒 *Note: Clean modern interface optimized for desktop and mobile displays. Admin passcode required only in the sidebar for updating logs.*")
