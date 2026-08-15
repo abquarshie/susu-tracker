@@ -11,9 +11,15 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS for clean layout, compact dark metrics, and mobile sidebar behavior
+# Custom CSS for clean layout, compact dark metrics, and hiding Streamlit branding/headers
 st.markdown("""
     <style>
+    /* Hide Streamlit Header, Main Menu, Deploy Button, and Footer Branding */
+    header {visibility: hidden !important;}
+    #MainMenu {visibility: hidden !important;}
+    .stDeployButton {display: none !important;}
+    footer {visibility: hidden !important;}
+    
     .main {
         background-color: #f8f9fa;
     }
@@ -127,8 +133,7 @@ if is_admin:
         updated_tiers[m] = st.sidebar.number_input(f"{m}'s Monthly Contribution (GH₵)", value=current_val, step=50.0, key=f"tier_{m}")
     member_tiers = updated_tiers
 
-total_months = num_members
-total_weeks = total_months * 4  # 4 weeks per month block
+total_weeks = num_members * 4  # 4 weeks per month block
 
 try:
     start_dt = datetime.strptime(start_date_str, '%Y-%m-%d')
@@ -296,7 +301,7 @@ for member in members:
     
     total_paid_all = sum(1 for w in range(1, total_weeks + 1) if member_payments.get(str(w), False))
     
-    if owing_amount > 0:
+    if owing_amount >0:
         status_text = f"🔴 Owing GH₵ {owing_amount:,.2f}"
     else:
         status_text = "🟢 Up to Date"
