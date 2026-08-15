@@ -5,7 +5,7 @@ import os
 
 # Page Configuration
 st.set_page_config(
-    page_title="Susu Savings Hub", 
+    page_title="Susu Savings", 
     page_icon="💸", 
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -30,34 +30,38 @@ st.markdown("""
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     
-    /* Sleek Modern Metric Cards */
-    div[data-testid="stMetric"] {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+    /* Compact Combined Metric Card */
+    .metric-card {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
         border: 1px solid #334155;
-        padding: 16px 20px;
+        padding: 14px 18px;
         border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
     }
-    div[data-testid="stMetric"] label {
-        color: #94a3b8 !important;
+    .metric-item {
+        text-align: center;
+        flex: 1;
+        border-right: 1px solid #334155;
+    }
+    .metric-item:last-child {
+        border-right: none;
+    }
+    .metric-label {
+        color: #94a3b8;
         font-weight: 500;
-        font-size: 13px !important;
+        font-size: 11px;
         letter-spacing: 0.05em;
         text-transform: uppercase;
+        margin-bottom: 4px;
     }
-    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #38bdf8 !important;
-        font-size: 24px !important;
+    .metric-value {
+        color: #38bdf8;
+        font-size: 16px;
         font-weight: 700;
-    }
-    
-    /* Custom Container Box Styling */
-    .card-container {
-        background-color: #1e293b;
-        border: 1px solid #334155;
-        padding: 20px;
-        border-radius: 12px;
-        margin-bottom: 20px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -99,12 +103,11 @@ def save_data(data):
 saved_data = load_data()
 
 # App Header
-st.title("💸 Susu Savings Hub")
-st.markdown("Track group contributions, pool balances, and payout rotations seamlessly.")
+st.title("Susu Savings")
 st.markdown("---")
 
 # --- ADMIN SECURITY LOGIN IN SIDEBAR ---
-st.sidebar.header("⚙️ Admin Panel")
+st.sidebar.header("Admin Panel")
 admin_password_input = st.sidebar.text_input("Admin Passcode", type="password", placeholder="Enter passcode to edit")
 
 ADMIN_SECRET = "Susu2026" 
@@ -112,7 +115,7 @@ is_admin = (admin_password_input == ADMIN_SECRET)
 
 if not is_admin:
     st.sidebar.markdown("---")
-    st.sidebar.info("🔒 **View-Only Mode**\n\nEnter the correct Admin Passcode above to unlock settings and record updates.")
+    st.sidebar.info("View-Only Mode\n\nEnter the correct Admin Passcode above to unlock settings and record updates.")
 
 # Process core group variables from saved file
 start_date_str = saved_data["start_date"]
@@ -124,7 +127,7 @@ members = [n.strip() for n in names_input.split(",") if n.strip()]
 num_members = len(members)
 
 if num_members < 2:
-    st.error("⚠️ Please enter at least 2 participant names in the sidebar.")
+    st.error("Please enter at least 2 participant names in the sidebar.")
     st.stop()
 
 # Initialize or clean member tiers dictionary
@@ -154,7 +157,7 @@ total_weeks = num_members * 4  # 4 weeks per month block
 try:
     start_dt = datetime.strptime(start_date_str, '%Y-%m-%d')
 except ValueError:
-    st.error("⚠️ Incorrect date format. Use YYYY-MM-DD.")
+    st.error("Incorrect date format. Use YYYY-MM-DD.")
     st.stop()
 
 end_date = start_dt + timedelta(weeks=total_weeks)
@@ -264,15 +267,26 @@ for i in range(num_members):
 
 total_cash_held = total_cash_collected - total_payouts_distributed
 
-# Top Metrics Overview
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Cash Held", f"GH₵ {total_cash_held:,.2f}")
-col2.metric("Admin Fee Rate", f"{admin_fee_percentage}%")
-col3.metric("Program End Date", format_date(end_date))
+# Compact Combined Metric Card
+st.markdown(f"""
+    <div class="metric-card">
+        <div class="metric-item">
+            <div class="metric-label">Total Cash Held</div>
+            <div class="metric-value">GH₵ {total_cash_held:,.2f}</div>
+        </div>
+        <div class="metric-item">
+            <div class="metric-label">Admin Fee Rate</div>
+            <div class="metric-value">{admin_fee_percentage}%</div>
+        </div>
+        <div class="metric-item">
+            <div class="metric-label">End Date</div>
+            <div class="metric-value">{format_date(end_date)}</div>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
 st.markdown("")
-st.markdown("### 📅 Payout Rotation & Fee Breakdown")
-st.markdown("Track payout schedule dates, automatic admin fee deductions, and remaining pools clearly.")
+st.markdown("### Payout")
 
 schedule = []
 current_date = start_dt
@@ -302,8 +316,7 @@ for i in range(num_members):
 
 st.dataframe(schedule, use_container_width=True, hide_index=True)
 
-st.markdown("### 📊 Member Contributions")
-st.markdown("Overview of member contribution tiers, weekly targets, and live standings.")
+st.markdown("### Contributions")
 
 table_data = []
 for member in members:
@@ -318,9 +331,9 @@ for member in members:
     total_paid_all = sum(1 for w in range(1, total_weeks + 1) if member_payments.get(str(w), False))
     
     if owing_amount > 0:
-        status_text = f"🔴 Owing GH₵ {owing_amount:,.2f}"
+        status_text = f"Owing GH₵ {owing_amount:,.2f}"
     else:
-        status_text = "🟢 Up to Date"
+        status_text = "Up to Date"
     
     row = {
         "Member": member, 
@@ -334,4 +347,4 @@ for member in members:
 st.dataframe(table_data, use_container_width=True, hide_index=True)
 
 st.markdown("---")
-st.caption("🔒 *Note: Clean modern interface optimized for desktop and mobile displays. Admin passcode required only in the sidebar for updating logs.*")
+st.caption("Admin passcode required only in the sidebar for updating logs.")
