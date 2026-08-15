@@ -366,6 +366,7 @@ st.markdown(f"""
 # --- BUILD DATA ---
 schedule_data = []
 whatsapp_payout_rows = []
+whatsapp_onboarding_rows = []
 current_date = start_dt
 
 for i in range(num_members):
@@ -390,11 +391,21 @@ for i in range(num_members):
         "Remaining": f"GHS {fmt_num(remaining_pool)}",
     })
     whatsapp_payout_rows.append({"recipient": recipient, "date": format_date(payout_date), "balance": fmt_num(remaining_pool)})
+    
+    # Onboarding details per member
+    m_monthly = st.session_state.member_tiers.get(recipient, st.session_state.base_monthly)
+    m_weekly = m_monthly / 4.0
+    whatsapp_onboarding_rows.append({
+        "member": recipient,
+        "monthly": fmt_num(m_monthly),
+        "weekly": fmt_num(m_weekly),
+        "payout_date": format_date(payout_date),
+        "net_pool": fmt_num(net_pool_amount)
+    })
     current_date = payout_date
 
 contrib_data = []
 whatsapp_contrib_rows = []
-whatsapp_onboarding_rows = []
 for member in members:
     m_monthly = st.session_state.member_tiers.get(member, st.session_state.base_monthly)
     m_weekly = m_monthly / 4.0
@@ -415,11 +426,6 @@ for member in members:
         "Status": ("🔴 " if owing > 0 else "🟢 ") + status,
     })
     whatsapp_contrib_rows.append({"member": member, "standing": status})
-    whatsapp_onboarding_rows.append({
-        "member": member,
-        "monthly": fmt_num(m_monthly),
-        "weekly": fmt_num(m_weekly)
-    })
 
 
 # --- WHATSAPP REPORTS ---
@@ -431,13 +437,15 @@ st.markdown('<p class="section-sub">Download ready-to-paste messages for onboard
 col_exp1, col_exp2 = st.columns(2)
 
 with col_exp1:
-    # Onboarding / Beginning Export (Monthly & Weekly Targets)
+    # Onboarding / Beginning Export (Monthly, Weekly, Payout Date & Net Payout Amount)
     onboard_buffer = io.StringIO()
-    onboard_buffer.write("🚀 *SUSU SAVINGS - MEMBER TARGETS*\n")
+    onboard_buffer.write("🚀 *SUSU SAVINGS - ONBOARDING DETAILS*\n")
     onboard_buffer.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
-    onboard_buffer.write("📋 *CONTRIBUTION TARGETS*\n")
+    onboard_buffer.write("📋 *CONTRIBUTION & PAYOUT SCHEDULE*\n")
     for row in whatsapp_onboarding_rows:
-        onboard_buffer.write(f"• *{row['member']}*: GHS {row['monthly']} / mo (GHS {row['weekly']} / wk)\n")
+        onboard_buffer.write(f"• *{row['member']}*\n")
+        onboard_buffer.write(f"  - Contribution: GHS {row['monthly']} / mo (GHS {row['weekly']} / wk)\n")
+        onboard_buffer.write(f"  - Payout: GHS {row['net_pool']} on {row['payout_date']}\n\n")
     
     st.download_button(
         label="📥 Download Onboarding Target Update",
