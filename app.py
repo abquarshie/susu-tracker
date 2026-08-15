@@ -394,6 +394,7 @@ for i in range(num_members):
 
 contrib_data = []
 whatsapp_contrib_rows = []
+whatsapp_onboarding_rows = []
 for member in members:
     m_monthly = st.session_state.member_tiers.get(member, st.session_state.base_monthly)
     m_weekly = m_monthly / 4.0
@@ -414,33 +415,59 @@ for member in members:
         "Status": ("🔴 " if owing > 0 else "🟢 ") + status,
     })
     whatsapp_contrib_rows.append({"member": member, "standing": status})
+    whatsapp_onboarding_rows.append({
+        "member": member,
+        "monthly": fmt_num(m_monthly),
+        "weekly": fmt_num(m_weekly)
+    })
 
 
-# --- WHATSAPP REPORT ---
+# --- WHATSAPP REPORTS ---
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 st.markdown('<p class="section-eyebrow">Export</p>', unsafe_allow_html=True)
-st.markdown('<p class="section-heading">WhatsApp Update</p>', unsafe_allow_html=True)
-st.markdown('<p class="section-sub">Download a ready-to-paste weekly status message</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-heading">WhatsApp Updates</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-sub">Download ready-to-paste messages for onboarding or weekly standing updates</p>', unsafe_allow_html=True)
 
-report_buffer = io.StringIO()
-report_buffer.write(f"📌 *WK {current_elapsed_week} UPDATE*\n")
-report_buffer.write(f"💰 *Cash at Hand:* GHS {fmt_num(total_cash_held)}\n")
-report_buffer.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
-report_buffer.write("👥 *MEMBERS*\n")
-for row in whatsapp_contrib_rows:
-    icon = "❌" if "Owing" in row["standing"] else "✅"
-    report_buffer.write(f"{icon} *{row['member']}*: {row['standing']}\n")
-report_buffer.write("\n🎁 *PAYOUTS*\n")
-for prow in whatsapp_payout_rows:
-    report_buffer.write(f"{prow['recipient']} · {prow['date']} · GHS {prow['balance']}\n")
+col_exp1, col_exp2 = st.columns(2)
 
-st.download_button(
-    label="📥 Download WhatsApp Update",
-    data=report_buffer.getvalue(),
-    file_name=f"Susu_Update_W{current_elapsed_week}.txt",
-    mime="text/plain",
-    type="primary"
-)
+with col_exp1:
+    # Onboarding / Beginning Export (Monthly & Weekly Targets)
+    onboard_buffer = io.StringIO()
+    onboard_buffer.write("🚀 *SUSU SAVINGS - MEMBER TARGETS*\n")
+    onboard_buffer.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
+    onboard_buffer.write("📋 *CONTRIBUTION TARGETS*\n")
+    for row in whatsapp_onboarding_rows:
+        onboard_buffer.write(f"• *{row['member']}*: GHS {row['monthly']} / mo (GHS {row['weekly']} / wk)\n")
+    
+    st.download_button(
+        label="📥 Download Onboarding Target Update",
+        data=onboard_buffer.getvalue(),
+        file_name="Susu_Onboarding_Targets.txt",
+        mime="text/plain",
+        type="primary"
+    )
+
+with col_exp2:
+    # Weekly Status Update Export
+    report_buffer = io.StringIO()
+    report_buffer.write(f"📌 *WK {current_elapsed_week} UPDATE*\n")
+    report_buffer.write(f"💰 *Cash at Hand:* GHS {fmt_num(total_cash_held)}\n")
+    report_buffer.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
+    report_buffer.write("👥 *MEMBERS*\n")
+    for row in whatsapp_contrib_rows:
+        icon = "❌" if "Owing" in row["standing"] else "✅"
+        report_buffer.write(f"{icon} *{row['member']}*: {row['standing']}\n")
+    report_buffer.write("\n🎁 *PAYOUTS*\n")
+    for prow in whatsapp_payout_rows:
+        report_buffer.write(f"{prow['recipient']} {prow['date']} - GHS {prow['balance']}\n")
+
+    st.download_button(
+        label="📥 Download Weekly Status Update",
+        data=report_buffer.getvalue(),
+        file_name=f"Susu_Update_W{current_elapsed_week}.txt",
+        mime="text/plain",
+        type="secondary"
+    )
 
 # --- TABLES ---
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
