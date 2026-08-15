@@ -5,12 +5,12 @@ import io
 
 # Page Configuration
 st.set_page_config(
-    page_title="Susu Savings", 
+    page_title="Susu Weekly Update", 
     page_icon="💸", 
     layout="centered"
 )
 
-# Modern UI Styling
+# Modern UI Styling with clean mobile text output encoding fix
 st.markdown("""
     <style>
     header {visibility: hidden !important;}
@@ -66,19 +66,18 @@ st.markdown("""
     }
     .metric-value {
         color: #38bdf8;
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 700;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Helper function for clean number formatting
+# Helper function for clean number formatting (standard text instead of symbols that break on mobile)
 def fmt_num(val):
     if val.is_integer():
         return f"{int(val):,}"
     return f"{val:,.2f}"
 
-# Helper function for clean date formatting
 def format_date(dt):
     day = dt.day
     if 11 <= day <= 13:
@@ -98,16 +97,16 @@ if "initialized" not in st.session_state:
     st.session_state.payout_status = {}
     st.session_state.initialized = True
 
-# --- APP SIDEBAR (Group Management & Weekly Logging) ---
-st.sidebar.header("Group Setup & Logs")
+# --- SIDEBAR: SIMPLE CONFIG & WEEKLY LOGGING ---
+st.sidebar.header("Weekly Manager")
 
-with st.sidebar.expander("Group Settings", expanded=False):
+with st.sidebar.expander("Group Setup", expanded=False):
     start_date_str = st.text_input("Start Date (YYYY-MM-DD)", value=st.session_state.start_date)
-    base_monthly = st.number_input("Standard Base Monthly Target (GH₵)", value=float(st.session_state.base_monthly), step=50.0)
-    admin_fee_percentage = st.number_input("Admin Holding Fee per Payout (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
-    names_input = st.text_area("Participant Names (comma-separated)", value=st.session_state.names_input)
+    base_monthly = st.number_input("Standard Monthly Target (GHS)", value=float(st.session_state.base_monthly), step=50.0)
+    admin_fee_percentage = st.number_input("Admin Fee (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
+    names_input = st.text_area("Names (comma-separated)", value=st.session_state.names_input)
     
-    if st.button("Save Settings"):
+    if st.button("Update Setup"):
         st.session_state.start_date = start_date_str
         st.session_state.base_monthly = base_monthly
         st.session_state.admin_fee_percentage = admin_fee_percentage
@@ -118,21 +117,12 @@ members = [n.strip() for n in st.session_state.names_input.split(",") if n.strip
 num_members = len(members)
 
 if num_members < 2:
-    st.error("Please enter at least 2 participant names in the sidebar settings.")
+    st.error("Please enter at least 2 names.")
     st.stop()
 
 for m in members:
     if m not in st.session_state.member_tiers:
         st.session_state.member_tiers[m] = st.session_state.base_monthly
-
-with st.sidebar.expander("Custom Monthly Tiers", expanded=False):
-    updated_tiers = {}
-    for m in members:
-        current_val = float(st.session_state.member_tiers.get(m, st.session_state.base_monthly))
-        updated_tiers[m] = st.number_input(f"{m}'s Monthly (GH₵)", value=current_val, step=50.0, key=f"tier_{m}")
-    if st.button("Save Tiers"):
-        st.session_state.member_tiers = updated_tiers
-        st.rerun()
 
 total_weeks = num_members * 4
 
@@ -150,42 +140,21 @@ if not st.session_state.payments or list(st.session_state.payments.keys()) != me
 if not st.session_state.payout_status:
     st.session_state.payout_status = {f"Month {i+1}": {"amount_collected": 0.0} for i in range(num_members)}
 
-# --- LOGGING ACTIONS IN SIDEBAR ---
+# Weekly Check-in Logger
 st.sidebar.markdown("---")
-st.sidebar.subheader("Record Weekly Payment")
+st.sidebar.subheader("Tick Off Weekly Payment")
 selected_member = st.sidebar.selectbox("Select Member", members)
 selected_week = st.sidebar.selectbox("Select Week Number", list(range(1, total_weeks + 1)))
 
 current_w_status = st.session_state.payments.get(selected_member, {}).get(str(selected_week), False)
 weekly_check = st.sidebar.checkbox(f"Has {selected_member} paid for Week {selected_week}?", value=current_w_status)
 
-if st.sidebar.button("Save Weekly Payment"):
+if st.sidebar.button("Save Payment Status"):
     st.session_state.payments[selected_member][str(selected_week)] = weekly_check
     st.sidebar.success("Saved!")
     st.rerun()
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("Record Payout Collection")
-month_options = [f"Month {i+1} ({members[i]})" for i in range(num_members)]
-selected_month_label = st.sidebar.selectbox("Select Payout Turn", month_options)
-month_key = selected_month_label.split(" (")[0]
-
-current_p_info = st.session_state.payout_status.get(month_key, {"amount_collected": 0.0})
-recipient_idx = int(month_key.split(" ")[1]) - 1
-recipient_name = members[recipient_idx]
-rec_monthly = st.session_state.member_tiers.get(recipient_name, st.session_state.base_monthly)
-gross_pool = rec_monthly * num_members
-fee_val = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
-net_pool = gross_pool - fee_val
-
-input_collected = st.sidebar.number_input("Amount Collected (GH₵)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(net_pool), step=50.0)
-
-if st.sidebar.button("Save Payout Amounts"):
-    st.session_state.payout_status[month_key]["amount_collected"] = input_collected
-    st.sidebar.success("Saved!")
-    st.rerun()
-
-# --- CALCULATIONS ---
+# --- CALCULATE CURRENT WEEK & STANDINGS ---
 today = datetime.today()
 days_passed = (today - start_dt).days
 current_elapsed_week = max(0, days_passed // 7) + 1 if today >= start_dt else 0
@@ -207,106 +176,95 @@ for i in range(num_members):
 
 total_cash_held = total_cash_collected - total_payouts_distributed
 
-# --- MAIN DASHBOARD VIEW ---
+# Determine who is collecting this week or currently active based on dates
+current_active_collector = "None (Between cycles)"
+current_payout_pool_amount = 0.0
+current_cycle_month_label = ""
+
+cycle_date = start_dt
+for i in range(num_members):
+    payout_date = cycle_date + timedelta(weeks=4)
+    if cycle_date <= today <= payout_date:
+        current_active_collector = members[i]
+        current_cycle_month_label = f"Month {i+1}"
+        rec_monthly = st.session_state.member_tiers.get(current_active_collector, st.session_state.base_monthly)
+        gross_pool = rec_monthly * num_members
+        fee_val = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
+        current_payout_pool_amount = gross_pool - fee_val
+        break
+    cycle_date = payout_date
+
+# --- SIMPLIFIED DASHBOARD VIEW ---
 st.markdown(f"""
     <div class="metric-card">
-        <div class="card-title">Susu Savings Dashboard</div>
+        <div class="card-title">Weekly Susu Update (Week {current_elapsed_week})</div>
         <div class="metric-row">
             <div class="metric-item">
-                <div class="metric-label">Total Cash Held</div>
-                <div class="metric-value">GH₵ {fmt_num(total_cash_held)}</div>
+                <div class="metric-label">Total Cash at Hand</div>
+                <div class="metric-value">GHS {fmt_num(total_cash_held)}</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">Admin Fee Rate</div>
-                <div class="metric-value">{fmt_num(st.session_state.admin_fee_percentage)}%</div>
-            </div>
-            <div class="metric-item">
-                <div class="metric-label">End Date</div>
-                <div class="metric-value">{format_date(end_date)}</div>
+                <div class="metric-label">Collecting This Month</div>
+                <div class="metric-value">{current_active_collector}</div>
             </div>
         </div>
     </div>
 """, unsafe_allow_html=True)
 
-# Build table records
-schedule_data = []
-current_date = start_dt
-for i in range(num_members):
-    month_lbl = f"Month {i+1}"
-    recipient = members[i]
-    payout_date = current_date + timedelta(weeks=4)
-    rec_monthly = st.session_state.member_tiers.get(recipient, st.session_state.base_monthly)
-    gross_pool = rec_monthly * num_members
-    admin_fee_val = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
-    net_pool_amount = gross_pool - admin_fee_val
-    p_info = st.session_state.payout_status.get(month_lbl, {"amount_collected": 0.0})
-    collected_amt = float(p_info.get("amount_collected", 0.0))
-    remaining_pool = max(0.0, net_pool_amount - collected_amt)
+# Build simple clean lists for who paid/owing this week
+st.markdown("### 📋 This Week's Standing Summary")
 
-    schedule_data.append({
-        "Recipient": recipient,
-        "Payout Date": format_date(payout_date),
-        "Admin Fee": f"GH₵ {fmt_num(admin_fee_val)}",
-        "Total Pool": f"GH₵ {fmt_num(remaining_pool)}",
-        "Amount Collected": f"GH₵ {fmt_num(collected_amt)}"
-    })
-    current_date = payout_date
-
-contrib_data = []
+summary_rows = []
 for member in members:
     m_monthly = st.session_state.member_tiers.get(member, st.session_state.base_monthly)
     m_weekly = m_monthly / 4.0
     member_payments = st.session_state.payments.get(member, {})
+    
+    # Check current week status
+    paid_this_week = member_payments.get(str(current_elapsed_week), False) if current_elapsed_week > 0 else False
+    
+    # Check overall owing
     paid_passed_weeks = sum(1 for w in range(1, current_elapsed_week + 1) if member_payments.get(str(w), False))
     unpaid_passed_weeks = current_elapsed_week - paid_passed_weeks
     owing_amount = unpaid_passed_weeks * m_weekly
-    total_paid_all = sum(1 for w in range(1, total_weeks + 1) if member_payments.get(str(w), False))
     
-    status_text = f"Owing GH₵ {fmt_num(owing_amount)}" if owing_amount > 0 else "Up to Date"
+    if paid_this_week:
+        week_status = "Paid This Week"
+    else:
+        week_status = "Not Paid Yet"
+        
+    debt_status = f"Owing GHS {fmt_num(owing_amount)}" if owing_amount > 0 else "Fully Up to Date"
     
-    contrib_data.append({
-        "Member": member, 
-        "Monthly Tier": f"GH₵ {fmt_num(m_monthly)}",
-        "Weekly Target": f"GH₵ {fmt_num(m_weekly)} / wk",
-        "Progress": f"{total_paid_all} / {total_weeks} weeks paid",
-        "Status": status_text
+    summary_rows.append({
+        "Member": member,
+        "Week Status": week_status,
+        "Account Standing": debt_status
     })
 
-df_sched = pd.DataFrame(schedule_data)
-df_contrib = pd.DataFrame(contrib_data)
+df_summary = pd.DataFrame(summary_rows)
+st.dataframe(df_summary, use_container_width=True, hide_index=True)
 
-# --- TEXT REPORT DOWNLOAD (Simple text format that opens anywhere without external libraries) ---
-st.markdown("### Weekly Standings Text Report")
-st.info("Download a plain text summary report that you can easily view, text, or print out for members.")
+# --- CLEAN TEXT REPORT FOR EASY SHARING (WhatsApp / SMS / Print) ---
+st.markdown("### 📥 Get Simple Weekly Text Update")
+st.info("Download this short text update. It contains only who paid, who is owing, who is collecting, and total cash at hand—perfect for sharing directly on WhatsApp with members.")
 
-report_buffer = io.StringIO()
-report_buffer.write(f"=== SUSU SAVINGS REPORT (WEEK {current_elapsed_week}) ===\n")
-report_buffer.write(f"Date: {datetime.today().strftime('%Y-%m-%d')}\n")
-report_buffer.write(f"Total Cash Held: GH₵ {fmt_num(total_cash_held)}\n")
-report_buffer.write(f"End Date: {format_date(end_date)}\n\n")
+text_report = f"""--- SUSU WEEKLY UPDATE (WEEK {current_elapsed_week}) ---
+Date: {datetime.today().strftime('%Y-%m-%d')}
+Total Cash at Hand: GHS {fmt_num(total_cash_held)}
+Current Collector: {current_active_collector}
 
-report_buffer.write("--- MEMBER CONTRIBUTIONS ---\n")
-for idx, row in df_contrib.iterrows():
-    report_buffer.write(f"- {row['Member']}: {row['Progress']} | Status: {row['Status']}\n")
-
-report_buffer.write("\n--- PAYOUT SCHEDULE ---\n")
-for idx, row in df_sched.iterrows():
-    report_buffer.write(f"- Month {idx+1} ({row['Recipient']}): Payout Date: {row['Payout Date']} | Pool: {row['Total Pool']}\n")
+--- MEMBER STATUS ---
+"""
+for row in summary_rows:
+    text_report += f"- {row['Member']}: {row['Week Status']} | {row['Account Standing']}\n"
 
 st.download_button(
-    label="📥 Download Weekly Report (Text File)",
-    data=report_buffer.getvalue(),
-    file_name=f"Susu_Report_Week_{current_elapsed_week}.txt",
+    label="Download Simple Text Update (WhatsApp Ready)",
+    data=text_report,
+    file_name=f"Susu_Simple_Update_Week_{current_elapsed_week}.txt",
     mime="text/plain",
     type="primary"
 )
 
-# --- DISPLAY TABLES ---
-st.markdown("### Payout")
-st.dataframe(df_sched, use_container_width=True, hide_index=True)
-
-st.markdown("### Contributions")
-st.dataframe(df_contrib, use_container_width=True, hide_index=True)
-
 st.markdown("---")
-st.caption("Running completely offline in local memory session. No passcode required.")
+st.caption("Running offline in local memory. Simple mobile-friendly view.")
