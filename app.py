@@ -83,7 +83,6 @@ st.markdown("""
         border-radius: 14px;
         padding: 20px 24px;
         margin-bottom: 20px;
-        transition: background-color 0.3s ease, border-color 0.3s ease;
     }
     .dashboard-tile-hidden {
         background: transparent !important;
@@ -131,15 +130,6 @@ st.markdown("""
     }
     .stDownloadButton > button:hover {
         background: #2563eb !important;
-    }
-
-    /* Info box */
-    div[data-testid="stInfo"] {
-        background: #161d27 !important;
-        border: 1px solid #1e2d3d !important;
-        border-radius: 8px !important;
-        color: #64748b !important;
-        font-size: 13px !important;
     }
 
     /* Dataframe */
@@ -264,8 +254,7 @@ if not st.session_state.authenticated:
     with col_m:
         pwd_input = st.text_input("Password", type="password", key="admin_pwd")
         if st.button("Unlock Dashboard", use_container_width=True):
-            # Change "admin123" to whatever default password you prefer
-            if pwd_input == "admin123":
+            if pwd_input == "Susu2026":
                 st.session_state.authenticated = True
                 st.rerun()
             else:
@@ -273,48 +262,50 @@ if not st.session_state.authenticated:
     st.stop()
 
 
-# --- SIDEBAR (Global Group Settings & Configuration) ---
-st.sidebar.header("⚙️ Configuration")
+# --- CONFIGURATION (EXPANDERS IN MAIN INTERFACE) ---
+with st.expander("⚙️ Group Settings & Custom Tiers", expanded=False):
+    col_set1, col_set2 = st.columns(2)
+    with col_set1:
+        start_date_str = st.text_input("Start Date (YYYY-MM-DD)", value=st.session_state.start_date)
+        base_monthly = st.number_input("Base Monthly Target (GHS)", value=float(st.session_state.base_monthly), step=50.0)
+        admin_fee_percentage = st.number_input("Admin Fee per Payout (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
+        names_input = st.text_area("Members (comma-separated)", value=st.session_state.names_input)
+        if st.button("Save Settings"):
+            st.session_state.start_date = start_date_str
+            st.session_state.base_monthly = base_monthly
+            st.session_state.admin_fee_percentage = admin_fee_percentage
+            st.session_state.names_input = names_input
+            persist_current_state()
+            st.success("Settings saved successfully!")
+            st.rerun()
 
-with st.sidebar.expander("Group Settings", expanded=False):
-    start_date_str = st.text_input("Start Date (YYYY-MM-DD)", value=st.session_state.start_date)
-    base_monthly = st.number_input("Base Monthly Target (GHS)", value=float(st.session_state.base_monthly), step=50.0)
-    admin_fee_percentage = st.number_input("Admin Fee per Payout (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
-    names_input = st.text_area("Members (comma-separated)", value=st.session_state.names_input)
-    if st.button("Save Settings"):
-        st.session_state.start_date = start_date_str
-        st.session_state.base_monthly = base_monthly
-        st.session_state.admin_fee_percentage = admin_fee_percentage
-        st.session_state.names_input = names_input
-        persist_current_state()
-        st.success("Settings saved successfully!")
+    members_temp = [n.strip() for n in names_input.split(",") if n.strip()]
+    with col_set2:
+        st.markdown("**Custom Monthly Tiers**")
+        updated_tiers = {}
+        for m in members_temp:
+            current_val = float(st.session_state.member_tiers.get(m, base_monthly))
+            updated_tiers[m] = st.number_input(f"{m} (GHS)", value=current_val, step=50.0, key=f"tier_{m}")
+        if st.button("Save Tiers"):
+            st.session_state.member_tiers = updated_tiers
+            persist_current_state()
+            st.success("Tiers saved successfully!")
+            st.rerun()
+
+    if st.button("🔒 Lock Dashboard"):
+        st.session_state.authenticated = False
         st.rerun()
 
 members = [n.strip() for n in st.session_state.names_input.split(",") if n.strip()]
 num_members = len(members)
 
 if num_members < 2:
-    st.error("Please enter at least 2 participant names.")
+    st.error("Please enter at least 2 participant names in settings.")
     st.stop()
 
 for m in members:
     if m not in st.session_state.member_tiers:
         st.session_state.member_tiers[m] = st.session_state.base_monthly
-
-with st.sidebar.expander("Custom Monthly Tiers", expanded=False):
-    updated_tiers = {}
-    for m in members:
-        current_val = float(st.session_state.member_tiers.get(m, st.session_state.base_monthly))
-        updated_tiers[m] = st.number_input(f"{m} (GHS)", value=current_val, step=50.0, key=f"tier_{m}")
-    if st.button("Save Tiers"):
-        st.session_state.member_tiers = updated_tiers
-        persist_current_state()
-        st.success("Tiers saved successfully!")
-        st.rerun()
-
-if st.sidebar.button("Lock Dashboard"):
-    st.session_state.authenticated = False
-    st.rerun()
 
 total_weeks = num_members * 4
 
@@ -388,7 +379,7 @@ st.markdown('<p class="section-sub">Update weekly member contributions and turn 
 
 col_tile1, col_tile2 = st.columns(2)
 
-# --- PAYMENT TILE (MAIN) ---
+# --- PAYMENT TILE ---
 with col_tile1:
     pay_tile_class = "dashboard-tile-hidden" if st.session_state.payment_saved else "dashboard-tile-normal"
     st.markdown(f'<div class="{pay_tile_class}">', unsafe_allow_html=True)
@@ -405,7 +396,7 @@ with col_tile1:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- PAYOUT TILE (MAIN) ---
+# --- PAYOUT TILE ---
 with col_tile2:
     payout_tile_class = "dashboard-tile-hidden" if st.session_state.payout_saved else "dashboard-tile-normal"
     st.markdown(f'<div class="{payout_tile_class}">', unsafe_allow_html=True)
