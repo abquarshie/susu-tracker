@@ -8,7 +8,8 @@ import os
 st.set_page_config(
     page_title="Susu Savings",
     page_icon="💸",
-    layout="centered"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
 st.markdown("""
@@ -19,16 +20,15 @@ st.markdown("""
     #MainMenu {visibility: hidden !important;}
     .stDeployButton {display: none !important;}
     footer {visibility: hidden !important;}
-    .block-container {padding-top: 1.8rem !important; padding-bottom: 3rem !important;}
+    [data-testid="collapsedControl"] {display: none !important;}
+    .block-container {padding-top: 1.8rem !important; padding-bottom: 3rem !important; max-width: 780px !important;}
 
     html, body, [class*="css"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
-
-    /* Dark background */
     .main, .stApp { background-color: #0d1117 !important; }
 
-    /* Page header card */
+    /* Page header */
     .page-header {
         background: linear-gradient(135deg, #1c2a3a 0%, #243447 100%);
         border: 1px solid #2d3f55;
@@ -43,18 +43,10 @@ st.markdown("""
         margin: 0 0 4px 0;
         letter-spacing: -0.2px;
     }
-    .page-header p {
-        font-size: 12px;
-        color: #4a6080;
-        margin: 0;
-    }
+    .page-header p { font-size: 12px; color: #4a6080; margin: 0; }
 
-    /* Compact metric strip */
-    .metric-strip {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
+    /* Metric strip */
+    .metric-strip { display: flex; gap: 10px; margin-bottom: 20px; }
     .metric-chip {
         flex: 1;
         background: #161d27;
@@ -63,89 +55,65 @@ st.markdown("""
         padding: 10px 14px;
     }
     .metric-chip-label {
-        font-size: 10px;
-        font-weight: 600;
-        color: #3d5a75;
-        text-transform: uppercase;
-        letter-spacing: 0.6px;
-        margin-bottom: 3px;
+        font-size: 10px; font-weight: 600; color: #3d5a75;
+        text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 3px;
     }
-    .metric-chip-value {
-        font-size: 15px;
-        font-weight: 700;
-        color: #38bdf8;
-    }
+    .metric-chip-value { font-size: 15px; font-weight: 700; color: #38bdf8; }
 
-    /* Main Dashboard Interactive Tiles */
-    .dashboard-tile-normal {
-        background: #161d27;
-        border: 1px solid #1e2d3d;
-        border-radius: 14px;
-        padding: 20px 24px;
-        margin-bottom: 20px;
+    /* Lock screen */
+    .lock-wrap {
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; padding: 60px 20px;
     }
-    .dashboard-tile-hidden {
-        background: transparent !important;
-        border-color: transparent !important;
-        margin-bottom: 20px;
-        padding: 20px 24px;
+    .lock-icon { font-size: 48px; margin-bottom: 16px; }
+    .lock-title {
+        font-size: 20px; font-weight: 700; color: #e2e8f0;
+        margin-bottom: 6px; text-align: center;
     }
-    .dashboard-tile-hidden * {
-        opacity: 0.15;
+    .lock-sub { font-size: 13px; color: #3d5a75; text-align: center; margin-bottom: 28px; }
+
+    /* Admin badge */
+    .admin-badge {
+        display: inline-flex; align-items: center; gap: 6px;
+        background: #162032; border: 1px solid #1e3a5f;
+        border-radius: 20px; padding: 5px 12px;
+        font-size: 11px; font-weight: 600; color: #38bdf8;
+        margin-bottom: 20px;
     }
 
     /* Section headers */
     .section-eyebrow {
-        font-size: 10px;
-        font-weight: 600;
-        color: #3d5a75;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-        margin: 26px 0 2px 0;
+        font-size: 10px; font-weight: 600; color: #3d5a75;
+        text-transform: uppercase; letter-spacing: 0.8px; margin: 26px 0 2px 0;
     }
-    .section-heading {
-        font-size: 16px;
-        font-weight: 700;
-        color: #cbd5e1;
-        margin: 0 0 3px 0;
-    }
-    .section-sub {
-        font-size: 12px;
-        color: #3d5a75;
-        margin: 0 0 12px 0;
-    }
+    .section-heading { font-size: 16px; font-weight: 700; color: #cbd5e1; margin: 0 0 3px 0; }
+    .section-sub { font-size: 12px; color: #3d5a75; margin: 0 0 12px 0; }
 
     /* Divider */
     .divider { height: 1px; background: #161d27; margin: 20px 0; }
 
-    /* Download button */
-    .stDownloadButton > button {
-        background: #1d4ed8 !important;
-        color: #ffffff !important;
-        border: none !important;
+    /* Inputs */
+    .stTextInput input, .stNumberInput input, .stTextArea textarea, .stSelectbox select {
+        background: #161d27 !important;
+        border: 1px solid #1e2d3d !important;
+        color: #e2e8f0 !important;
         border-radius: 8px !important;
         font-size: 13px !important;
-        font-weight: 600 !important;
-        padding: 8px 18px !important;
     }
-    .stDownloadButton > button:hover {
-        background: #2563eb !important;
+    .stTextInput label, .stNumberInput label, .stTextArea label,
+    .stSelectbox label, .stCheckbox label {
+        color: #64748b !important;
+        font-size: 12px !important;
+        font-weight: 500 !important;
     }
-
-    /* Dataframe */
-    div[data-testid="stDataFrame"] {
-        border-radius: 10px;
-        overflow: hidden;
-        border: 1px solid #1e2d3d;
-    }
-
-    /* Inputs & Buttons globally */
-    .stTextInput input, .stNumberInput input, .stTextArea textarea {
+    .stSelectbox > div > div {
         background: #161d27 !important;
         border: 1px solid #1e2d3d !important;
         color: #e2e8f0 !important;
         border-radius: 8px !important;
     }
+
+    /* Buttons */
     .stButton > button {
         background: #1d4ed8 !important;
         color: white !important;
@@ -153,154 +121,151 @@ st.markdown("""
         border-radius: 8px !important;
         font-weight: 600 !important;
         font-size: 13px !important;
+        padding: 8px 18px !important;
+        width: 100%;
     }
-    .stCheckbox label { color: #94a3b8 !important; }
+    .stButton > button:hover { background: #2563eb !important; }
+    .stButton > button[kind="secondary"] {
+        background: #161d27 !important;
+        color: #64748b !important;
+        border: 1px solid #1e2d3d !important;
+    }
+
+    /* Download button */
+    .stDownloadButton > button {
+        background: #161d27 !important;
+        color: #38bdf8 !important;
+        border: 1px solid #1e2d3d !important;
+        border-radius: 8px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        padding: 8px 18px !important;
+        width: auto !important;
+    }
+
+    /* Expander */
+    .streamlit-expanderHeader {
+        background: #161d27 !important;
+        border: 1px solid #1e2d3d !important;
+        border-radius: 10px !important;
+        color: #94a3b8 !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+    }
+    .streamlit-expanderContent {
+        background: #0d1117 !important;
+        border: 1px solid #1e2d3d !important;
+        border-top: none !important;
+        border-radius: 0 0 10px 10px !important;
+        padding: 16px !important;
+    }
+
+    /* Dataframe */
+    div[data-testid="stDataFrame"] {
+        border-radius: 10px; overflow: hidden; border: 1px solid #1e2d3d;
+    }
+
+    /* Checkbox */
+    .stCheckbox { color: #94a3b8 !important; }
+
+    /* Alerts */
+    div[data-testid="stSuccess"] {
+        background: #0f2a1a !important; border: 1px solid #14532d !important;
+        border-radius: 8px !important; color: #4ade80 !important; font-size: 13px !important;
+    }
+    div[data-testid="stError"] {
+        background: #2a0f0f !important; border: 1px solid #7f1d1d !important;
+        border-radius: 8px !important; color: #f87171 !important; font-size: 13px !important;
+    }
 
     /* Footer */
     .footer-note {
-        text-align: center;
-        font-size: 11px;
-        color: #1e2d3d;
-        margin-top: 28px;
-        padding-top: 16px;
-        border-top: 1px solid #161d27;
+        text-align: center; font-size: 11px; color: #1e2d3d;
+        margin-top: 28px; padding-top: 16px; border-top: 1px solid #161d27;
     }
     </style>
 """, unsafe_allow_html=True)
 
 
+# ── helpers ──────────────────────────────────────────────────────────────────
 def fmt_num(val):
-    if val == int(val):
-        return f"{int(val):,}"
-    return f"{val:,.2f}"
+    return f"{int(val):,}" if val == int(val) else f"{val:,.2f}"
 
 def format_date(dt):
-    day = dt.day
-    suffix = 'th' if 11 <= day <= 13 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
-    return f"{day}{suffix} {dt.strftime('%b %Y')}"
-
+    d = dt.day
+    sfx = 'th' if 11 <= d <= 13 else {1:'st',2:'nd',3:'rd'}.get(d%10,'th')
+    return f"{d}{sfx} {dt.strftime('%b %Y')}"
 
 DATA_FILE = "susu_data.json"
 
 def load_data():
     if os.path.exists(DATA_FILE):
         try:
-            with open(DATA_FILE, "r") as f:
+            with open(DATA_FILE) as f:
                 return json.load(f)
         except Exception:
             pass
     return None
 
-def save_data(data_dict):
-    try:
-        with open(DATA_FILE, "w") as f:
-            json.dump(data_dict, f, indent=4)
-    except Exception as e:
-        st.error(f"Error saving data: {e}")
+def save_data(d):
+    with open(DATA_FILE, "w") as f:
+        json.dump(d, f, indent=4)
 
-
-saved_state = load_data()
-
-if "initialized" not in st.session_state:
-    if saved_state:
-        st.session_state.start_date = saved_state.get("start_date", "2026-08-17")
-        st.session_state.base_monthly = saved_state.get("base_monthly", 1000)
-        st.session_state.admin_fee_percentage = saved_state.get("admin_fee_percentage", 0.0)
-        st.session_state.names_input = saved_state.get("names_input", "Alice, Bob, Charlie, Diana, Frank, Grace")
-        st.session_state.member_tiers = saved_state.get("member_tiers", {})
-        st.session_state.payments = saved_state.get("payments", {})
-        st.session_state.payout_status = saved_state.get("payout_status", {})
-    else:
-        st.session_state.start_date = "2026-08-17"
-        st.session_state.base_monthly = 1000
-        st.session_state.admin_fee_percentage = 0.0
-        st.session_state.names_input = "Alice, Bob, Charlie, Diana, Frank, Grace"
-        st.session_state.member_tiers = {}
-        st.session_state.payments = {}
-        st.session_state.payout_status = {}
-    st.session_state.initialized = True
-
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
-if "payment_saved" not in st.session_state:
-    st.session_state.payment_saved = False
-
-if "payout_saved" not in st.session_state:
-    st.session_state.payout_saved = False
-
-def persist_current_state():
+def persist():
     save_data({
-        "start_date": st.session_state.start_date,
-        "base_monthly": st.session_state.base_monthly,
+        "start_date":           st.session_state.start_date,
+        "base_monthly":         st.session_state.base_monthly,
         "admin_fee_percentage": st.session_state.admin_fee_percentage,
-        "names_input": st.session_state.names_input,
-        "member_tiers": st.session_state.member_tiers,
-        "payments": st.session_state.payments,
-        "payout_status": st.session_state.payout_status
+        "names_input":          st.session_state.names_input,
+        "member_tiers":         st.session_state.member_tiers,
+        "payments":             st.session_state.payments,
+        "payout_status":        st.session_state.payout_status,
     })
 
 
-# --- PASSWORD PROTECTION SCREEN ---
+# ── session init ─────────────────────────────────────────────────────────────
+if "initialized" not in st.session_state:
+    saved = load_data() or {}
+    st.session_state.start_date           = saved.get("start_date", "2026-08-17")
+    st.session_state.base_monthly         = saved.get("base_monthly", 1000)
+    st.session_state.admin_fee_percentage = saved.get("admin_fee_percentage", 0.0)
+    st.session_state.names_input          = saved.get("names_input", "Alice, Bob, Charlie, Diana, Frank, Grace")
+    st.session_state.member_tiers         = saved.get("member_tiers", {})
+    st.session_state.payments             = saved.get("payments", {})
+    st.session_state.payout_status        = saved.get("payout_status", {})
+    st.session_state.authenticated        = False
+    st.session_state.initialized          = True
+
+
+# ── auth gate ─────────────────────────────────────────────────────────────────
+ADMIN_PW = "Susu2026"
+
 if not st.session_state.authenticated:
     st.markdown("""
-        <div class="page-header" style="max-width: 400px; margin: 80px auto 20px auto; text-align: center;">
-            <h1>🔒 Admin Access</h1>
-            <p>Enter your password to unlock the management dashboard</p>
+        <div class="lock-wrap">
+            <div class="lock-icon">🔒</div>
+            <div class="lock-title">Susu Savings Dashboard</div>
+            <div class="lock-sub">Enter the group passcode to continue</div>
         </div>
     """, unsafe_allow_html=True)
-    
-    col_l, col_m, col_r = st.columns([1, 1.2, 1])
-    with col_m:
-        pwd_input = st.text_input("Password", type="password", key="admin_pwd")
-        if st.button("Unlock Dashboard", use_container_width=True):
-            if pwd_input == "Susu2026":
+    col_l, col_c, col_r = st.columns([1,2,1])
+    with col_c:
+        pw = st.text_input("Passcode", type="password", label_visibility="collapsed", placeholder="Enter passcode…")
+        if st.button("Unlock →"):
+            if pw == ADMIN_PW:
                 st.session_state.authenticated = True
                 st.rerun()
             else:
-                st.error("Incorrect password.")
+                st.error("Incorrect passcode.")
     st.stop()
 
 
-# --- CONFIGURATION (EXPANDERS IN MAIN INTERFACE) ---
-with st.expander("⚙️ Group Settings & Custom Tiers", expanded=False):
-    col_set1, col_set2 = st.columns(2)
-    with col_set1:
-        start_date_str = st.text_input("Start Date (YYYY-MM-DD)", value=st.session_state.start_date)
-        base_monthly = st.number_input("Base Monthly Target (GHS)", value=float(st.session_state.base_monthly), step=50.0)
-        admin_fee_percentage = st.number_input("Admin Fee per Payout (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
-        names_input = st.text_area("Members (comma-separated)", value=st.session_state.names_input)
-        if st.button("Save Settings"):
-            st.session_state.start_date = start_date_str
-            st.session_state.base_monthly = base_monthly
-            st.session_state.admin_fee_percentage = admin_fee_percentage
-            st.session_state.names_input = names_input
-            persist_current_state()
-            st.success("Settings saved successfully!")
-            st.rerun()
-
-    members_temp = [n.strip() for n in names_input.split(",") if n.strip()]
-    with col_set2:
-        st.markdown("**Custom Monthly Tiers**")
-        updated_tiers = {}
-        for m in members_temp:
-            current_val = float(st.session_state.member_tiers.get(m, base_monthly))
-            updated_tiers[m] = st.number_input(f"{m} (GHS)", value=current_val, step=50.0, key=f"tier_{m}")
-        if st.button("Save Tiers"):
-            st.session_state.member_tiers = updated_tiers
-            persist_current_state()
-            st.success("Tiers saved successfully!")
-            st.rerun()
-
-    if st.button("🔒 Lock Dashboard"):
-        st.session_state.authenticated = False
-        st.rerun()
-
-members = [n.strip() for n in st.session_state.names_input.split(",") if n.strip()]
+# ── derive members / dates ────────────────────────────────────────────────────
+members     = [n.strip() for n in st.session_state.names_input.split(",") if n.strip()]
 num_members = len(members)
 
 if num_members < 2:
-    st.error("Please enter at least 2 participant names in settings.")
+    st.error("Please enter at least 2 member names in Settings.")
     st.stop()
 
 for m in members:
@@ -310,34 +275,31 @@ for m in members:
 total_weeks = num_members * 4
 
 try:
-    start_dt = datetime.strptime(st.session_state.start_date, '%Y-%m-%d')
+    start_dt = datetime.strptime(st.session_state.start_date, "%Y-%m-%d")
 except ValueError:
     st.error("Date format must be YYYY-MM-DD.")
     st.stop()
 
 end_date = start_dt + timedelta(weeks=total_weeks)
 
-if not st.session_state.payments or list(st.session_state.payments.keys()) != members:
-    st.session_state.payments = {m: {str(w): False for w in range(1, total_weeks + 1)} for m in members}
+if list(st.session_state.payments.keys()) != members:
+    st.session_state.payments = {m: {str(w): False for w in range(1, total_weeks+1)} for m in members}
 
 if not st.session_state.payout_status:
     st.session_state.payout_status = {f"Month {i+1}": {"amount_collected": 0.0} for i in range(num_members)}
 
 
-# --- CALCULATIONS ---
+# ── calculations ──────────────────────────────────────────────────────────────
 today = datetime.today()
-days_passed = (today - start_dt).days
+days_passed          = (today - start_dt).days
 current_elapsed_week = max(0, days_passed // 7) + 1 if today >= start_dt else 0
 current_elapsed_week = min(current_elapsed_week, total_weeks)
 
-total_cash_collected = 0.0
-for m in members:
-    m_monthly = st.session_state.member_tiers.get(m, st.session_state.base_monthly)
-    m_weekly = m_monthly / 4.0
-    m_payments = st.session_state.payments.get(m, {})
-    paid_count = sum(1 for w in range(1, total_weeks + 1) if m_payments.get(str(w), False))
-    total_cash_collected += paid_count * m_weekly
-
+total_cash_collected = sum(
+    st.session_state.member_tiers.get(m, st.session_state.base_monthly) / 4.0
+    * sum(1 for w in range(1, total_weeks+1) if st.session_state.payments.get(m,{}).get(str(w), False))
+    for m in members
+)
 total_payouts_distributed = sum(
     float(st.session_state.payout_status.get(f"Month {i+1}", {}).get("amount_collected", 0.0))
     for i in range(num_members)
@@ -345,7 +307,7 @@ total_payouts_distributed = sum(
 total_cash_held = total_cash_collected - total_payouts_distributed
 
 
-# --- MAIN VIEW HEADER & METRICS ---
+# ── header + metrics ──────────────────────────────────────────────────────────
 st.markdown(f"""
     <div class="page-header">
         <h1>💸 Susu Savings Dashboard</h1>
@@ -369,180 +331,166 @@ st.markdown(f"""
             <div class="metric-chip-value">{format_date(end_date)}</div>
         </div>
     </div>
+    <div class="admin-badge">🔓 Admin — logged in</div>
 """, unsafe_allow_html=True)
 
 
-# --- MAIN DASHBOARD INTERACTIVE TILES ---
-st.markdown('<p class="section-eyebrow">Actions</p>', unsafe_allow_html=True)
-st.markdown('<p class="section-heading">Record Transactions</p>', unsafe_allow_html=True)
-st.markdown('<p class="section-sub">Update weekly member contributions and turn payouts directly below</p>', unsafe_allow_html=True)
-
-col_tile1, col_tile2 = st.columns(2)
-
-# --- PAYMENT TILE ---
-with col_tile1:
-    pay_tile_class = "dashboard-tile-hidden" if st.session_state.payment_saved else "dashboard-tile-normal"
-    st.markdown(f'<div class="{pay_tile_class}">', unsafe_allow_html=True)
-    st.subheader("📥 Record Weekly Payment")
-    selected_member = st.selectbox("Member", members, key="main_pay_member", on_change=lambda: st.session_state.update({"payment_saved": False}))
-    selected_week = st.selectbox("Week", list(range(1, total_weeks + 1)), key="main_pay_week", on_change=lambda: st.session_state.update({"payment_saved": False}))
-    current_w_status = st.session_state.payments.get(selected_member, {}).get(str(selected_week), False)
-    weekly_check = st.checkbox(f"Week {selected_week} paid?", value=current_w_status, key="main_pay_chk", on_change=lambda: st.session_state.update({"payment_saved": False}))
-
-    if st.button("Save Payment", key="main_btn_save_pay"):
-        st.session_state.payments[selected_member][str(selected_week)] = weekly_check
-        st.session_state.payment_saved = True
-        persist_current_state()
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# --- PAYOUT TILE ---
-with col_tile2:
-    payout_tile_class = "dashboard-tile-hidden" if st.session_state.payout_saved else "dashboard-tile-normal"
-    st.markdown(f'<div class="{payout_tile_class}">', unsafe_allow_html=True)
-    st.subheader("📤 Record Payout")
-    month_options = [f"Month {i+1} — {members[i]}" for i in range(num_members)]
-    selected_month_label = st.selectbox("Payout Turn", month_options, key="main_payout_turn", on_change=lambda: st.session_state.update({"payout_saved": False}))
-    month_key = selected_month_label.split(" —")[0]
-    current_p_info = st.session_state.payout_status.get(month_key, {"amount_collected": 0.0})
-    recipient_idx = int(month_key.split(" ")[1]) - 1
-    recipient_name = members[recipient_idx]
-    rec_monthly = st.session_state.member_tiers.get(recipient_name, st.session_state.base_monthly)
-    gross_pool = rec_monthly * num_members
-    fee_val = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
-    net_pool = gross_pool - fee_val
-    input_collected = st.number_input("Amount Collected (GHS)", value=float(current_p_info.get("amount_collected", 0.0)), min_value=0.0, max_value=float(net_pool), step=50.0, key="main_payout_amt", on_change=lambda: st.session_state.update({"payout_saved": False}))
-
-    if st.button("Save Payout", key="main_btn_save_payout"):
-        st.session_state.payout_status[month_key]["amount_collected"] = input_collected
-        st.session_state.payout_saved = True
-        persist_current_state()
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-
-# --- BUILD DATA ---
-schedule_data = []
-whatsapp_payout_rows = []
-whatsapp_onboarding_rows = []
+# ── build table data ──────────────────────────────────────────────────────────
+schedule_data, wa_payout_rows = [], []
 current_date = start_dt
-
 for i in range(num_members):
-    month_lbl = f"Month {i+1}"
-    recipient = members[i]
-    payout_date = current_date + timedelta(weeks=4)
-    rec_monthly = st.session_state.member_tiers.get(recipient, st.session_state.base_monthly)
-    gross_pool = rec_monthly * num_members
-    admin_fee_val = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
-    net_pool_amount = gross_pool - admin_fee_val
-    p_info = st.session_state.payout_status.get(month_lbl, {"amount_collected": 0.0})
-    collected_amt = float(p_info.get("amount_collected", 0.0))
-    remaining_pool = max(0.0, net_pool_amount - collected_amt)
-
+    month_lbl    = f"Month {i+1}"
+    recipient    = members[i]
+    payout_date  = current_date + timedelta(weeks=4)
+    rec_monthly  = st.session_state.member_tiers.get(recipient, st.session_state.base_monthly)
+    gross_pool   = rec_monthly * num_members
+    admin_fee_v  = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
+    net_pool_amt = gross_pool - admin_fee_v
+    collected    = float(st.session_state.payout_status.get(month_lbl, {}).get("amount_collected", 0.0))
+    remaining    = max(0.0, net_pool_amt - collected)
     schedule_data.append({
-        "Turn": f"Month {i+1}",
-        "Recipient": recipient,
+        "Turn": f"Month {i+1}", "Recipient": recipient,
         "Payout Date": format_date(payout_date),
-        "Admin Fee": f"GHS {fmt_num(admin_fee_val)}",
-        "Net Pool": f"GHS {fmt_num(net_pool_amount)}",
-        "Collected": f"GHS {fmt_num(collected_amt)}",
-        "Remaining": f"GHS {fmt_num(remaining_pool)}",
+        "Admin Fee": f"GHS {fmt_num(admin_fee_v)}",
+        "Net Pool": f"GHS {fmt_num(net_pool_amt)}",
+        "Collected": f"GHS {fmt_num(collected)}",
+        "Remaining": f"GHS {fmt_num(remaining)}",
     })
-    whatsapp_payout_rows.append({"recipient": recipient, "date": format_date(payout_date), "balance": fmt_num(remaining_pool)})
-    
-    m_monthly = st.session_state.member_tiers.get(recipient, st.session_state.base_monthly)
-    m_weekly = m_monthly / 4.0
-    whatsapp_onboarding_rows.append({
-        "member": recipient,
-        "monthly": fmt_num(m_monthly),
-        "weekly": fmt_num(m_weekly),
-        "payout_date": format_date(payout_date),
-        "net_pool": fmt_num(net_pool_amount)
-    })
+    wa_payout_rows.append({"recipient": recipient, "date": format_date(payout_date), "balance": fmt_num(remaining)})
     current_date = payout_date
 
-contrib_data = []
-whatsapp_contrib_rows = []
+contrib_data, wa_contrib_rows = [], []
 for member in members:
-    m_monthly = st.session_state.member_tiers.get(member, st.session_state.base_monthly)
-    m_weekly = m_monthly / 4.0
-    member_payments = st.session_state.payments.get(member, {})
-    paid_passed = sum(1 for w in range(1, current_elapsed_week + 1) if member_payments.get(str(w), False))
-    unpaid_passed = current_elapsed_week - paid_passed
-    owing = unpaid_passed * m_weekly
-    total_paid_all = sum(1 for w in range(1, total_weeks + 1) if member_payments.get(str(w), False))
-    pct = int((total_paid_all / total_weeks) * 100) if total_weeks > 0 else 0
-    status = f"Owing GHS {fmt_num(owing)}" if owing > 0 else "Up to date"
-
+    m_monthly   = st.session_state.member_tiers.get(member, st.session_state.base_monthly)
+    m_weekly    = m_monthly / 4.0
+    m_pmts      = st.session_state.payments.get(member, {})
+    paid_passed = sum(1 for w in range(1, current_elapsed_week+1) if m_pmts.get(str(w), False))
+    owing       = (current_elapsed_week - paid_passed) * m_weekly
+    total_paid  = sum(1 for w in range(1, total_weeks+1) if m_pmts.get(str(w), False))
+    pct         = int((total_paid / total_weeks) * 100) if total_weeks else 0
+    standing    = f"Owing GHS {fmt_num(owing)}" if owing > 0 else "Up to date"
     contrib_data.append({
         "Member": member,
         "Monthly Tier": f"GHS {fmt_num(m_monthly)}",
         "Weekly Target": f"GHS {fmt_num(m_weekly)}",
-        "Weeks Paid": f"{total_paid_all} / {total_weeks}",
+        "Weeks Paid": f"{total_paid} / {total_weeks}",
         "Progress": f"{pct}%",
-        "Status": ("🔴 " if owing > 0 else "🟢 ") + status,
+        "Status": ("🔴 " if owing > 0 else "🟢 ") + standing,
     })
-    whatsapp_contrib_rows.append({"member": member, "standing": status})
+    wa_contrib_rows.append({"member": member, "standing": standing})
 
 
-# --- WHATSAPP REPORTS ---
-st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
-st.markdown('<p class="section-eyebrow">Export</p>', unsafe_allow_html=True)
-st.markdown('<p class="section-heading">WhatsApp Updates</p>', unsafe_allow_html=True)
-st.markdown('<p class="section-sub">Download ready-to-paste messages for onboarding or weekly standing updates</p>', unsafe_allow_html=True)
-
-col_exp1, col_exp2 = st.columns(2)
-
-with col_exp1:
-    onboard_buffer = io.StringIO()
-    onboard_buffer.write("🚀 *SUSU SAVINGS - ONBOARDING DETAILS*\n")
-    onboard_buffer.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
-    onboard_buffer.write("📋 *CONTRIBUTION & PAYOUT SCHEDULE*\n")
-    for row in whatsapp_onboarding_rows:
-        onboard_buffer.write(f"• *{row['member']}*\n")
-        onboard_buffer.write(f"  - Contribution: GHS {row['monthly']} / mo (GHS {row['weekly']} / wk)\n")
-        onboard_buffer.write(f"  - Payout: GHS {row['net_pool']} on {row['payout_date']}\n\n")
-    
-    st.download_button(
-        label="📥 Download Onboarding Target Update",
-        data=onboard_buffer.getvalue(),
-        file_name="Susu_Onboarding_Targets.txt",
-        mime="text/plain",
-        type="primary"
-    )
-
-with col_exp2:
-    report_buffer = io.StringIO()
-    report_buffer.write(f"📌 *WK {current_elapsed_week} UPDATE*\n")
-    report_buffer.write(f"💰 *Cash at Hand:* GHS {fmt_num(total_cash_held)}\n")
-    report_buffer.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
-    report_buffer.write("👥 *MEMBERS*\n")
-    for row in whatsapp_contrib_rows:
-        icon = "❌" if "Owing" in row["standing"] else "✅"
-        report_buffer.write(f"{icon} *{row['member']}*: {row['standing']}\n")
-    report_buffer.write("\n🎁 *PAYOUTS*\n")
-    for prow in whatsapp_payout_rows:
-        report_buffer.write(f"{prow['recipient']} {prow['date']} - GHS {prow['balance']}\n")
-
-    st.download_button(
-        label="📥 Download Weekly Status Update",
-        data=report_buffer.getvalue(),
-        file_name=f"Susu_Update_W{current_elapsed_week}.txt",
-        mime="text/plain",
-        type="secondary"
-    )
-
-# --- TABLES ---
-st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+# ── payout schedule ───────────────────────────────────────────────────────────
 st.markdown('<p class="section-eyebrow">Rotation</p>', unsafe_allow_html=True)
 st.markdown('<p class="section-heading">Payout Schedule</p>', unsafe_allow_html=True)
-st.markdown('<p class="section-sub">Dates, fees and remaining pool per turn</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-sub">Dates, fees and pool balance per turn</p>', unsafe_allow_html=True)
 st.dataframe(pd.DataFrame(schedule_data), use_container_width=True, hide_index=True)
 
+
+# ── contributions ─────────────────────────────────────────────────────────────
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 st.markdown('<p class="section-eyebrow">Members</p>', unsafe_allow_html=True)
 st.markdown('<p class="section-heading">Contributions</p>', unsafe_allow_html=True)
-st.markdown('<p class="section-sub">Tiers, progress and payment standing per member</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-sub">Tiers, progress and payment standing</p>', unsafe_allow_html=True)
 st.dataframe(pd.DataFrame(contrib_data), use_container_width=True, hide_index=True)
 
-st.markdown('<div class="footer-note">History saved locally · View-only by default</div>', unsafe_allow_html=True)
+
+# ── whatsapp export ───────────────────────────────────────────────────────────
+st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+st.markdown('<p class="section-eyebrow">Export</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-heading">WhatsApp Update</p>', unsafe_allow_html=True)
+st.markdown('<p class="section-sub">Download a ready-to-paste weekly status message</p>', unsafe_allow_html=True)
+
+buf = io.StringIO()
+buf.write(f"📌 *WK {current_elapsed_week} UPDATE*\n")
+buf.write(f"💰 *Cash at Hand:* GHS {fmt_num(total_cash_held)}\n")
+buf.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
+buf.write("👥 *MEMBERS*\n")
+for r in wa_contrib_rows:
+    buf.write(f"{'✅' if 'Up' in r['standing'] else '❌'} *{r['member']}*: {r['standing']}\n")
+buf.write("\n🎁 *PAYOUTS*\n")
+for r in wa_payout_rows:
+    buf.write(f"{r['recipient']} · {r['date']} · GHS {r['balance']}\n")
+
+st.download_button(
+    label="📥 Download WhatsApp Update",
+    data=buf.getvalue(),
+    file_name=f"Susu_W{current_elapsed_week}.txt",
+    mime="text/plain",
+)
+
+
+# ── admin panel ───────────────────────────────────────────────────────────────
+st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+
+with st.expander("⚙️ Group Settings"):
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        new_start = st.text_input("Start Date (YYYY-MM-DD)", value=st.session_state.start_date)
+    with c2:
+        new_base = st.number_input("Base Monthly (GHS)", value=float(st.session_state.base_monthly), step=50.0)
+    with c3:
+        new_fee = st.number_input("Admin Fee (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
+    new_names = st.text_area("Members (comma-separated)", value=st.session_state.names_input)
+    if st.button("Save Settings", key="save_settings"):
+        st.session_state.start_date           = new_start
+        st.session_state.base_monthly         = new_base
+        st.session_state.admin_fee_percentage = new_fee
+        st.session_state.names_input          = new_names
+        persist()
+        st.success("Settings saved.")
+        st.rerun()
+
+with st.expander("💰 Custom Member Tiers"):
+    tier_cols = st.columns(min(num_members, 4))
+    new_tiers = {}
+    for idx, m in enumerate(members):
+        with tier_cols[idx % 4]:
+            new_tiers[m] = st.number_input(m, value=float(st.session_state.member_tiers.get(m, st.session_state.base_monthly)), step=50.0, key=f"tier_{m}")
+    if st.button("Save Tiers", key="save_tiers"):
+        st.session_state.member_tiers = new_tiers
+        persist()
+        st.success("Tiers saved.")
+        st.rerun()
+
+with st.expander("📝 Record Weekly Payment"):
+    pc1, pc2 = st.columns(2)
+    with pc1:
+        sel_member = st.selectbox("Member", members, key="pay_member")
+    with pc2:
+        sel_week   = st.selectbox("Week", list(range(1, total_weeks+1)), key="pay_week")
+    cur_status = st.session_state.payments.get(sel_member, {}).get(str(sel_week), False)
+    chk        = st.checkbox(f"Mark Week {sel_week} as paid", value=cur_status, key="pay_chk")
+    if st.button("Save Payment", key="save_payment"):
+        st.session_state.payments[sel_member][str(sel_week)] = chk
+        persist()
+        st.success(f"Week {sel_week} for {sel_member} saved.")
+        st.rerun()
+
+with st.expander("🎁 Record Payout"):
+    month_options = [f"Month {i+1} — {members[i]}" for i in range(num_members)]
+    sel_month_lbl = st.selectbox("Payout Turn", month_options, key="payout_month")
+    mkey          = sel_month_lbl.split(" —")[0]
+    rec_idx       = int(mkey.split(" ")[1]) - 1
+    rec_name      = members[rec_idx]
+    rec_monthly_v = st.session_state.member_tiers.get(rec_name, st.session_state.base_monthly)
+    gross_v       = rec_monthly_v * num_members
+    fee_v         = gross_v * (st.session_state.admin_fee_percentage / 100.0)
+    net_v         = gross_v - fee_v
+    cur_collected = float(st.session_state.payout_status.get(mkey, {}).get("amount_collected", 0.0))
+    new_collected = st.number_input(f"Amount Collected for {rec_name} (max GHS {fmt_num(net_v)})", value=cur_collected, min_value=0.0, max_value=float(net_v), step=50.0, key="payout_amt")
+    if st.button("Save Payout", key="save_payout"):
+        if mkey not in st.session_state.payout_status:
+            st.session_state.payout_status[mkey] = {}
+        st.session_state.payout_status[mkey]["amount_collected"] = new_collected
+        persist()
+        st.success(f"Payout for {rec_name} saved.")
+        st.rerun()
+
+# ── logout ────────────────────────────────────────────────────────────────────
+st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
+if st.button("🔒 Lock Dashboard", key="logout", type="secondary"):
+    st.session_state.authenticated = False
+    st.rerun()
+
+st.markdown('<div class="footer-note">Data saved locally · Secured with passcode</div>', unsafe_allow_html=True)
