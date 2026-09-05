@@ -499,22 +499,7 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# countdown banner — urgent pulse when ≤7 days
-if next_recipient:
-    urgent_cls = "urgent" if days_to_payout <= 7 else ""
-    st.markdown(f"""
-        <div class="countdown-banner">
-            <div class="countdown-left">
-                <div class="countdown-label">Next Payout</div>
-                <div class="countdown-name">{next_recipient}</div>
-                <div class="countdown-pool">GHS {fmt_num(next_net_pool)} &nbsp;·&nbsp; {format_date(next_payout_date)}</div>
-            </div>
-            <div class="countdown-right">
-                <div class="countdown-days {urgent_cls}">{days_to_payout}</div>
-                <div class="countdown-days-label">days away</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+
 
 # chips — 4th chip: total collected vs expected
 gap_class   = "chip-value-red" if collection_gap > 0 else "chip-value-green"
@@ -621,22 +606,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 
-# ── member self-view links ────────────────────────────────────────────────────
-base_url = st.get_option("browser.serverAddress") or "your-app-url"
-app_url  = "https://your-app.streamlit.app"   # update this to your real URL
-st.markdown(f"""
-    <div class="glass-card">
-        <p class="sec-label">Member Links</p>
-        <p class="sec-title">Self-View URLs</p>
-        <p class="sec-sub">Share each link with the individual member — no passcode required</p>
-        <table class="data-table">
-            <thead><tr><th>Member</th><th>Read-Only Link</th></tr></thead>
-            <tbody>
-            {''.join(f'<tr class="plain"><td><span class="cell-name">{m}</span></td><td style="font-size:11px;color:{T["sub_color"]}">{app_url}?member={m}</td></tr>' for m in members)}
-            </tbody>
-        </table>
-    </div>
-""", unsafe_allow_html=True)
+
 
 
 # ── exports ───────────────────────────────────────────────────────────────────
