@@ -2,6 +2,7 @@ import streamlit as st
 from datetime import datetime, timedelta
 import io
 import json
+import re
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -27,6 +28,13 @@ st.markdown("""
     }
     </script>
 """, unsafe_allow_html=True)
+
+# ── HTML helper ───────────────────────────────────────────────────────────────
+# Streamlit's Markdown parser treats a blank line followed by a line indented
+# 4+ spaces as a code block. This strips leading whitespace from every line so
+# multi-line HTML strings render as HTML, never as literal code.
+def html(s):
+    st.markdown(re.sub(r"\n[ \t]+", "\n", s).strip(), unsafe_allow_html=True)
 
 # ── theme ─────────────────────────────────────────────────────────────────────
 if "dark_mode" not in st.session_state: st.session_state.dark_mode = True
@@ -234,13 +242,12 @@ def completion_ring(pct, size=72):
     dash = circ*pct/100
     c    = ring_text_c
     tr   = T["ring_track"]
-    return f"""<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" style="flex-shrink:0">
-      <circle cx="{size//2}" cy="{size//2}" r="{r}" fill="none" stroke="{tr}" stroke-width="5"/>
-      <circle cx="{size//2}" cy="{size//2}" r="{r}" fill="none" stroke="{c}" stroke-width="5"
-        stroke-dasharray="{dash:.1f} {circ:.1f}" stroke-linecap="round"
-        transform="rotate(-90 {size//2} {size//2})"/>
-      <text x="{size//2}" y="{size//2+4}" text-anchor="middle" font-size="13" font-weight="700" fill="{c}">{pct}%</text>
-    </svg>"""
+    return (f'<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" style="flex-shrink:0">'
+            f'<circle cx="{size//2}" cy="{size//2}" r="{r}" fill="none" stroke="{tr}" stroke-width="5"/>'
+            f'<circle cx="{size//2}" cy="{size//2}" r="{r}" fill="none" stroke="{c}" stroke-width="5" '
+            f'stroke-dasharray="{dash:.1f} {circ:.1f}" stroke-linecap="round" transform="rotate(-90 {size//2} {size//2})"/>'
+            f'<text x="{size//2}" y="{size//2+4}" text-anchor="middle" font-size="13" font-weight="700" fill="{c}">{pct}%</text>'
+            f'</svg>')
 
 
 # ── Google Sheets ─────────────────────────────────────────────────────────────
@@ -319,13 +326,13 @@ member_view = params.get("member", None)
 
 # ── auth ──────────────────────────────────────────────────────────────────────
 if not member_view and not st.session_state.authenticated:
-    st.markdown("""<div class="lock-outer">
+    html("""<div class="lock-outer">
         <div class="lock-card">
             <span class="lock-icon">💸</span>
             <div class="lock-title">Susu Savings</div>
             <div class="lock-sub">Enter your passcode to continue</div>
         </div>
-    </div>""", unsafe_allow_html=True)
+    </div>""")
     col_l,col_c,col_r = st.columns([1,2,1])
     with col_c:
         pw = st.text_input("p", type="password", label_visibility="collapsed", placeholder="Passcode…")
@@ -448,7 +455,7 @@ if member_view:
 
     sync_ago = int((datetime.now()-st.session_state.last_sync).total_seconds()/60)
     sync_txt = "just now" if sync_ago<1 else f"{sync_ago}m ago"
-    st.markdown(f"""
+    html(f"""
         <div class="status-bar"><span><span class="status-dot"></span><span class="status-live">Live</span></span><span class="status-sync">Synced {sync_txt} &nbsp;·&nbsp; Google Sheets</span></div>
         <div class="hero"><div class="hero-left">
             <div class="hero-title">💸 Susu Savings — Member View</div>
@@ -465,7 +472,7 @@ if member_view:
                 <div style="font-size:11px;color:{T['sub_color']};margin-top:6px">{mr['total_paid']} / {total_weeks} weeks paid</div>
             </div>
         </div>
-    """, unsafe_allow_html=True)
+    """)
 
     pills = ""
     for w in range(1,total_weeks+1):
@@ -475,21 +482,21 @@ if member_view:
         icon   = "✅" if paid else ("⏳" if future else "❌")
         pills += f'<span class="week-pill {cls}">{icon} Wk {w}</span>'
 
-    st.markdown(f"""<div class="glass-card">
+    html(f"""<div class="glass-card">
         <p class="sec-label">Payment Tracker</p><p class="sec-title">Your Weekly History</p>
         <p class="sec-sub">✅ Paid &nbsp;·&nbsp; ❌ Owing &nbsp;·&nbsp; ⏳ Upcoming</p>
-        <div class="week-grid">{pills}</div></div>""", unsafe_allow_html=True)
+        <div class="week-grid">{pills}</div></div>""")
 
     if next_recipient:
         urgent_cls = "urgent" if days_to_payout<=7 else ""
-        st.markdown(f"""<div class="countdown-banner">
+        html(f"""<div class="countdown-banner">
             <div class="countdown-left"><div class="countdown-label">Next Group Payout</div>
                 <div class="countdown-name">{next_recipient}</div>
                 <div class="countdown-pool">GHS {fmt_num(next_net_pool)} &nbsp;·&nbsp; {format_date(next_payout_date)}</div>
             </div>
             <div class="countdown-right"><div class="countdown-days {urgent_cls}">{days_to_payout}</div>
                 <div class="countdown-days-label">days away</div></div>
-        </div>""", unsafe_allow_html=True)
+        </div>""")
 
     # Feature 6: individual member WhatsApp message
     ind = io.StringIO()
@@ -509,7 +516,7 @@ if member_view:
     ind.write("\nThank you! 🙏")
     st.download_button("📲 Download My Update", data=ind.getvalue(), file_name=f"{member_view}_W{current_elapsed_week}.txt", mime="text/plain")
 
-    st.markdown(f'<div class="foot">Read-only view · {member_view} · Susu Savings</div>', unsafe_allow_html=True)
+    html(f'<div class="foot">Read-only view · {member_view} · Susu Savings</div>')
     st.stop()
 
 
@@ -520,7 +527,7 @@ sync_ago = int((datetime.now()-st.session_state.last_sync).total_seconds()/60)
 sync_txt = "just now" if sync_ago<1 else f"{sync_ago}m ago"
 sb_col,tg_col = st.columns([4,1])
 with sb_col:
-    st.markdown(f"""<div class="status-bar"><span><span class="status-dot"></span><span class="status-live">Live</span></span><span class="status-sync">Synced {sync_txt} &nbsp;·&nbsp; Google Sheets</span></div>""", unsafe_allow_html=True)
+    html(f"""<div class="status-bar"><span><span class="status-dot"></span><span class="status-live">Live</span></span><span class="status-sync">Synced {sync_txt} &nbsp;·&nbsp; Google Sheets</span></div>""")
 with tg_col:
     st.markdown("<div style='padding-top:2px'>", unsafe_allow_html=True)
     if st.button(f"{T['toggle_icon']} {T['toggle_label']}", key="theme_toggle", type="secondary"):
@@ -528,7 +535,7 @@ with tg_col:
     st.markdown("</div>", unsafe_allow_html=True)
 
 # Hero with completion ring
-st.markdown(f"""
+html(f"""
     <div class="hero">
         <div class="hero-left">
             <div class="hero-title">💸 Susu Savings Dashboard</div>
@@ -537,7 +544,7 @@ st.markdown(f"""
         </div>
         {completion_ring(program_pct)}
     </div>
-""", unsafe_allow_html=True)
+""")
 
 # Chips
 gap_class  = "chip-value-red" if collection_gap>0 else "chip-value-green"
@@ -552,14 +559,14 @@ if prev_snap is not None and current_elapsed_week>1:
 else:
     delta_html = f'<div style="font-size:10px;color:#334155;margin-top:3px;">No prior snapshot yet</div>'
 
-st.markdown(f"""
+html(f"""
     <div class="chip-row">
         <div class="chip"><div class="chip-label">Cash Held</div><div class="chip-value">GHS {fmt_num(total_cash_held)}</div>{delta_html}</div>
         <div class="chip"><div class="chip-label">Week</div><div class="chip-value">{current_elapsed_week} / {total_weeks}</div></div>
         <div class="chip"><div class="chip-label">Next Payout</div><div class="chip-value-amber">{days_to_payout} days</div></div>
         <div class="chip"><div class="chip-label">Collection</div><div class="{gap_class}">{gap_label}</div><div class="chip-sub">Expected GHS {fmt_num(total_expected_so_far)}</div></div>
     </div>
-""", unsafe_allow_html=True)
+""")
 
 
 # ── contributions card ────────────────────────────────────────────────────────
@@ -569,20 +576,20 @@ for r in contrib_rows:
     row_class = "owing" if is_owing else "ok"
     badge     = f'<span class="badge-owe">Owing GHS {fmt_num(r["owing"])}</span>' if is_owing else '<span class="badge-ok">Up to date</span>'
     streak_html = f'<span class="streak-badge">🔴 {r["streak"]}wk streak</span>' if r["streak"]>=2 else ""
-    rows_html += f"""<tr class="{row_class}">
-        <td><span class="cell-name">{r['member']}</span></td>
-        <td>GHS {fmt_num(r['m_monthly'])}</td><td>GHS {fmt_num(r['m_weekly'])}</td>
-        <td>{r['total_paid']} / {total_weeks}</td>
-        <td>{badge}{streak_html}</td></tr>"""
+    rows_html += (f'<tr class="{row_class}">'
+                  f'<td><span class="cell-name">{r["member"]}</span></td>'
+                  f'<td>GHS {fmt_num(r["m_monthly"])}</td><td>GHS {fmt_num(r["m_weekly"])}</td>'
+                  f'<td>{r["total_paid"]} / {total_weeks}</td>'
+                  f'<td>{badge}{streak_html}</td></tr>')
 
-st.markdown(f"""<div class="glass-card">
+html(f"""<div class="glass-card">
     <div id="section-payments"></div><p class="sec-label">Members</p>
     <p class="sec-title">Contributions</p>
     <p class="sec-sub">Weekly targets and payment standing · 🔴 streak = consecutive missed weeks</p>
     <table class="data-table">
         <thead><tr><th>Member</th><th>Monthly</th><th>Weekly</th><th>Weeks Paid</th><th>Status</th></tr></thead>
         <tbody>{rows_html}</tbody>
-    </table></div>""", unsafe_allow_html=True)
+    </table></div>""")
 
 
 # ── payout schedule card ──────────────────────────────────────────────────────
@@ -598,27 +605,27 @@ for r in schedule_rows:
         days_cell = '<div style="margin-top:4px;font-size:10px;color:#64748b">Past</div>'
     # early eligibility note
     early_note = '<div class="early-eligible">⚡ Pool fully collected — eligible for early payout</div>' if r['early_ok'] else ""
-    pay_rows_html += f"""<tr class="plain">
-        <td><span class="cell-name">{r['turn']}</span></td>
-        <td>{r['recipient']}</td>
-        <td>{r['date']}{days_cell}</td>
-        <td>GHS {r['fee']}</td>
-        <td>GHS {r['pool']}
-            {early_note}
-            <div class="pbar-wrap"><div class="pbar-fill" style="width:{bar_pct}%"></div></div>
-        </td>
-        <td>GHS {r['collected']}</td>
-        <td>GHS {r['remaining']}</td>
-        <td>{status_badge}</td></tr>"""
+    # NOTE: built as a single-line string on purpose — a blank line followed by
+    # an indented line here is what made Streamlit render the table as code.
+    pay_rows_html += (f'<tr class="plain">'
+                      f'<td><span class="cell-name">{r["turn"]}</span></td>'
+                      f'<td>{r["recipient"]}</td>'
+                      f'<td>{r["date"]}{days_cell}</td>'
+                      f'<td>GHS {r["fee"]}</td>'
+                      f'<td>GHS {r["pool"]}{early_note}'
+                      f'<div class="pbar-wrap"><div class="pbar-fill" style="width:{bar_pct}%"></div></div></td>'
+                      f'<td>GHS {r["collected"]}</td>'
+                      f'<td>GHS {r["remaining"]}</td>'
+                      f'<td>{status_badge}</td></tr>')
 
-st.markdown(f"""<div class="glass-card">
+html(f"""<div class="glass-card">
     <div id="section-payouts"></div><p class="sec-label">Rotation</p>
     <p class="sec-title">Payout Schedule</p>
     <p class="sec-sub">Dates, fees and collection progress · ⚡ early payout eligible when pool is full</p>
     <table class="data-table">
         <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th><th>Admin Fee</th><th>Net Pool</th><th>Collected</th><th>Remaining</th><th>Status</th></tr></thead>
         <tbody>{pay_rows_html}</tbody>
-    </table></div>""", unsafe_allow_html=True)
+    </table></div>""")
 
 
 # ── exports ───────────────────────────────────────────────────────────────────
@@ -677,10 +684,10 @@ for member in members:
         ch.write(f"  Wk {w:02d}: {icon} {label}\n")
     ch.write("\n")
 
-st.markdown(f"""<div class="glass-card">
+html(f"""<div class="glass-card">
     <div id="section-exports"></div><p class="sec-label">Export</p>
     <p class="sec-title">WhatsApp Messages</p>
-    <p class="sec-sub">Ready-to-paste updates for the group chat</p></div>""", unsafe_allow_html=True)
+    <p class="sec-sub">Ready-to-paste updates for the group chat</p></div>""")
 dl_r1c1,dl_r1c2 = st.columns(2)
 dl_r2c1,dl_r2c2 = st.columns(2)
 with dl_r1c1: st.download_button("📥 Weekly Update", data=buf.getvalue(), file_name=f"Susu_W{current_elapsed_week}.txt", mime="text/plain")
@@ -811,20 +818,20 @@ if st.session_state.history:
         log_html = ""
         for entry in st.session_state.history[:20]:
             dot_class = dot_map.get(entry.get("type","payment"),"log-dot")
-            log_html += f"""<div class="log-entry"><div class="{dot_class}"></div>
-                <div class="log-text"><strong>{entry.get('text','—')}</strong></div>
-                <div class="log-time">{entry.get('time','')}</div></div>"""
-        st.markdown(log_html, unsafe_allow_html=True)
+            log_html += (f'<div class="log-entry"><div class="{dot_class}"></div>'
+                         f'<div class="log-text"><strong>{entry.get("text","—")}</strong></div>'
+                         f'<div class="log-time">{entry.get("time","")}</div></div>')
+        html(log_html)
 
 st.markdown('<div class="gdivider"></div>', unsafe_allow_html=True)
 if st.button("🔒  Lock Dashboard", key="logout", type="secondary"):
     st.session_state.authenticated=False; st.rerun()
 
-st.markdown(f'''<div class="bottom-nav">
+html(f'''<div class="bottom-nav">
     <button class="nav-item" onclick="navTo('top')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
     <button class="nav-item" onclick="navTo('section-payments')"><span class="nav-icon">👥</span><span class="nav-label">Members</span></button>
     <button class="nav-item" onclick="navTo('section-payouts')"><span class="nav-icon">🎁</span><span class="nav-label">Payouts</span></button>
     <button class="nav-item" onclick="navTo('section-exports')"><span class="nav-icon">📤</span><span class="nav-label">Export</span></button>
     <button class="nav-item" onclick="navTo('section-admin')"><span class="nav-icon">⚙️</span><span class="nav-label">Admin</span></button>
-</div>''', unsafe_allow_html=True)
+</div>''')
 st.markdown('<div class="foot">Backed by Google Sheets · Secured with passcode</div>', unsafe_allow_html=True)
