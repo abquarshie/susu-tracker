@@ -99,13 +99,13 @@ else:
         "chip_border":  "rgba(0,0,0,0.07)",
         "status_bg":    "rgba(255,255,255,0.5)",
         "status_border":"rgba(0,0,0,0.07)",
-        "sync_color":   "#94a3b8",
+        "sync_color":   "#64748b",
         "title_color":  "#0f172a",
-        "sub_color":    "#94a3b8",
-        "label_color":  "#6366f1",
+        "sub_color":    "#475569",
+        "label_color":  "#4f46e5",
         "sec_title":    "#0f172a",
-        "th_color":     "#6366f1",
-        "td_color":     "#475569",
+        "th_color":     "#4f46e5",
+        "td_color":     "#1e293b",
         "td_border":    "rgba(0,0,0,0.04)",
         "th_border":    "rgba(0,0,0,0.06)",
         "member_name":  "#0f172a",
@@ -118,22 +118,22 @@ else:
         "lock_sub":     "#94a3b8",
         "exp_bg":       "rgba(255,255,255,0.7)",
         "exp_border":   "rgba(0,0,0,0.07)",
-        "exp_color":    "#475569",
+        "exp_color":    "#334155",
         "exp_content":  "rgba(255,255,255,0.6)",
         "gdiv":         "rgba(99,102,241,0.2)",
-        "foot_color":   "#cbd5e1",
+        "foot_color":   "#94a3b8",
         "foot_border":  "rgba(0,0,0,0.06)",
         "btn_bg":       "rgba(29,78,216,0.9)",
         "btn_border":   "rgba(29,78,216,0.4)",
         "btn2_bg":      "rgba(0,0,0,0.04)",
-        "btn2_color":   "#64748b",
+        "btn2_color":   "#334155",
         "btn2_border":  "rgba(0,0,0,0.08)",
         "dl_bg":        "rgba(99,102,241,0.06)",
         "dl_border":    "rgba(99,102,241,0.3)",
         "log_border":   "rgba(0,0,0,0.05)",
-        "log_color":    "#64748b",
-        "log_strong":   "#334155",
-        "log_time":     "#94a3b8",
+        "log_color":    "#334155",
+        "log_strong":   "#0f172a",
+        "log_time":     "#64748b",
         "toggle_icon":  "🌙",
         "toggle_label": "Dark mode",
         "ring_track":   "rgba(0,0,0,0.08)",
@@ -176,7 +176,7 @@ st.markdown(f"""
     .hero {{background:{T['hero_bg']};backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid {T['hero_border']};border-radius:20px;padding:28px 32px;margin-bottom:14px;box-shadow:0 4px 24px rgba(0,0,0,0.1),inset 0 1px 0 rgba(255,255,255,0.3);position:relative;overflow:hidden;}}
     .hero::before {{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(56,189,248,0.08) 0%,transparent 70%);pointer-events:none;}}
     .hero::after  {{content:'';position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(99,102,241,0.06) 0%,transparent 70%);pointer-events:none;}}
-    .hero-title {{font-size:22px;font-weight:800;color:{T['title_color']};margin:0 0 4px 0;letter-spacing:-0.4px;}}
+    .hero-title {{font-size:17px;font-weight:700;color:{T['title_color']};margin:0 0 4px 0;letter-spacing:-0.4px;}}
     .hero-sub {{font-size:12px;color:{T['sub_color']};margin:0;}}
     .hero-badge {{display:inline-flex;align-items:center;gap:5px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);border-radius:20px;padding:4px 10px;font-size:10px;font-weight:600;color:#38bdf8;margin-top:12px;letter-spacing:0.3px;}}
 
@@ -483,12 +483,11 @@ if next_recipient:
 
 
 # ── metric chips ──────────────────────────────────────────────────────────────
-owing_class = "chip-value-red" if members_owing > 0 else "chip-value-green"
 st.markdown(f"""
     <div class="chip-row">
         <div class="chip"><div class="chip-label">Cash Held</div><div class="chip-value">GHS {fmt_num(total_cash_held)}</div></div>
         <div class="chip"><div class="chip-label">Week</div><div class="chip-value">{current_elapsed_week} / {total_weeks}</div></div>
-        <div class="chip"><div class="chip-label">Owing</div><div class="{owing_class}">{members_owing} member{'s' if members_owing!=1 else ''}</div></div>
+        <div class="chip"><div class="chip-label">Next Payout</div><div class="chip-value-amber">{days_to_payout} days</div></div>
         <div class="chip"><div class="chip-label">Admin Fee</div><div class="chip-value-green">{fmt_num(st.session_state.admin_fee_percentage)}%</div></div>
     </div>
 """, unsafe_allow_html=True)
@@ -531,14 +530,11 @@ for r in contrib_rows:
     is_owing  = r["owing"] > 0
     row_class = "owing" if is_owing else "ok"
     badge     = f'<span class="badge-owe">Owing GHS {fmt_num(r["owing"])}</span>' if is_owing else '<span class="badge-ok">Up to date</span>'
-    ring_col  = "#fbbf24" if is_owing else "#34d399"
-    svg       = ring_svg(r["pct"], ring_col)
     rows_html += f"""<tr class="{row_class}">
         <td><span class="cell-name">{r['member']}</span></td>
         <td>GHS {fmt_num(r['m_monthly'])}</td>
         <td>GHS {fmt_num(r['m_weekly'])}</td>
         <td>{r['total_paid']} / {total_weeks}</td>
-        <td><div class="ring-wrap">{svg}</div></td>
         <td>{badge}</td>
     </tr>"""
 
@@ -550,7 +546,7 @@ st.markdown(f"""
         <table class="data-table">
             <thead><tr>
                 <th>Member</th><th>Monthly</th><th>Weekly</th>
-                <th>Weeks Paid</th><th>Progress</th><th>Status</th>
+                <th>Weeks Paid</th><th>Status</th>
             </tr></thead>
             <tbody>{rows_html}</tbody>
         </table>
@@ -616,6 +612,22 @@ for i in range(num_members):
     ob.write(f"*Month {i+1} — {recipient}*\n  • Payout Date: {format_date(payout_date)}\n  • Net Pool: GHS {fmt_num(net)}\n\n")
     ob_date = payout_date
 
+# Contribution history per member per week
+ch = io.StringIO()
+ch.write(f"📊 *CONTRIBUTION HISTORY — WK {current_elapsed_week}*\n")
+ch.write(f"🗓️ *Period:* {format_date(start_dt)} → {format_date(end_date)}\n\n")
+for member in members:
+    m_monthly = st.session_state.member_tiers.get(member, st.session_state.base_monthly)
+    m_weekly  = m_monthly / 4.0
+    m_pmts    = st.session_state.payments.get(member, {})
+    ch.write(f"👤 *{member}* (GHS {fmt_num(m_weekly)}/wk)\n")
+    for w in range(1, total_weeks + 1):
+        paid = m_pmts.get(str(w), False)
+        icon = "✅" if paid else ("⏳" if w > current_elapsed_week else "❌")
+        label = "Paid" if paid else ("Upcoming" if w > current_elapsed_week else "Owing")
+        ch.write(f"  Wk {w:02d}: {icon} {label}\n")
+    ch.write("\n")
+
 st.markdown(f"""
     <div class="glass-card">
         <p class="sec-label">Export</p>
@@ -623,11 +635,13 @@ st.markdown(f"""
         <p class="sec-sub">Ready-to-paste updates for the group chat</p>
     </div>
 """, unsafe_allow_html=True)
-col_dl1, col_dl2 = st.columns(2)
+col_dl1, col_dl2, col_dl3 = st.columns(3)
 with col_dl1:
     st.download_button("📥  Weekly Update", data=buf.getvalue(), file_name=f"Susu_W{current_elapsed_week}.txt", mime="text/plain")
 with col_dl2:
     st.download_button("📋  Onboarding Details", data=ob.getvalue(), file_name="Susu_Onboarding.txt", mime="text/plain")
+with col_dl3:
+    st.download_button("📊  Contribution History", data=ch.getvalue(), file_name=f"Susu_History_W{current_elapsed_week}.txt", mime="text/plain")
 
 
 # ── admin panel ───────────────────────────────────────────────────────────────
