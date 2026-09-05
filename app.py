@@ -26,6 +26,31 @@ st.markdown("""
     setTimeout(removeSidebar, 300);
     setTimeout(removeSidebar, 800);
     </script>
+    <script>
+    // Web Share API helper
+    function shareText(text, title) {
+        if (navigator.share) {
+            navigator.share({ title: title, text: text })
+                .catch(e => console.log('Share cancelled'));
+        } else {
+            navigator.clipboard.writeText(text)
+                .then(() => alert('Copied to clipboard!'))
+                .catch(() => alert('Copy not supported — please copy manually'));
+        }
+    }
+    // Copy to clipboard helper for member links
+    function copyLink(url) {
+        navigator.clipboard.writeText(url)
+            .then(() => alert('Link copied!'))
+            .catch(() => alert(url));
+    }
+    // Smooth scroll to section
+    function navTo(id) {
+        const el = window.parent.document.getElementById(id);
+        if (el) el.scrollIntoView({behavior:'smooth'});
+        else window.parent.scrollTo({top: id === 'top' ? 0 : 99999, behavior:'smooth'});
+    }
+    </script>
 """, unsafe_allow_html=True)
 
 # ── theme init ────────────────────────────────────────────────────────────────
@@ -205,6 +230,35 @@ st.markdown(f"""
 
     .gdivider{{height:1px;background:linear-gradient(90deg,transparent,{T['gdiv']},transparent);margin:22px 0;}}
     .foot{{text-align:center;font-size:11px;color:{T['foot_color']};margin-top:32px;padding-top:20px;border-top:1px solid {T['foot_border']};}}
+    @media (max-width:600px){{
+        .block-container{{padding-bottom:5rem!important;padding-left:12px!important;padding-right:12px!important;}}
+        .hero{{padding:14px 16px!important;border-radius:14px!important;margin-bottom:10px!important;}}
+        .hero-title{{font-size:15px!important;}}
+        .hero-sub{{font-size:11px!important;}}
+        .chip-row{{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;}}
+        .chip{{min-width:0!important;padding:10px 12px!important;}}
+        .chip-value,.chip-value-green,.chip-value-amber,.chip-value-red{{font-size:15px!important;}}
+        .data-table{{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}}
+        .data-table th,.data-table td{{padding:8px 10px!important;font-size:11px!important;}}
+        .glass-card{{padding:14px 14px!important;border-radius:12px!important;}}
+        .sec-title{{font-size:14px!important;}}
+    }}
+    .bottom-nav{{
+        display:none;
+        position:fixed;bottom:0;left:0;right:0;z-index:999;
+        background:{T['card_bg']};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+        border-top:1px solid {T['card_border']};
+        padding:8px 0 8px;
+        justify-content:space-around;align-items:center;
+    }}
+    @media (max-width:600px){{.bottom-nav{{display:flex!important;}}}}
+    .nav-item{{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 16px;border-radius:10px;text-decoration:none;border:none;background:none;}}
+    .nav-icon{{font-size:20px;line-height:1;}}
+    .nav-label{{font-size:9px;font-weight:600;color:{T['sub_color']};letter-spacing:0.3px;text-transform:uppercase;}}
+    .link-pill{{display:flex;align-items:center;justify-content:space-between;background:{T['card_bg']};border:1px solid {T['card_border']};border-radius:12px;padding:10px 14px;margin-bottom:8px;gap:10px;}}
+    .link-pill-name{{font-size:13px;font-weight:600;color:{T['member_name']};}}
+    .link-pill-url{{font-size:10px;color:{T['sub_color']};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}}
+    .copy-btn{{background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);color:#38bdf8;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;}}
     </style>
 """, unsafe_allow_html=True)
 
@@ -565,7 +619,7 @@ for r in contrib_rows:
 
 st.markdown(f"""
     <div class="glass-card">
-        <p class="sec-label">Members</p>
+        <div id="section-payments"></div><p class="sec-label">Members</p>
         <p class="sec-title">Contributions</p>
         <p class="sec-sub">Weekly targets and payment standing</p>
         <table class="data-table">
@@ -595,7 +649,7 @@ for r in schedule_rows:
 
 st.markdown(f"""
     <div class="glass-card">
-        <p class="sec-label">Rotation</p>
+        <div id="section-payouts"></div><p class="sec-label">Rotation</p>
         <p class="sec-title">Payout Schedule</p>
         <p class="sec-sub">Dates, fees and collection progress per turn</p>
         <table class="data-table">
@@ -670,19 +724,45 @@ for member in members:
 
 st.markdown(f"""
     <div class="glass-card">
-        <p class="sec-label">Export</p>
+        <div id="section-exports"></div><p class="sec-label">Export</p>
         <p class="sec-title">WhatsApp Messages</p>
         <p class="sec-sub">Ready-to-paste updates for the group chat</p>
     </div>
 """, unsafe_allow_html=True)
-c1,c2,c3,c4 = st.columns(4)
-with c1: st.download_button("📥 Weekly Update",  data=buf.getvalue(), file_name=f"Susu_W{current_elapsed_week}.txt", mime="text/plain")
-with c2: st.download_button("🔔 Reminder",        data=rem.getvalue(), file_name=f"Susu_Reminder_W{current_elapsed_week}.txt", mime="text/plain")
-with c3: st.download_button("📋 Onboarding",      data=ob.getvalue(),  file_name="Susu_Onboarding.txt", mime="text/plain")
-with c4: st.download_button("📊 History",          data=ch.getvalue(),  file_name=f"Susu_History_W{current_elapsed_week}.txt", mime="text/plain")
+# Mobile-friendly: 2x2 grid on desktop, stacked on mobile
+dl_r1c1, dl_r1c2 = st.columns(2)
+dl_r2c1, dl_r2c2 = st.columns(2)
+with dl_r1c1: st.download_button("📥 Weekly Update",  data=buf.getvalue(), file_name=f"Susu_W{current_elapsed_week}.txt", mime="text/plain")
+with dl_r1c2: st.download_button("🔔 Reminder",       data=rem.getvalue(), file_name=f"Susu_Reminder_W{current_elapsed_week}.txt", mime="text/plain")
+with dl_r2c1: st.download_button("📋 Onboarding",     data=ob.getvalue(),  file_name="Susu_Onboarding.txt", mime="text/plain")
+with dl_r2c2: st.download_button("📊 History",        data=ch.getvalue(),  file_name=f"Susu_History_W{current_elapsed_week}.txt", mime="text/plain")
+# Web Share API buttons (mobile tap-to-share)
+st.markdown(f'''<div style="margin-top:10px">
+    <p class="sec-sub">📱 On mobile — tap to share directly to WhatsApp</p>
+    <button class="share-btn" style="margin-bottom:8px" onclick="shareText(`{buf.getvalue().replace("`","'").replace(chr(10),"\\n")}`, 'Weekly Update')">📤 Share Weekly Update</button>
+    <button class="share-btn" onclick="shareText(`{rem.getvalue().replace("`","'").replace(chr(10),"\\n")}`, 'Payment Reminder')">📤 Share Reminder</button>
+</div>''', unsafe_allow_html=True)
 
 
 # ── admin panel ───────────────────────────────────────────────────────────────
+# Member self-view links as copy pills
+app_url = 'https://your-app.streamlit.app'  # ← update to your real URL
+pills_html = ''.join(
+    f'<div class="link-pill">'
+    f'<div><div class="link-pill-name">{m}</div>'
+    f'<div class="link-pill-url">{app_url}?member={m}</div></div>'
+    f'<button class="copy-btn" onclick="copyLink(\'{app_url}?member={m}\')">Copy</button>'
+    f'</div>'
+    for m in members
+)
+st.markdown(f'''
+    <div class="glass-card" id="section-admin">
+        <p class="sec-label">Member Links</p>
+        <p class="sec-title">Self-View Links</p>
+        <p class="sec-sub">Tap Copy to share each member their read-only view</p>
+        {pills_html}
+    </div>
+''', unsafe_allow_html=True)
 st.markdown(f'<p class="sec-label" style="margin-top:24px">Admin</p>', unsafe_allow_html=True)
 st.markdown('<p class="sec-title">Group Controls</p>', unsafe_allow_html=True)
 st.markdown('<p class="sec-sub">Update settings, record payments and payouts</p>', unsafe_allow_html=True)
@@ -787,4 +867,14 @@ if st.button("🔒  Lock Dashboard", key="logout", type="secondary"):
     st.session_state.authenticated = False
     st.rerun()
 
+# Bottom navigation bar
+st.markdown(f'''
+    <div class="bottom-nav">
+        <button class="nav-item" onclick="navTo(\'top\')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+        <button class="nav-item" onclick="navTo(\'section-payments\')"><span class="nav-icon">👥</span><span class="nav-label">Members</span></button>
+        <button class="nav-item" onclick="navTo(\'section-payouts\')"><span class="nav-icon">🎁</span><span class="nav-label">Payouts</span></button>
+        <button class="nav-item" onclick="navTo(\'section-exports\')"><span class="nav-icon">📤</span><span class="nav-label">Export</span></button>
+        <button class="nav-item" onclick="navTo(\'section-admin\')"><span class="nav-icon">⚙️</span><span class="nav-label">Admin</span></button>
+    </div>
+''', unsafe_allow_html=True)
 st.markdown('<div class="foot">Backed by Google Sheets · Secured with passcode</div>', unsafe_allow_html=True)
