@@ -333,6 +333,7 @@ if "initialized" not in st.session_state:
     st.session_state.payments             = payments
     st.session_state.payout_status        = payout_status
     st.session_state.history              = history
+    st.session_state.admin_passcode       = load_cell(gsheet, "passcode", ADMIN_PW)
     st.session_state.authenticated        = False
     st.session_state.initialized          = True
     st.session_state.last_sync            = datetime.now()
@@ -361,7 +362,7 @@ if not member_view and not st.session_state.authenticated:
     with col_c:
         pw = st.text_input("p", type="password", label_visibility="collapsed", placeholder="Passcode…")
         if st.button("Unlock →"):
-            if pw == ADMIN_PW:
+            if pw == st.session_state.get("admin_passcode", ADMIN_PW):
                 st.session_state.authenticated = True
                 st.session_state.last_sync = datetime.now()
                 st.rerun()
@@ -558,9 +559,22 @@ st.markdown(f"""
 # chips — 4th chip: total collected vs expected
 gap_class   = "chip-value-red" if collection_gap > 0 else "chip-value-green"
 gap_label   = f"−GHS {fmt_num(collection_gap)}" if collection_gap > 0 else "On track"
+
+# week-on-week delta for cash held chip
+prev_week = max(0, current_elapsed_week - 1)
+cash_last_week = sum(
+    st.session_state.member_tiers.get(m, st.session_state.base_monthly) / 4.0
+    * sum(1 for w in range(1, total_weeks+1) if st.session_state.payments.get(m,{}).get(str(w), False) and int(w) <= prev_week)
+    for m in members
+) - total_payouts_dist
+cash_delta = total_cash_held - cash_last_week
+delta_arrow = "↑" if cash_delta >= 0 else "↓"
+delta_color = "#34d399" if cash_delta >= 0 else "#f87171"
+delta_html  = f'<div style="font-size:10px;color:{delta_color};margin-top:3px;font-weight:600">{delta_arrow} GHS {fmt_num(abs(cash_delta))} this week</div>' if current_elapsed_week > 1 else ""
+
 st.markdown(f"""
     <div class="chip-row">
-        <div class="chip"><div class="chip-label">Cash Held</div><div class="chip-value">GHS {fmt_num(total_cash_held)}</div></div>
+        <div class="chip"><div class="chip-label">Cash Held</div><div class="chip-value">GHS {fmt_num(total_cash_held)}</div>{delta_html}</div>
         <div class="chip"><div class="chip-label">Week</div><div class="chip-value">{current_elapsed_week} / {total_weeks}</div></div>
         <div class="chip"><div class="chip-label">Next Payout</div><div class="chip-value-amber">{days_to_payout} days</div></div>
         <div class="chip">
@@ -586,7 +600,8 @@ for i in range(num_members):
     collected    = float(st.session_state.payout_status.get(month_lbl,{}).get("amount_collected",0.0))
     remaining    = max(0.0, net_pool_amt - collected)
     pct_collected = int((collected / net_pool_amt * 100)) if net_pool_amt > 0 else 0
-    schedule_rows.append({"turn":f"Month {i+1}","recipient":recipient,"date":format_date(payout_date),"fee":fmt_num(admin_fee_v),"pool":fmt_num(net_pool_amt),"collected":fmt_num(collected),"remaining":fmt_num(remaining),"pct":pct_collected})
+    disbursed = st.session_state.payout_status.get(month_lbl,{}).get("disbursed", False)
+    schedule_rows.append({"turn":f"Month {i+1}","recipient":recipient,"date":format_date(payout_date),"fee":fmt_num(admin_fee_v),"pool":fmt_num(net_pool_amt),"collected":fmt_num(collected),"remaining":fmt_num(remaining),"pct":pct_collected,"disbursed":disbursed})
     wa_payout_rows.append({"recipient":recipient,"date":format_date(payout_date),"balance":fmt_num(remaining)})
     cur_d = payout_date
 
@@ -634,6 +649,7 @@ st.markdown(f"""
 pay_rows_html = ""
 for r in schedule_rows:
     bar_pct = min(r['pct'], 100)
+    status_badge = '<span class="badge-ok">✅ Done</span>' if r['disbursed'] else '<span class="badge-pending">⏳ Pending</span>'
     pay_rows_html += f"""<tr class="plain">
         <td><span class="cell-name">{r['turn']}</span></td>
         <td>{r['recipient']}</td>
@@ -645,6 +661,7 @@ for r in schedule_rows:
         </td>
         <td>GHS {r['collected']}</td>
         <td>GHS {r['remaining']}</td>
+        <td>{status_badge}</td>
     </tr>"""
 
 st.markdown(f"""
@@ -653,7 +670,7 @@ st.markdown(f"""
         <p class="sec-title">Payout Schedule</p>
         <p class="sec-sub">Dates, fees and collection progress per turn</p>
         <table class="data-table">
-            <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th><th>Admin Fee</th><th>Net Pool</th><th>Collected</th><th>Remaining</th></tr></thead>
+            <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th><th>Admin Fee</th><th>Net Pool</th><th>Collected</th><th>Remaining</th><th>Status</th></tr></thead>
             <tbody>{pay_rows_html}</tbody>
         </table>
     </div>
@@ -785,12 +802,33 @@ with st.expander("📝  Bulk Payment Entry"):
                 week_vals[str(w)] = st.checkbox(label, value=m_pmts.get(str(w), False), key=f"bulk_{member}_{w}")
         bulk_payments[member] = week_vals
     if st.button("Save All Payments", key="bulk_save"):
-        st.session_state.payments = bulk_payments
-        save_all(gsheet)
-        total_checked = sum(sum(1 for v in wv.values() if v) for wv in bulk_payments.values())
-        append_log(gsheet,{"type":"payment","text":f"Bulk payment update — {total_checked} weeks marked paid","time":datetime.now().strftime("%d %b %Y %H:%M")})
-        st.session_state.last_sync=datetime.now()
-        st.success("✓ All payments saved."); st.rerun()
+        # Feature 10: detect newly ticked weeks that were already paid
+        already_paid_warnings = []
+        for mbr, wv in bulk_payments.items():
+            prev = st.session_state.payments.get(mbr, {})
+            for wk, ticked in wv.items():
+                if ticked and prev.get(wk, False):
+                    pass  # already paid, no issue
+                elif not ticked and prev.get(wk, False):
+                    already_paid_warnings.append(f"{mbr} — Week {wk} (was paid, now unticked)")
+        if already_paid_warnings and not st.session_state.get("bulk_confirm_overwrite", False):
+            st.warning("⚠️ The following weeks will be marked as **unpaid** — confirm?\n\n" + "\n".join(f"• {w}" for w in already_paid_warnings))
+            oc1, oc2 = st.columns(2)
+            with oc1:
+                if st.button("✓ Confirm save", key="bulk_confirm_yes"):
+                    st.session_state.bulk_confirm_overwrite = True
+                    st.rerun()
+            with oc2:
+                if st.button("✗ Cancel", key="bulk_confirm_no", type="secondary"):
+                    st.rerun()
+        else:
+            st.session_state.bulk_confirm_overwrite = False
+            st.session_state.payments = bulk_payments
+            save_all(gsheet)
+            total_checked = sum(sum(1 for v in wv.values() if v) for wv in bulk_payments.values())
+            append_log(gsheet,{"type":"payment","text":f"Bulk payment update — {total_checked} weeks marked paid","time":datetime.now().strftime("%d %b %Y %H:%M")})
+            st.session_state.last_sync=datetime.now()
+            st.success("✓ All payments saved."); st.rerun()
 
 with st.expander("🎁  Record Payout"):
     month_options = [f"Month {i+1} — {members[i]}" for i in range(num_members)]
@@ -803,20 +841,26 @@ with st.expander("🎁  Record Payout"):
     cur_col   = float(st.session_state.payout_status.get(mkey,{}).get("amount_collected",0.0))
     new_col   = st.number_input(f"Amount Collected for {rec_name} (max GHS {fmt_num(net_v)})", value=cur_col, min_value=0.0, max_value=float(net_v), step=50.0, key="payout_amt")
 
-    # ── confirmation dialog (feature 6) ──────────────────────────────────────
+    cur_disbursed = st.session_state.payout_status.get(mkey,{}).get("disbursed", False)
+    new_disbursed = st.checkbox("Mark as fully disbursed ✅", value=cur_disbursed, key="payout_disbursed")
+
+    # ── confirmation dialog ───────────────────────────────────────────────────
     if not st.session_state.get("confirm_payout", False):
         if st.button("Save Payout", key="save_payout_btn"):
             st.session_state.confirm_payout = True
             st.rerun()
     else:
-        st.warning(f"⚠️ Confirm: Record GHS {fmt_num(new_col)} payout for {rec_name} ({mkey})?")
+        disbursed_txt = " · Marked as disbursed" if new_disbursed else ""
+        st.warning(f"⚠️ Confirm: Record GHS {fmt_num(new_col)} payout for {rec_name} ({mkey}){disbursed_txt}?")
         cc1, cc2 = st.columns(2)
         with cc1:
             if st.button("✓ Yes, confirm", key="confirm_yes"):
                 if mkey not in st.session_state.payout_status: st.session_state.payout_status[mkey]={}
                 st.session_state.payout_status[mkey]["amount_collected"]=new_col
+                st.session_state.payout_status[mkey]["disbursed"]=new_disbursed
                 save_all(gsheet)
-                append_log(gsheet,{"type":"payout","text":f"{mkey} payout recorded for {rec_name} — GHS {fmt_num(new_col)}","time":datetime.now().strftime("%d %b %Y %H:%M")})
+                disbursed_note = " · Disbursed" if new_disbursed else ""
+                append_log(gsheet,{"type":"payout","text":f"{mkey} payout recorded for {rec_name} — GHS {fmt_num(new_col)}{disbursed_note}","time":datetime.now().strftime("%d %b %Y %H:%M")})
                 st.session_state.last_sync=datetime.now()
                 st.session_state.confirm_payout=False
                 st.success(f"✓ Payout for {rec_name} saved."); st.rerun()
@@ -824,6 +868,27 @@ with st.expander("🎁  Record Payout"):
             if st.button("✗ Cancel", key="confirm_no", type="secondary"):
                 st.session_state.confirm_payout=False
                 st.rerun()
+
+with st.expander("🔑  Change Passcode"):
+    st.markdown(f'<p style="font-size:12px;color:{T["sub_color"]};margin-bottom:8px">Enter current passcode to confirm, then set a new one.</p>', unsafe_allow_html=True)
+    cp1, cp2, cp3 = st.columns(3)
+    with cp1: old_pw  = st.text_input("Current Passcode", type="password", key="old_pw")
+    with cp2: new_pw1 = st.text_input("New Passcode", type="password", key="new_pw1")
+    with cp3: new_pw2 = st.text_input("Confirm New Passcode", type="password", key="new_pw2")
+    if st.button("Update Passcode", key="update_pw"):
+        stored_pw = st.session_state.get("admin_passcode", ADMIN_PW)
+        if old_pw != stored_pw:
+            st.error("Current passcode is incorrect.")
+        elif not new_pw1:
+            st.error("New passcode cannot be empty.")
+        elif new_pw1 != new_pw2:
+            st.error("New passcodes do not match.")
+        else:
+            st.session_state.admin_passcode = new_pw1
+            save_cell(gsheet, "passcode", new_pw1)
+            append_log(gsheet,{"type":"setting","text":"Passcode changed","time":datetime.now().strftime("%d %b %Y %H:%M")})
+            st.success("✓ Passcode updated successfully.")
+            st.rerun()
 
 if st.session_state.history:
     with st.expander("🕒  Activity Log"):
