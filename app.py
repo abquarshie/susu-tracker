@@ -745,24 +745,8 @@ st.markdown(f'''<div style="margin-top:10px">
 
 
 # ── admin panel ───────────────────────────────────────────────────────────────
-# Member self-view links as copy pills
-app_url = 'https://your-app.streamlit.app'  # ← update to your real URL
-pills_html = ''.join(
-    f'<div class="link-pill">'
-    f'<div><div class="link-pill-name">{m}</div>'
-    f'<div class="link-pill-url">{app_url}?member={m}</div></div>'
-    f'<button class="copy-btn" onclick="copyLink(\'{app_url}?member={m}\')">Copy</button>'
-    f'</div>'
-    for m in members
-)
-st.markdown(f'''
-    <div class="glass-card" id="section-admin">
-        <p class="sec-label">Member Links</p>
-        <p class="sec-title">Self-View Links</p>
-        <p class="sec-sub">Tap Copy to share each member their read-only view</p>
-        {pills_html}
-    </div>
-''', unsafe_allow_html=True)
+# section-admin anchor
+st.markdown('<div id="section-admin"></div>', unsafe_allow_html=True)
 st.markdown(f'<p class="sec-label" style="margin-top:24px">Admin</p>', unsafe_allow_html=True)
 st.markdown('<p class="sec-title">Group Controls</p>', unsafe_allow_html=True)
 st.markdown('<p class="sec-sub">Update settings, record payments and payouts</p>', unsafe_allow_html=True)
