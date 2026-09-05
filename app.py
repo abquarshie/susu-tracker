@@ -316,6 +316,12 @@ def append_log(sheet, entry):
     save_cell(sheet,"history",st.session_state.history)
 
 
+def save_snapshot(sheet, week, cash_held):
+    snaps = st.session_state.get("snapshots", {})
+    snaps[str(week)] = round(cash_held, 2)
+    st.session_state.snapshots = snaps
+    save_cell(sheet, "snapshots", snaps)
+
 ADMIN_PW = "Susu2026"
 
 # ── connect ───────────────────────────────────────────────────────────────────
@@ -336,6 +342,7 @@ if "initialized" not in st.session_state:
     st.session_state.payout_status        = payout_status
     st.session_state.history              = history
     st.session_state.admin_passcode       = load_cell(gsheet, "passcode", ADMIN_PW)
+    st.session_state.snapshots            = load_cell(gsheet, "snapshots", {})
     st.session_state.authenticated        = False
     st.session_state.initialized          = True
     st.session_state.last_sync            = datetime.now()
@@ -561,16 +568,16 @@ st.markdown(f"""
 gap_class   = "chip-value-red" if collection_gap > 0 else "chip-value-green"
 gap_label   = f"−GHS {fmt_num(collection_gap)}" if collection_gap > 0 else "On track"
 
-# total collected so far vs total expected overall
-total_expected_full = sum(
-    st.session_state.member_tiers.get(m, st.session_state.base_monthly)
-    for m in members
-) * num_members / num_members * total_weeks / 4
-total_expected_full = sum(
-    st.session_state.member_tiers.get(m, st.session_state.base_monthly) / 4.0 * total_weeks
-    for m in members
-)
-delta_html = f'<div style="font-size:10px;color:#64748b;margin-top:3px;font-weight:500">GHS {fmt_num(total_cash_collected)} of GHS {fmt_num(total_expected_full)}</div>'
+# week-on-week delta using snapshots
+snaps        = st.session_state.get("snapshots", {})
+prev_snap    = snaps.get(str(current_elapsed_week - 1), None)
+if prev_snap is not None and current_elapsed_week > 1:
+    snap_delta  = total_cash_held - float(prev_snap)
+    d_arrow     = "↑" if snap_delta >= 0 else "↓"
+    d_color     = "#34d399" if snap_delta >= 0 else "#f87171"
+    delta_html  = f'<div style="font-size:10px;color:{d_color};margin-top:3px;font-weight:600">{d_arrow} GHS {fmt_num(abs(snap_delta))} vs last week</div>'
+else:
+    delta_html  = f'<div style="font-size:10px;color:#334155;margin-top:3px;">No prior snapshot yet</div>'
 
 st.markdown(f"""
     <div class="chip-row">
@@ -827,6 +834,7 @@ with st.expander("📝  Bulk Payment Entry"):
             save_all(gsheet)
             total_checked = sum(sum(1 for v in wv.values() if v) for wv in bulk_payments.values())
             append_log(gsheet,{"type":"payment","text":f"Bulk payment update — {total_checked} weeks marked paid","time":datetime.now().strftime("%d %b %Y %H:%M")})
+            save_snapshot(gsheet, current_elapsed_week, total_cash_held)
             st.session_state.last_sync=datetime.now()
             st.success("✓ All payments saved."); st.rerun()
 
