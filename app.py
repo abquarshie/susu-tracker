@@ -1,6 +1,5 @@
 import streamlit as st
 from datetime import datetime, timedelta
-import pandas as pd
 import io
 import json
 import gspread
@@ -29,186 +28,233 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-st.markdown("""
+# ── theme init ────────────────────────────────────────────────────────────────
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = True
+
+D = st.session_state.dark_mode
+
+# Theme tokens
+if D:
+    T = {
+        "bg":           "linear-gradient(135deg,#080d1a 0%,#0b1525 50%,#080f1c 100%)",
+        "card_bg":      "rgba(255,255,255,0.025)",
+        "card_border":  "rgba(255,255,255,0.06)",
+        "card_shadow":  "0 4px 20px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.04)",
+        "hero_bg":      "rgba(255,255,255,0.03)",
+        "hero_border":  "rgba(255,255,255,0.07)",
+        "chip_bg":      "rgba(255,255,255,0.03)",
+        "chip_border":  "rgba(255,255,255,0.07)",
+        "status_bg":    "rgba(255,255,255,0.02)",
+        "status_border":"rgba(255,255,255,0.05)",
+        "sync_color":   "#334155",
+        "title_color":  "#f1f5f9",
+        "sub_color":    "#334155",
+        "label_color":  "#1e3a5f",
+        "sec_title":    "#cbd5e1",
+        "th_color":     "#1e3a5f",
+        "td_color":     "#94a3b8",
+        "td_border":    "rgba(255,255,255,0.03)",
+        "th_border":    "rgba(255,255,255,0.05)",
+        "member_name":  "#e2e8f0",
+        "input_bg":     "rgba(255,255,255,0.04)",
+        "input_border": "rgba(255,255,255,0.08)",
+        "input_color":  "#e2e8f0",
+        "lock_bg":      "rgba(255,255,255,0.04)",
+        "lock_border":  "rgba(255,255,255,0.08)",
+        "lock_title":   "#f1f5f9",
+        "lock_sub":     "#334155",
+        "exp_bg":       "rgba(255,255,255,0.025)",
+        "exp_border":   "rgba(255,255,255,0.06)",
+        "exp_color":    "#64748b",
+        "exp_content":  "rgba(255,255,255,0.015)",
+        "gdiv":         "rgba(56,189,248,0.12)",
+        "foot_color":   "#0f1f35",
+        "foot_border":  "rgba(255,255,255,0.03)",
+        "btn_bg":       "rgba(29,78,216,0.75)",
+        "btn_border":   "rgba(59,130,246,0.35)",
+        "btn2_bg":      "rgba(255,255,255,0.03)",
+        "btn2_color":   "#334155",
+        "btn2_border":  "rgba(255,255,255,0.07)",
+        "dl_bg":        "rgba(255,255,255,0.03)",
+        "dl_border":    "rgba(56,189,248,0.2)",
+        "log_border":   "rgba(255,255,255,0.03)",
+        "log_color":    "#64748b",
+        "log_strong":   "#94a3b8",
+        "log_time":     "#1e3a5f",
+        "toggle_icon":  "☀️",
+        "toggle_label": "Light mode",
+        "ring_track":   "rgba(255,255,255,0.06)",
+        "bulk_bg":      "rgba(255,255,255,0.02)",
+    }
+else:
+    T = {
+        "bg":           "linear-gradient(135deg,#e8edf5 0%,#f0f4fa 50%,#eaeff8 100%)",
+        "card_bg":      "rgba(255,255,255,0.75)",
+        "card_border":  "rgba(0,0,0,0.07)",
+        "card_shadow":  "0 4px 20px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.9)",
+        "hero_bg":      "rgba(255,255,255,0.7)",
+        "hero_border":  "rgba(0,0,0,0.08)",
+        "chip_bg":      "rgba(255,255,255,0.8)",
+        "chip_border":  "rgba(0,0,0,0.07)",
+        "status_bg":    "rgba(255,255,255,0.5)",
+        "status_border":"rgba(0,0,0,0.07)",
+        "sync_color":   "#94a3b8",
+        "title_color":  "#0f172a",
+        "sub_color":    "#94a3b8",
+        "label_color":  "#6366f1",
+        "sec_title":    "#0f172a",
+        "th_color":     "#6366f1",
+        "td_color":     "#475569",
+        "td_border":    "rgba(0,0,0,0.04)",
+        "th_border":    "rgba(0,0,0,0.06)",
+        "member_name":  "#0f172a",
+        "input_bg":     "rgba(255,255,255,0.8)",
+        "input_border": "rgba(0,0,0,0.1)",
+        "input_color":  "#0f172a",
+        "lock_bg":      "rgba(255,255,255,0.8)",
+        "lock_border":  "rgba(0,0,0,0.08)",
+        "lock_title":   "#0f172a",
+        "lock_sub":     "#94a3b8",
+        "exp_bg":       "rgba(255,255,255,0.7)",
+        "exp_border":   "rgba(0,0,0,0.07)",
+        "exp_color":    "#475569",
+        "exp_content":  "rgba(255,255,255,0.6)",
+        "gdiv":         "rgba(99,102,241,0.2)",
+        "foot_color":   "#cbd5e1",
+        "foot_border":  "rgba(0,0,0,0.06)",
+        "btn_bg":       "rgba(29,78,216,0.9)",
+        "btn_border":   "rgba(29,78,216,0.4)",
+        "btn2_bg":      "rgba(0,0,0,0.04)",
+        "btn2_color":   "#64748b",
+        "btn2_border":  "rgba(0,0,0,0.08)",
+        "dl_bg":        "rgba(99,102,241,0.06)",
+        "dl_border":    "rgba(99,102,241,0.3)",
+        "log_border":   "rgba(0,0,0,0.05)",
+        "log_color":    "#64748b",
+        "log_strong":   "#334155",
+        "log_time":     "#94a3b8",
+        "toggle_icon":  "🌙",
+        "toggle_label": "Dark mode",
+        "ring_track":   "rgba(0,0,0,0.08)",
+        "bulk_bg":      "rgba(0,0,0,0.03)",
+    }
+
+dl_color = "#38bdf8" if D else "#6366f1"
+
+st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-    header {visibility: hidden !important; height: 0 !important;}
-    #MainMenu {visibility: hidden !important;}
-    .stDeployButton {display: none !important;}
-    footer {visibility: hidden !important;}
-    section[data-testid="stSidebar"] {display: none !important; width: 0 !important;}
-    [data-testid="collapsedControl"] {display: none !important; width: 0 !important;}
-    [data-testid="stSidebarNav"] {display: none !important;}
-    button[kind="header"] {display: none !important;}
-    .block-container {padding-top: 0 !important; padding-bottom: 4rem !important; max-width: 820px !important;}
-    html, body, [class*="css"] { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-    .main, .stApp {
-        background: linear-gradient(135deg, #080d1a 0%, #0b1525 50%, #080f1c 100%) !important;
-        min-height: 100vh;
-    }
+    header {{visibility:hidden!important;height:0!important;}}
+    #MainMenu {{visibility:hidden!important;}}
+    .stDeployButton {{display:none!important;}}
+    footer {{visibility:hidden!important;}}
+    section[data-testid="stSidebar"] {{display:none!important;width:0!important;}}
+    [data-testid="collapsedControl"] {{display:none!important;width:0!important;}}
+    [data-testid="stSidebarNav"] {{display:none!important;}}
+    button[kind="header"] {{display:none!important;}}
+    .block-container {{padding-top:0!important;padding-bottom:4rem!important;max-width:820px!important;}}
+    html,body,[class*="css"] {{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;}}
+    .main,.stApp {{background:{T['bg']}!important;min-height:100vh;}}
 
     /* Status bar */
-    .status-bar {
-        background: rgba(255,255,255,0.02);
-        border-bottom: 1px solid rgba(255,255,255,0.05);
-        padding: 8px 0;
-        display: flex; align-items: center; justify-content: space-between;
-        margin-bottom: 20px; font-size: 11px;
-    }
-    .status-dot { width: 6px; height: 6px; background: #34d399; border-radius: 50%; display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-    .status-live { color: #34d399; font-weight: 600; }
-    .status-sync { color: #334155; }
+    .status-bar {{background:{T['status_bg']};border-bottom:1px solid {T['status_border']};padding:8px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;font-size:11px;}}
+    .status-dot {{width:6px;height:6px;background:#34d399;border-radius:50%;display:inline-block;margin-right:6px;animation:pulse 2s infinite;}}
+    @keyframes pulse {{0%,100%{{opacity:1}}50%{{opacity:0.4}}}}
+    .status-live {{color:#34d399;font-weight:600;}}
+    .status-sync {{color:{T['sync_color']};}}
 
     /* Lock */
-    .lock-outer { min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; }
-    .lock-card {
-        background: rgba(255,255,255,0.04); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 48px 40px;
-        text-align: center; width: 100%; max-width: 360px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
-    }
-    .lock-icon { font-size: 44px; margin-bottom: 16px; display: block; }
-    .lock-title { font-size: 22px; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
-    .lock-sub { font-size: 13px; color: #334155; margin-bottom: 0; }
+    .lock-outer {{min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;}}
+    .lock-card {{background:{T['lock_bg']};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid {T['lock_border']};border-radius:24px;padding:48px 40px;text-align:center;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.4);}}
+    .lock-icon {{font-size:44px;margin-bottom:16px;display:block;}}
+    .lock-title {{font-size:22px;font-weight:700;color:{T['lock_title']};margin-bottom:6px;}}
+    .lock-sub {{font-size:13px;color:{T['lock_sub']};margin-bottom:0;}}
 
     /* Hero */
-    .hero {
-        background: rgba(255,255,255,0.03); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(255,255,255,0.07); border-radius: 20px; padding: 28px 32px; margin-bottom: 14px;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; overflow: hidden;
-    }
-    .hero::before { content:''; position:absolute; top:-60px; right:-60px; width:220px; height:220px; background:radial-gradient(circle, rgba(56,189,248,0.07) 0%, transparent 70%); pointer-events:none; }
-    .hero::after  { content:''; position:absolute; bottom:-40px; left:-40px; width:160px; height:160px; background:radial-gradient(circle, rgba(99,102,241,0.05) 0%, transparent 70%); pointer-events:none; }
-    .hero-title { font-size: 22px; font-weight: 800; color: #f1f5f9; margin: 0 0 4px 0; letter-spacing: -0.4px; }
-    .hero-sub { font-size: 12px; color: #334155; margin: 0; }
-    .hero-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.2); border-radius:20px; padding:4px 10px; font-size:10px; font-weight:600; color:#38bdf8; margin-top:12px; letter-spacing:0.3px; }
+    .hero {{background:{T['hero_bg']};backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid {T['hero_border']};border-radius:20px;padding:28px 32px;margin-bottom:14px;box-shadow:0 4px 24px rgba(0,0,0,0.1),inset 0 1px 0 rgba(255,255,255,0.3);position:relative;overflow:hidden;}}
+    .hero::before {{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(56,189,248,0.08) 0%,transparent 70%);pointer-events:none;}}
+    .hero::after  {{content:'';position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;background:radial-gradient(circle,rgba(99,102,241,0.06) 0%,transparent 70%);pointer-events:none;}}
+    .hero-title {{font-size:22px;font-weight:800;color:{T['title_color']};margin:0 0 4px 0;letter-spacing:-0.4px;}}
+    .hero-sub {{font-size:12px;color:{T['sub_color']};margin:0;}}
+    .hero-badge {{display:inline-flex;align-items:center;gap:5px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);border-radius:20px;padding:4px 10px;font-size:10px;font-weight:600;color:#38bdf8;margin-top:12px;letter-spacing:0.3px;}}
 
-    /* Countdown banner */
-    .countdown-banner {
-        background: rgba(99,102,241,0.08); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(99,102,241,0.2); border-radius: 14px; padding: 16px 22px;
-        margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between;
-        box-shadow: 0 0 20px rgba(99,102,241,0.06);
-    }
-    .countdown-left { display: flex; flex-direction: column; gap: 3px; }
-    .countdown-label { font-size: 10px; font-weight: 600; color: #4f46e5; text-transform: uppercase; letter-spacing: 0.8px; }
-    .countdown-name { font-size: 15px; font-weight: 700; color: #e2e8f0; }
-    .countdown-pool { font-size: 12px; color: #475569; }
-    .countdown-right { text-align: right; }
-    .countdown-days { font-size: 32px; font-weight: 800; color: #818cf8; line-height: 1; }
-    .countdown-days-label { font-size: 10px; color: #4f46e5; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    /* Countdown */
+    .countdown-banner {{background:rgba(99,102,241,0.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(99,102,241,0.2);border-radius:14px;padding:16px 22px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 0 20px rgba(99,102,241,0.06);}}
+    .countdown-left {{display:flex;flex-direction:column;gap:3px;}}
+    .countdown-label {{font-size:10px;font-weight:600;color:#4f46e5;text-transform:uppercase;letter-spacing:0.8px;}}
+    .countdown-name {{font-size:15px;font-weight:700;color:{T['title_color']};}}
+    .countdown-pool {{font-size:12px;color:{T['sub_color']};}}
+    .countdown-right {{text-align:right;}}
+    .countdown-days {{font-size:32px;font-weight:800;color:#818cf8;line-height:1;}}
+    .countdown-days-label {{font-size:10px;color:#4f46e5;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}}
 
     /* Chips */
-    .chip-row { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
-    .chip {
-        flex: 1; min-width: 110px;
-        background: rgba(255,255,255,0.03); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 14px 16px;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04);
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .chip:hover { border-color: rgba(56,189,248,0.2); box-shadow: 0 4px 20px rgba(56,189,248,0.06); }
-    .chip-label { font-size: 10px; font-weight: 600; color: #1e3a5f; text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 6px; }
-    .chip-value       { font-size: 16px; font-weight: 700; color: #38bdf8; }
-    .chip-value-green { font-size: 16px; font-weight: 700; color: #34d399; }
-    .chip-value-amber { font-size: 16px; font-weight: 700; color: #fbbf24; }
-    .chip-value-red   { font-size: 16px; font-weight: 700; color: #f87171; }
+    .chip-row {{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}}
+    .chip {{flex:1;min-width:110px;background:{T['chip_bg']};backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid {T['chip_border']};border-radius:14px;padding:14px 16px;box-shadow:0 2px 12px rgba(0,0,0,0.1),inset 0 1px 0 rgba(255,255,255,0.2);transition:border-color 0.2s,box-shadow 0.2s;}}
+    .chip-label {{font-size:10px;font-weight:600;color:{T['label_color']};text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px;}}
+    .chip-value       {{font-size:16px;font-weight:700;color:#38bdf8;}}
+    .chip-value-green {{font-size:16px;font-weight:700;color:#34d399;}}
+    .chip-value-amber {{font-size:16px;font-weight:700;color:#fbbf24;}}
+    .chip-value-red   {{font-size:16px;font-weight:700;color:#f87171;}}
+    @keyframes countUp {{from{{opacity:0;transform:translateY(6px)}}to{{opacity:1;transform:translateY(0)}}}}
+    .chip-value,.chip-value-green,.chip-value-amber,.chip-value-red {{animation:countUp 0.6s ease-out;}}
 
-    /* Animated counter */
-    @keyframes countUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    .chip-value, .chip-value-green, .chip-value-amber, .chip-value-red { animation: countUp 0.6s ease-out; }
-
-    /* Glass card */
-    .glass-card {
-        background: rgba(255,255,255,0.025); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-        border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 20px 22px; margin-bottom: 14px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.04);
-    }
+    /* Glass card — identical for both tables */
+    .glass-card {{background:{T['card_bg']};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid {T['card_border']};border-radius:16px;padding:20px 22px;margin-bottom:14px;box-shadow:{T['card_shadow']};}}
 
     /* Section labels */
-    .sec-label { font-size: 10px; font-weight: 700; color: #1e3a5f; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-    .sec-title { font-size: 15px; font-weight: 700; color: #cbd5e1; margin: 0 0 2px 0; }
-    .sec-sub   { font-size: 11px; color: #334155; margin: 0 0 14px 0; }
+    .sec-label {{font-size:10px;font-weight:700;color:{T['label_color']};text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}}
+    .sec-title {{font-size:15px;font-weight:700;color:{T['sec_title']};margin:0 0 2px 0;}}
+    .sec-sub   {{font-size:11px;color:{T['sub_color']};margin:0 0 14px 0;}}
 
-    /* Custom member table */
-    .member-table { width: 100%; border-collapse: collapse; }
-    .member-table th { font-size: 10px; font-weight: 600; color: #1e3a5f; text-transform: uppercase; letter-spacing: 0.6px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: left; }
-    .member-table td { font-size: 13px; color: #94a3b8; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-    .member-table tr:last-child td { border-bottom: none; }
-    .member-table tr.owing td:first-child { border-left: 2px solid #fbbf24; padding-left: 10px; }
-    .member-table tr.ok td:first-child { border-left: 2px solid #34d399; padding-left: 10px; }
-    .member-name { font-weight: 600; color: #e2e8f0; }
-    .badge-ok  { background: rgba(52,211,153,0.1); color: #34d399; border: 1px solid rgba(52,211,153,0.2); border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
-    .badge-owe { background: rgba(251,191,36,0.1);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.2);  border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    /* Unified table — used for BOTH cards */
+    .data-table {{width:100%;border-collapse:collapse;}}
+    .data-table th {{font-size:10px;font-weight:600;color:{T['th_color']};text-transform:uppercase;letter-spacing:0.6px;padding:8px 12px;border-bottom:1px solid {T['th_border']};text-align:left;}}
+    .data-table td {{font-size:13px;color:{T['td_color']};padding:10px 12px;border-bottom:1px solid {T['td_border']};vertical-align:middle;}}
+    .data-table tr:last-child td {{border-bottom:none;}}
+    .data-table tr.owing td:first-child {{border-left:2px solid #fbbf24;padding-left:10px;}}
+    .data-table tr.ok  td:first-child {{border-left:2px solid #34d399;padding-left:10px;}}
+    .data-table tr.plain td:first-child {{border-left:2px solid transparent;padding-left:10px;}}
+    .cell-name  {{font-weight:600;color:{T['member_name']};}}
+    .badge-ok  {{background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.25);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;white-space:nowrap;}}
+    .badge-owe {{background:rgba(251,191,36,0.12); color:#fbbf24;border:1px solid rgba(251,191,36,0.25); border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;white-space:nowrap;}}
+    .ring-wrap {{display:inline-flex;align-items:center;gap:6px;}}
 
-    /* Progress ring */
-    .ring-wrap { display: inline-flex; align-items: center; gap: 8px; }
-    .ring-pct  { font-size: 12px; font-weight: 600; color: #64748b; }
-
-    /* Bulk payment grid */
-    .bulk-grid { display: grid; gap: 8px; }
-    .bulk-row  { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.02); border-radius: 10px; padding: 8px 12px; }
-    .bulk-name { font-size: 13px; font-weight: 600; color: #e2e8f0; width: 100px; flex-shrink: 0; }
-    .bulk-weeks { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
-
-    /* History log */
-    .log-entry { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
-    .log-entry:last-child { border-bottom: none; }
-    .log-dot { width: 8px; height: 8px; border-radius: 50%; background: #38bdf8; margin-top: 4px; flex-shrink: 0; }
-    .log-dot-payout { background: #818cf8; }
-    .log-dot-setting { background: #34d399; }
-    .log-text { font-size: 12px; color: #64748b; line-height: 1.4; }
-    .log-text strong { color: #94a3b8; font-weight: 600; }
-    .log-time { font-size: 11px; color: #1e3a5f; margin-left: auto; white-space: nowrap; padding-left: 12px; }
+    /* Log */
+    .log-entry {{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid {T['log_border']};}}
+    .log-entry:last-child {{border-bottom:none;}}
+    .log-dot         {{width:8px;height:8px;border-radius:50%;background:#38bdf8;margin-top:4px;flex-shrink:0;}}
+    .log-dot-payout  {{background:#818cf8;}}
+    .log-dot-setting {{background:#34d399;}}
+    .log-text {{font-size:12px;color:{T['log_color']};line-height:1.4;}}
+    .log-text strong {{color:{T['log_strong']};font-weight:600;}}
+    .log-time {{font-size:11px;color:{T['log_time']};margin-left:auto;white-space:nowrap;padding-left:12px;}}
 
     /* Inputs */
-    .stTextInput input, .stNumberInput input, .stTextArea textarea {
-        background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.08) !important;
-        color: #e2e8f0 !important; border-radius: 10px !important; font-size: 13px !important;
-    }
-    .stTextInput input:focus, .stNumberInput input:focus { border-color: rgba(56,189,248,0.4) !important; box-shadow: 0 0 0 2px rgba(56,189,248,0.08) !important; }
-    .stTextInput label, .stNumberInput label, .stTextArea label, .stSelectbox label, .stCheckbox label { color: #334155 !important; font-size: 11px !important; font-weight: 600 !important; text-transform: uppercase; letter-spacing: 0.5px; }
-    .stSelectbox > div > div { background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.08) !important; color: #e2e8f0 !important; border-radius: 10px !important; }
+    .stTextInput input,.stNumberInput input,.stTextArea textarea {{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;color:{T['input_color']}!important;border-radius:10px!important;font-size:13px!important;}}
+    .stTextInput input:focus,.stNumberInput input:focus {{border-color:rgba(56,189,248,0.4)!important;box-shadow:0 0 0 2px rgba(56,189,248,0.08)!important;}}
+    .stTextInput label,.stNumberInput label,.stTextArea label,.stSelectbox label,.stCheckbox label {{color:{T['label_color']}!important;font-size:11px!important;font-weight:600!important;text-transform:uppercase;letter-spacing:0.5px;}}
+    .stSelectbox > div > div {{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;color:{T['input_color']}!important;border-radius:10px!important;}}
 
     /* Buttons */
-    .stButton > button {
-        background: rgba(29,78,216,0.75) !important; backdrop-filter: blur(8px) !important;
-        color: white !important; border: 1px solid rgba(59,130,246,0.35) !important;
-        border-radius: 10px !important; font-weight: 600 !important; font-size: 13px !important;
-        padding: 9px 20px !important; width: 100%;
-        box-shadow: 0 2px 8px rgba(29,78,216,0.3) !important; transition: all 0.2s !important;
-    }
-    .stButton > button:hover { background: rgba(37,99,235,0.9) !important; box-shadow: 0 4px 16px rgba(29,78,216,0.5) !important; }
-    .stButton > button[kind="secondary"] { background: rgba(255,255,255,0.03) !important; color: #334155 !important; border: 1px solid rgba(255,255,255,0.07) !important; box-shadow: none !important; }
+    .stButton > button {{background:{T['btn_bg']}!important;backdrop-filter:blur(8px)!important;color:white!important;border:1px solid {T['btn_border']}!important;border-radius:10px!important;font-weight:600!important;font-size:13px!important;padding:9px 20px!important;width:100%;box-shadow:0 2px 8px rgba(29,78,216,0.25)!important;transition:all 0.2s!important;}}
+    .stButton > button:hover {{background:rgba(37,99,235,0.95)!important;box-shadow:0 4px 16px rgba(29,78,216,0.4)!important;}}
+    .stButton > button[kind="secondary"] {{background:{T['btn2_bg']}!important;color:{T['btn2_color']}!important;border:1px solid {T['btn2_border']}!important;box-shadow:none!important;}}
 
-    .stDownloadButton > button {
-        background: rgba(255,255,255,0.03) !important; backdrop-filter: blur(8px) !important;
-        color: #38bdf8 !important; border: 1px solid rgba(56,189,248,0.2) !important;
-        border-radius: 10px !important; font-size: 13px !important; font-weight: 600 !important;
-        padding: 9px 20px !important; width: 100% !important;
-        box-shadow: 0 0 12px rgba(56,189,248,0.04) !important; transition: all 0.2s !important;
-    }
-    .stDownloadButton > button:hover { border-color: rgba(56,189,248,0.4) !important; box-shadow: 0 0 20px rgba(56,189,248,0.1) !important; }
+    .stDownloadButton > button {{background:{T['dl_bg']}!important;backdrop-filter:blur(8px)!important;color:{dl_color}!important;border:1px solid {T['dl_border']}!important;border-radius:10px!important;font-size:13px!important;font-weight:600!important;padding:9px 20px!important;width:100%!important;transition:all 0.2s!important;}}
 
     /* Expanders */
-    .streamlit-expanderHeader { background: rgba(255,255,255,0.025) !important; backdrop-filter: blur(12px) !important; border: 1px solid rgba(255,255,255,0.06) !important; border-radius: 12px !important; color: #64748b !important; font-size: 13px !important; font-weight: 600 !important; transition: border-color 0.2s !important; }
-    .streamlit-expanderHeader:hover { border-color: rgba(56,189,248,0.2) !important; }
-    .streamlit-expanderContent { background: rgba(255,255,255,0.015) !important; border: 1px solid rgba(255,255,255,0.05) !important; border-top: none !important; border-radius: 0 0 12px 12px !important; padding: 18px !important; backdrop-filter: blur(12px) !important; }
-
-    /* Dataframe */
-    div[data-testid="stDataFrame"] { border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .streamlit-expanderHeader {{background:{T['exp_bg']}!important;backdrop-filter:blur(12px)!important;border:1px solid {T['exp_border']}!important;border-radius:12px!important;color:{T['exp_color']}!important;font-size:13px!important;font-weight:600!important;transition:border-color 0.2s!important;}}
+    .streamlit-expanderContent {{background:{T['exp_content']}!important;border:1px solid {T['exp_border']}!important;border-top:none!important;border-radius:0 0 12px 12px!important;padding:18px!important;backdrop-filter:blur(12px)!important;}}
 
     /* Alerts */
-    div[data-testid="stSuccess"] { background: rgba(16,185,129,0.07) !important; border: 1px solid rgba(16,185,129,0.18) !important; border-radius: 10px !important; color: #34d399 !important; font-size: 13px !important; }
-    div[data-testid="stError"]   { background: rgba(239,68,68,0.07) !important;  border: 1px solid rgba(239,68,68,0.18) !important;  border-radius: 10px !important; color: #f87171 !important; font-size: 13px !important; }
+    div[data-testid="stSuccess"] {{background:rgba(16,185,129,0.07)!important;border:1px solid rgba(16,185,129,0.2)!important;border-radius:10px!important;color:#34d399!important;font-size:13px!important;}}
+    div[data-testid="stError"]   {{background:rgba(239,68,68,0.07)!important; border:1px solid rgba(239,68,68,0.2)!important; border-radius:10px!important;color:#f87171!important;font-size:13px!important;}}
 
-    /* Glow divider */
-    .gdivider { height: 1px; background: linear-gradient(90deg, transparent, rgba(56,189,248,0.12), transparent); margin: 22px 0; }
-
-    /* Footer */
-    .foot { text-align: center; font-size: 11px; color: #0f1f35; margin-top: 32px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.03); }
+    .gdivider {{height:1px;background:linear-gradient(90deg,transparent,{T['gdiv']},transparent);margin:22px 0;}}
+    .foot {{text-align:center;font-size:11px;color:{T['foot_color']};margin-top:32px;padding-top:20px;border-top:1px solid {T['foot_border']};}}
     </style>
 """, unsafe_allow_html=True)
 
@@ -225,8 +271,9 @@ def format_date(dt):
 def ring_svg(pct, color="#38bdf8", r=14):
     circ = 2 * 3.14159 * r
     dash = circ * pct / 100
+    track = T["ring_track"]
     return f"""<svg width="36" height="36" viewBox="0 0 36 36">
-      <circle cx="18" cy="18" r="{r}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="3"/>
+      <circle cx="18" cy="18" r="{r}" fill="none" stroke="{track}" stroke-width="3"/>
       <circle cx="18" cy="18" r="{r}" fill="none" stroke="{color}" stroke-width="3"
         stroke-dasharray="{dash:.1f} {circ:.1f}" stroke-linecap="round"
         transform="rotate(-90 18 18)"/>
@@ -374,11 +421,10 @@ members_owing = sum(
     )) > 0
 )
 
-# Next payout
 next_recipient, next_payout_date, next_net_pool, days_to_payout = None, None, 0, 0
-cur_date = start_dt
+cur_d = start_dt
 for i in range(num_members):
-    pd_date = cur_date + timedelta(weeks=4)
+    pd_date = cur_d + timedelta(weeks=4)
     if pd_date >= today:
         next_recipient   = members[i]
         next_payout_date = pd_date
@@ -386,18 +432,27 @@ for i in range(num_members):
         next_net_pool    = rm * num_members * (1 - st.session_state.admin_fee_percentage/100.0)
         days_to_payout   = (pd_date - today).days
         break
-    cur_date = pd_date
+    cur_d = pd_date
 
 
-# ── status bar ────────────────────────────────────────────────────────────────
+# ── status bar + theme toggle ─────────────────────────────────────────────────
 sync_ago = int((datetime.now() - st.session_state.last_sync).total_seconds() / 60)
 sync_txt = "just now" if sync_ago < 1 else f"{sync_ago}m ago"
-st.markdown(f"""
-    <div class="status-bar">
-        <span><span class="status-dot"></span><span class="status-live">Live</span></span>
-        <span class="status-sync">Synced {sync_txt} &nbsp;·&nbsp; Google Sheets</span>
-    </div>
-""", unsafe_allow_html=True)
+
+sb_col, tg_col = st.columns([4, 1])
+with sb_col:
+    st.markdown(f"""
+        <div class="status-bar">
+            <span><span class="status-dot"></span><span class="status-live">Live</span></span>
+            <span class="status-sync">Synced {sync_txt} &nbsp;·&nbsp; Google Sheets</span>
+        </div>
+    """, unsafe_allow_html=True)
+with tg_col:
+    st.markdown("<div style='padding-top:2px'>", unsafe_allow_html=True)
+    if st.button(f"{T['toggle_icon']} {T['toggle_label']}", key="theme_toggle", type="secondary"):
+        st.session_state.dark_mode = not st.session_state.dark_mode
+        st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ── hero ──────────────────────────────────────────────────────────────────────
@@ -410,7 +465,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 
-# ── countdown banner ──────────────────────────────────────────────────────────
+# ── countdown ─────────────────────────────────────────────────────────────────
 if next_recipient:
     st.markdown(f"""
         <div class="countdown-banner">
@@ -431,42 +486,30 @@ if next_recipient:
 owing_class = "chip-value-red" if members_owing > 0 else "chip-value-green"
 st.markdown(f"""
     <div class="chip-row">
-        <div class="chip">
-            <div class="chip-label">Cash Held</div>
-            <div class="chip-value">GHS {fmt_num(total_cash_held)}</div>
-        </div>
-        <div class="chip">
-            <div class="chip-label">Week</div>
-            <div class="chip-value">{current_elapsed_week} / {total_weeks}</div>
-        </div>
-        <div class="chip">
-            <div class="chip-label">Owing</div>
-            <div class="{owing_class}">{members_owing} member{'s' if members_owing!=1 else ''}</div>
-        </div>
-        <div class="chip">
-            <div class="chip-label">Admin Fee</div>
-            <div class="chip-value-green">{fmt_num(st.session_state.admin_fee_percentage)}%</div>
-        </div>
+        <div class="chip"><div class="chip-label">Cash Held</div><div class="chip-value">GHS {fmt_num(total_cash_held)}</div></div>
+        <div class="chip"><div class="chip-label">Week</div><div class="chip-value">{current_elapsed_week} / {total_weeks}</div></div>
+        <div class="chip"><div class="chip-label">Owing</div><div class="{owing_class}">{members_owing} member{'s' if members_owing!=1 else ''}</div></div>
+        <div class="chip"><div class="chip-label">Admin Fee</div><div class="chip-value-green">{fmt_num(st.session_state.admin_fee_percentage)}%</div></div>
     </div>
 """, unsafe_allow_html=True)
 
 
 # ── build data ────────────────────────────────────────────────────────────────
-schedule_data, wa_payout_rows = [], []
-cur_date = start_dt
+schedule_rows, wa_payout_rows = [], []
+cur_d = start_dt
 for i in range(num_members):
     month_lbl    = f"Month {i+1}"
     recipient    = members[i]
-    payout_date  = cur_date + timedelta(weeks=4)
+    payout_date  = cur_d + timedelta(weeks=4)
     rec_monthly  = st.session_state.member_tiers.get(recipient, st.session_state.base_monthly)
     gross_pool   = rec_monthly * num_members
     admin_fee_v  = gross_pool * (st.session_state.admin_fee_percentage / 100.0)
     net_pool_amt = gross_pool - admin_fee_v
     collected    = float(st.session_state.payout_status.get(month_lbl,{}).get("amount_collected",0.0))
     remaining    = max(0.0, net_pool_amt - collected)
-    schedule_data.append({"Turn":f"Month {i+1}","Recipient":recipient,"Payout Date":format_date(payout_date),"Admin Fee":f"GHS {fmt_num(admin_fee_v)}","Net Pool":f"GHS {fmt_num(net_pool_amt)}","Collected":f"GHS {fmt_num(collected)}","Remaining":f"GHS {fmt_num(remaining)}"})
+    schedule_rows.append({"turn":f"Month {i+1}","recipient":recipient,"date":format_date(payout_date),"fee":fmt_num(admin_fee_v),"pool":fmt_num(net_pool_amt),"collected":fmt_num(collected),"remaining":fmt_num(remaining)})
     wa_payout_rows.append({"recipient":recipient,"date":format_date(payout_date),"balance":fmt_num(remaining)})
-    cur_date = payout_date
+    cur_d = payout_date
 
 contrib_rows, wa_contrib_rows = [], []
 for member in members:
@@ -482,12 +525,7 @@ for member in members:
     wa_contrib_rows.append({"member":member,"standing":standing})
 
 
-# ── member contributions table (custom HTML) ──────────────────────────────────
-st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-st.markdown('<p class="sec-label">Members</p>', unsafe_allow_html=True)
-st.markdown('<p class="sec-title">Contributions</p>', unsafe_allow_html=True)
-st.markdown('<p class="sec-sub">Weekly targets, progress rings and payment standing</p>', unsafe_allow_html=True)
-
+# ── contributions card ────────────────────────────────────────────────────────
 rows_html = ""
 for r in contrib_rows:
     is_owing  = r["owing"] > 0
@@ -495,46 +533,58 @@ for r in contrib_rows:
     badge     = f'<span class="badge-owe">Owing GHS {fmt_num(r["owing"])}</span>' if is_owing else '<span class="badge-ok">Up to date</span>'
     ring_col  = "#fbbf24" if is_owing else "#34d399"
     svg       = ring_svg(r["pct"], ring_col)
-    rows_html += f"""
-    <tr class="{row_class}">
-        <td><span class="member-name">{r['member']}</span></td>
+    rows_html += f"""<tr class="{row_class}">
+        <td><span class="cell-name">{r['member']}</span></td>
         <td>GHS {fmt_num(r['m_monthly'])}</td>
         <td>GHS {fmt_num(r['m_weekly'])}</td>
         <td>{r['total_paid']} / {total_weeks}</td>
-        <td><div class="ring-wrap">{svg}<span class="ring-pct"></span></div></td>
+        <td><div class="ring-wrap">{svg}</div></td>
         <td>{badge}</td>
     </tr>"""
 
 st.markdown(f"""
-    <table class="member-table">
-        <thead><tr>
-            <th>Member</th><th>Monthly</th><th>Weekly</th>
-            <th>Weeks Paid</th><th>Progress</th><th>Status</th>
-        </tr></thead>
-        <tbody>{rows_html}</tbody>
-    </table>
+    <div class="glass-card">
+        <p class="sec-label">Members</p>
+        <p class="sec-title">Contributions</p>
+        <p class="sec-sub">Weekly targets, progress rings and payment standing</p>
+        <table class="data-table">
+            <thead><tr>
+                <th>Member</th><th>Monthly</th><th>Weekly</th>
+                <th>Weeks Paid</th><th>Progress</th><th>Status</th>
+            </tr></thead>
+            <tbody>{rows_html}</tbody>
+        </table>
+    </div>
 """, unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
 
 
-# ── payout schedule ───────────────────────────────────────────────────────────
-st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-st.markdown('<p class="sec-label">Rotation</p>', unsafe_allow_html=True)
-st.markdown('<p class="sec-title">Payout Schedule</p>', unsafe_allow_html=True)
-st.markdown('<p class="sec-sub">Dates, admin fees and pool balance per turn</p>', unsafe_allow_html=True)
-st.dataframe(
-    pd.DataFrame(schedule_data),
-    use_container_width=True, hide_index=True,
-    column_config={
-        "Turn":        st.column_config.TextColumn("Turn", width="small"),
-        "Recipient":   st.column_config.TextColumn("Recipient"),
-        "Payout Date": st.column_config.TextColumn("Payout Date"),
-        "Net Pool":    st.column_config.TextColumn("Net Pool"),
-        "Collected":   st.column_config.TextColumn("Collected"),
-        "Remaining":   st.column_config.TextColumn("Remaining"),
-    }
-)
-st.markdown('</div>', unsafe_allow_html=True)
+# ── payout schedule card ──────────────────────────────────────────────────────
+pay_rows_html = ""
+for r in schedule_rows:
+    pay_rows_html += f"""<tr class="plain">
+        <td><span class="cell-name">{r['turn']}</span></td>
+        <td>{r['recipient']}</td>
+        <td>{r['date']}</td>
+        <td>GHS {r['fee']}</td>
+        <td>GHS {r['pool']}</td>
+        <td>GHS {r['collected']}</td>
+        <td>GHS {r['remaining']}</td>
+    </tr>"""
+
+st.markdown(f"""
+    <div class="glass-card">
+        <p class="sec-label">Rotation</p>
+        <p class="sec-title">Payout Schedule</p>
+        <p class="sec-sub">Dates, admin fees and pool balance per turn</p>
+        <table class="data-table">
+            <thead><tr>
+                <th>Turn</th><th>Recipient</th><th>Payout Date</th>
+                <th>Admin Fee</th><th>Net Pool</th><th>Collected</th><th>Remaining</th>
+            </tr></thead>
+            <tbody>{pay_rows_html}</tbody>
+        </table>
+    </div>
+""", unsafe_allow_html=True)
 
 
 # ── exports ───────────────────────────────────────────────────────────────────
@@ -566,20 +616,22 @@ for i in range(num_members):
     ob.write(f"*Month {i+1} — {recipient}*\n  • Payout Date: {format_date(payout_date)}\n  • Net Pool: GHS {fmt_num(net)}\n\n")
     ob_date = payout_date
 
-st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-st.markdown('<p class="sec-label">Export</p>', unsafe_allow_html=True)
-st.markdown('<p class="sec-title">WhatsApp Messages</p>', unsafe_allow_html=True)
-st.markdown('<p class="sec-sub">Ready-to-paste updates for the group chat</p>', unsafe_allow_html=True)
+st.markdown(f"""
+    <div class="glass-card">
+        <p class="sec-label">Export</p>
+        <p class="sec-title">WhatsApp Messages</p>
+        <p class="sec-sub">Ready-to-paste updates for the group chat</p>
+    </div>
+""", unsafe_allow_html=True)
 col_dl1, col_dl2 = st.columns(2)
 with col_dl1:
     st.download_button("📥  Weekly Update", data=buf.getvalue(), file_name=f"Susu_W{current_elapsed_week}.txt", mime="text/plain")
 with col_dl2:
     st.download_button("📋  Onboarding Details", data=ob.getvalue(), file_name="Susu_Onboarding.txt", mime="text/plain")
-st.markdown('</div>', unsafe_allow_html=True)
 
 
 # ── admin panel ───────────────────────────────────────────────────────────────
-st.markdown('<p class="sec-label" style="margin-top:24px">Admin</p>', unsafe_allow_html=True)
+st.markdown(f'<p class="sec-label" style="margin-top:24px">Admin</p>', unsafe_allow_html=True)
 st.markdown('<p class="sec-title">Group Controls</p>', unsafe_allow_html=True)
 st.markdown('<p class="sec-sub">Update settings, record payments and payouts</p>', unsafe_allow_html=True)
 
@@ -593,7 +645,7 @@ with st.expander("⚙️  Group Settings"):
         st.session_state.start_date=new_start; st.session_state.base_monthly=new_base
         st.session_state.admin_fee_percentage=new_fee; st.session_state.names_input=new_names
         save_all(gsheet)
-        append_log(gsheet, {"type":"setting","text":"Group settings updated","time":datetime.now().strftime("%d %b %Y %H:%M")})
+        append_log(gsheet,{"type":"setting","text":"Group settings updated","time":datetime.now().strftime("%d %b %Y %H:%M")})
         st.session_state.last_sync=datetime.now()
         st.success("✓ Settings saved."); st.rerun()
 
@@ -610,16 +662,15 @@ with st.expander("💰  Custom Member Tiers"):
         st.success("✓ Tiers saved."); st.rerun()
 
 with st.expander("📝  Bulk Payment Entry"):
-    st.markdown('<p style="font-size:12px;color:#334155;margin-bottom:12px">Check all weeks paid for each member then save once.</p>', unsafe_allow_html=True)
+    st.markdown(f'<p style="font-size:12px;color:{T["sub_color"]};margin-bottom:12px">Check all weeks paid for each member then save once.</p>', unsafe_allow_html=True)
     bulk_payments = {}
     for member in members:
         m_pmts = st.session_state.payments.get(member, {})
-        st.markdown(f'<div style="font-size:12px;font-weight:600;color:#94a3b8;margin:10px 0 6px">{member}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:12px;font-weight:600;color:{T["td_color"]};margin:10px 0 6px">{member}</div>', unsafe_allow_html=True)
         cols = st.columns(min(total_weeks, 8))
         week_vals = {}
         for w in range(1, total_weeks+1):
-            col_idx = (w-1) % 8
-            with cols[col_idx]:
+            with cols[(w-1) % 8]:
                 week_vals[str(w)] = st.checkbox(f"W{w}", value=m_pmts.get(str(w), False), key=f"bulk_{member}_{w}")
         bulk_payments[member] = week_vals
     if st.button("Save All Payments", key="bulk_save"):
@@ -648,22 +699,18 @@ with st.expander("🎁  Record Payout"):
         st.session_state.last_sync=datetime.now()
         st.success(f"✓ Payout for {rec_name} saved."); st.rerun()
 
-
-# ── history log ───────────────────────────────────────────────────────────────
 if st.session_state.history:
     with st.expander("🕒  Activity Log"):
         dot_map = {"payment":"log-dot","payout":"log-dot log-dot-payout","setting":"log-dot log-dot-setting"}
         log_html = ""
         for entry in st.session_state.history[:20]:
             dot_class = dot_map.get(entry.get("type","payment"),"log-dot")
-            log_html += f"""
-            <div class="log-entry">
+            log_html += f"""<div class="log-entry">
                 <div class="{dot_class}"></div>
                 <div class="log-text"><strong>{entry.get('text','—')}</strong></div>
                 <div class="log-time">{entry.get('time','')}</div>
             </div>"""
         st.markdown(log_html, unsafe_allow_html=True)
-
 
 # ── logout ────────────────────────────────────────────────────────────────────
 st.markdown('<div class="gdivider"></div>', unsafe_allow_html=True)
