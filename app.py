@@ -561,17 +561,16 @@ st.markdown(f"""
 gap_class   = "chip-value-red" if collection_gap > 0 else "chip-value-green"
 gap_label   = f"−GHS {fmt_num(collection_gap)}" if collection_gap > 0 else "On track"
 
-# week-on-week delta for cash held chip
-prev_week = max(0, current_elapsed_week - 1)
-cash_last_week = sum(
-    st.session_state.member_tiers.get(m, st.session_state.base_monthly) / 4.0
-    * sum(1 for w in range(1, total_weeks+1) if st.session_state.payments.get(m,{}).get(str(w), False) and int(w) <= prev_week)
+# total collected so far vs total expected overall
+total_expected_full = sum(
+    st.session_state.member_tiers.get(m, st.session_state.base_monthly)
     for m in members
-) - total_payouts_dist
-cash_delta = total_cash_held - cash_last_week
-delta_arrow = "↑" if cash_delta >= 0 else "↓"
-delta_color = "#34d399" if cash_delta >= 0 else "#f87171"
-delta_html  = f'<div style="font-size:10px;color:{delta_color};margin-top:3px;font-weight:600">{delta_arrow} GHS {fmt_num(abs(cash_delta))} this week</div>' if current_elapsed_week > 1 else ""
+) * num_members / num_members * total_weeks / 4
+total_expected_full = sum(
+    st.session_state.member_tiers.get(m, st.session_state.base_monthly) / 4.0 * total_weeks
+    for m in members
+)
+delta_html = f'<div style="font-size:10px;color:#64748b;margin-top:3px;font-weight:500">GHS {fmt_num(total_cash_collected)} of GHS {fmt_num(total_expected_full)}</div>'
 
 st.markdown(f"""
     <div class="chip-row">
