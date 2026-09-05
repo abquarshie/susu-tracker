@@ -104,7 +104,7 @@ st.markdown(f"""
     @keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:0.4}}}}
     .status-live{{color:#34d399;font-weight:600;}} .status-sync{{color:{T['sync_color']};}}
 
-    .lock-outer{{min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;}}
+    .lock-outer{{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;margin-top:-2rem;}}
     .lock-card{{background:{T['lock_bg']};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid {T['lock_border']};border-radius:24px;padding:48px 40px;text-align:center;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.4);}}
     .lock-icon{{font-size:44px;margin-bottom:16px;display:block;}}
     .lock-title{{font-size:22px;font-weight:700;color:{T['lock_title']};margin-bottom:6px;}}
@@ -319,10 +319,13 @@ member_view = params.get("member", None)
 
 # ── auth ──────────────────────────────────────────────────────────────────────
 if not member_view and not st.session_state.authenticated:
-    st.markdown('<div class="lock-outer">', unsafe_allow_html=True)
-    st.markdown("""<div class="lock-card"><span class="lock-icon">💸</span>
-        <div class="lock-title">Susu Savings</div>
-        <div class="lock-sub">Enter your passcode to continue</div></div>""", unsafe_allow_html=True)
+    st.markdown("""<div class="lock-outer">
+        <div class="lock-card">
+            <span class="lock-icon">💸</span>
+            <div class="lock-title">Susu Savings</div>
+            <div class="lock-sub">Enter your passcode to continue</div>
+        </div>
+    </div>""", unsafe_allow_html=True)
     col_l,col_c,col_r = st.columns([1,2,1])
     with col_c:
         pw = st.text_input("p", type="password", label_visibility="collapsed", placeholder="Passcode…")
@@ -332,7 +335,6 @@ if not member_view and not st.session_state.authenticated:
                 st.session_state.last_sync = datetime.now()
                 st.rerun()
             else: st.error("Incorrect passcode.")
-    st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
 # ── derive ────────────────────────────────────────────────────────────────────
@@ -591,9 +593,9 @@ for r in schedule_rows:
     # days badge in schedule table
     if r['days_away'] is not None:
         urg = "urgent" if r['days_away']<=7 else ""
-        days_cell = f'<br><span class="days-badge {urg}">{r["days_away"]}d away</span>'
+        days_cell = f'<div style="margin-top:4px"><span class="days-badge {urg}">{r["days_away"]}d away</span></div>'
     else:
-        days_cell = '<br><span style="font-size:10px;color:#64748b">Past</span>'
+        days_cell = '<div style="margin-top:4px;font-size:10px;color:#64748b">Past</div>'
     # early eligibility note
     early_note = '<div class="early-eligible">⚡ Pool fully collected — eligible for early payout</div>' if r['early_ok'] else ""
     pay_rows_html += f"""<tr class="plain">
