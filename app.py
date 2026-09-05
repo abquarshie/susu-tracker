@@ -316,6 +316,8 @@ def append_log(sheet, entry):
     save_cell(sheet,"history",st.session_state.history)
 
 
+ADMIN_PW = "Susu2026"
+
 # ── connect ───────────────────────────────────────────────────────────────────
 try:
     gsheet = get_sheet()
@@ -347,7 +349,6 @@ is_admin_url = not bool(member_view)
 
 
 # ── auth ──────────────────────────────────────────────────────────────────────
-ADMIN_PW = "Susu2026"
 
 if not member_view and not st.session_state.authenticated:
     st.markdown('<div class="lock-outer">', unsafe_allow_html=True)
