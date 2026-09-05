@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 import io
 import json
 import re
+import hashlib
+import secrets as pysecrets
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -213,6 +215,14 @@ st.markdown(f"""
     div[data-testid="stSuccess"]{{background:rgba(16,185,129,0.07)!important;border:1px solid rgba(16,185,129,0.2)!important;border-radius:10px!important;color:#34d399!important;font-size:13px!important;}}
     div[data-testid="stError"]{{background:rgba(239,68,68,0.07)!important;border:1px solid rgba(239,68,68,0.2)!important;border-radius:10px!important;color:#f87171!important;font-size:13px!important;}}
     div[data-testid="stWarning"]{{background:rgba(251,191,36,0.07)!important;border:1px solid rgba(251,191,36,0.2)!important;border-radius:10px!important;color:#fbbf24!important;font-size:13px!important;}}
+    .stTabs [data-baseweb="tab-list"]{{gap:6px;background:transparent;}}
+    .stTabs [data-baseweb="tab"]{{background:{T['btn2_bg']};border:1px solid {T['btn2_border']};border-radius:10px;padding:6px 14px;color:{T['btn2_color']};font-size:12px;font-weight:600;}}
+    .stTabs [aria-selected="true"]{{background:{T['dl_bg']}!important;color:{dl_color}!important;border-color:{T['dl_border']}!important;}}
+    .stTabs [data-baseweb="tab-highlight"],.stTabs [data-baseweb="tab-border"]{{display:none;}}
+    div[data-testid="stCode"] pre,div[data-testid="stCodeBlock"] pre{{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;border-radius:12px!important;font-size:12px!important;line-height:1.5!important;}}
+    div[data-testid="stCode"] code,div[data-testid="stCodeBlock"] code{{color:{T['td_color']}!important;white-space:pre-wrap!important;}}
+    .copy-hint{{font-size:11px;color:{T['sub_color']};margin:-6px 0 8px;}}
+    .token-link{{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:{dl_color};word-break:break-all;}}
     .gdivider{{height:1px;background:linear-gradient(90deg,transparent,{T['gdiv']},transparent);margin:22px 0;}}
     .foot{{text-align:center;font-size:11px;color:{T['foot_color']};margin-top:32px;padding-top:20px;border-top:1px solid {T['foot_border']};}}
     @media (max-width:600px){{
@@ -245,6 +255,9 @@ def format_date(dt):
     sfx = 'th' if 11<=d<=13 else {1:'st',2:'nd',3:'rd'}.get(d%10,'th')
     return f"{d}{sfx} {dt.strftime('%b %Y')}"
 
+def now_str():
+    return datetime.now().strftime("%d %b %Y %H:%M")
+
 def completion_ring(pct, size=72):
     r    = (size-8)//2
     circ = 2*3.14159*r
@@ -257,6 +270,34 @@ def completion_ring(pct, size=72):
             f'stroke-dasharray="{dash:.1f} {circ:.1f}" stroke-linecap="round" transform="rotate(-90 {size//2} {size//2})"/>'
             f'<text x="{size//2}" y="{size//2+4}" text-anchor="middle" font-size="13" font-weight="700" fill="{c}">{pct}%</text>'
             f'</svg>')
+
+# passcode hashing (#7) — stored as sha256 hex; plaintext values already in the
+# sheet are accepted once and transparently migrated to a hash.
+def hash_pw(pw):
+    return hashlib.sha256(pw.encode("utf-8")).hexdigest()
+
+def is_hashed(val):
+    return isinstance(val,str) and len(val)==64 and all(c in "0123456789abcdef" for c in val)
+
+def check_pw(entered, stored):
+    return hash_pw(entered)==stored if is_hashed(stored) else entered==stored
+
+# flash messages that survive st.rerun (#5)
+def flash(msg, kind="success"):
+    st.session_state.flash = (msg, kind)
+
+def show_flash():
+    f = st.session_state.pop("flash", None)
+    if f:
+        msg, kind = f
+        icon = "✅" if kind=="success" else ("⚠️" if kind=="warning" else "ℹ️")
+        st.toast(msg, icon=icon)
+
+# WhatsApp export block: code block (copy button built in) + download (#6)
+def wa_block(text, fname, key):
+    html('<p class="copy-hint">Tap the copy icon (top-right of the box) and paste into WhatsApp.</p>')
+    st.code(text, language=None)
+    st.download_button("⬇️ Download .txt", data=text, file_name=fname, mime="text/plain", key=key, use_container_width=True)
 
 
 # ── Google Sheets ─────────────────────────────────────────────────────────────
@@ -283,15 +324,31 @@ def load_cell(sheet, ws_title, default):
 def save_cell(sheet, ws_title, value):
     ensure_ws(sheet, ws_title).update("A1", [[json.dumps(value)]])
 
-def load_all(sheet):
-    settings = load_cell(sheet,"settings",{"start_date":"2026-08-17","base_monthly":1000,"admin_fee_percentage":0.0,"names_input":"Alice, Bob, Charlie, Diana, Frank, Grace"})
-    return settings, load_cell(sheet,"tiers",{}), load_cell(sheet,"payments",{}), load_cell(sheet,"payout_status",{}), load_cell(sheet,"history",[])
+DEFAULT_SETTINGS = {"start_date":"2026-08-17","base_monthly":1000,"admin_fee_percentage":0.0,"names_input":"Alice, Bob, Charlie, Diana, Frank, Grace"}
+ADMIN_PW = "Susu2026"
+
+def load_all_into_state(sheet):
+    """(Re)load everything from the sheet into session state (#4)."""
+    settings = load_cell(sheet,"settings",DEFAULT_SETTINGS)
+    st.session_state.start_date           = settings.get("start_date",DEFAULT_SETTINGS["start_date"])
+    st.session_state.base_monthly         = settings.get("base_monthly",DEFAULT_SETTINGS["base_monthly"])
+    st.session_state.admin_fee_percentage = settings.get("admin_fee_percentage",0.0)
+    st.session_state.names_input          = settings.get("names_input",DEFAULT_SETTINGS["names_input"])
+    st.session_state.member_tiers         = load_cell(sheet,"tiers",{})
+    st.session_state.payments             = load_cell(sheet,"payments",{})
+    st.session_state.payout_status        = load_cell(sheet,"payout_status",{})
+    st.session_state.history              = load_cell(sheet,"history",[])
+    st.session_state.snapshots            = load_cell(sheet,"snapshots",{})
+    st.session_state.member_tokens        = load_cell(sheet,"tokens",{})
+    st.session_state.admin_passcode       = load_cell(sheet,"passcode",ADMIN_PW)
+    st.session_state.last_sync            = datetime.now()
 
 def save_all(sheet):
     save_cell(sheet,"settings",{"start_date":st.session_state.start_date,"base_monthly":st.session_state.base_monthly,"admin_fee_percentage":st.session_state.admin_fee_percentage,"names_input":st.session_state.names_input})
     save_cell(sheet,"tiers",st.session_state.member_tiers)
     save_cell(sheet,"payments",st.session_state.payments)
     save_cell(sheet,"payout_status",st.session_state.payout_status)
+    st.session_state.last_sync = datetime.now()
 
 def append_log(sheet, entry):
     st.session_state.history.insert(0,entry)
@@ -304,8 +361,6 @@ def save_snapshot(sheet, week, cash_held):
     st.session_state.snapshots = snaps
     save_cell(sheet,"snapshots",snaps)
 
-ADMIN_PW = "Susu2026"
-
 # ── connect ───────────────────────────────────────────────────────────────────
 try:
     gsheet = get_sheet()
@@ -313,25 +368,26 @@ except Exception as e:
     st.error(f"Could not connect to Google Sheets: {e}"); st.stop()
 
 if "initialized" not in st.session_state:
-    settings, tiers, payments, payout_status, history = load_all(gsheet)
-    st.session_state.start_date           = settings.get("start_date","2026-08-17")
-    st.session_state.base_monthly         = settings.get("base_monthly",1000)
-    st.session_state.admin_fee_percentage = settings.get("admin_fee_percentage",0.0)
-    st.session_state.names_input          = settings.get("names_input","Alice, Bob, Charlie, Diana, Frank, Grace")
-    st.session_state.member_tiers         = tiers
-    st.session_state.payments             = payments
-    st.session_state.payout_status        = payout_status
-    st.session_state.history              = history
-    st.session_state.admin_passcode       = load_cell(gsheet,"passcode",ADMIN_PW)
-    st.session_state.snapshots            = load_cell(gsheet,"snapshots",{})
-    st.session_state.authenticated        = False
-    st.session_state.initialized          = True
-    st.session_state.last_sync            = datetime.now()
-    st.session_state.confirm_payout       = False
+    load_all_into_state(gsheet)
+    st.session_state.authenticated  = False
+    st.session_state.initialized    = True
+    st.session_state.confirm_payout = False
 
-# ── URL param ─────────────────────────────────────────────────────────────────
-params      = st.query_params
-member_view = params.get("member", None)
+# auto-refresh a stale session (#4): another admin may have saved since
+STALE_MINUTES = 5
+if (datetime.now()-st.session_state.last_sync).total_seconds() > STALE_MINUTES*60:
+    load_all_into_state(gsheet)
+
+# ── URL param (#3: token-based member view) ───────────────────────────────────
+params       = st.query_params
+member_token = params.get("m", None)
+member_view  = None
+if member_token:
+    member_view = next((m for m,t in st.session_state.member_tokens.items() if t==member_token), None)
+    if member_view is None:
+        st.error("This member link is not valid. Please ask the admin for a new link."); st.stop()
+
+show_flash()
 
 # ── auth ──────────────────────────────────────────────────────────────────────
 if not member_view and not st.session_state.authenticated:
@@ -346,7 +402,11 @@ if not member_view and not st.session_state.authenticated:
     with col_c:
         pw = st.text_input("p", type="password", label_visibility="collapsed", placeholder="Passcode…")
         if st.button("Unlock →"):
-            if pw == st.session_state.get("admin_passcode", ADMIN_PW):
+            stored = st.session_state.get("admin_passcode", ADMIN_PW)
+            if check_pw(pw, stored):
+                if not is_hashed(stored):                       # migrate plaintext → hash
+                    st.session_state.admin_passcode = hash_pw(pw)
+                    save_cell(gsheet,"passcode",st.session_state.admin_passcode)
                 st.session_state.authenticated = True
                 st.session_state.last_sync = datetime.now()
                 st.rerun()
@@ -359,8 +419,7 @@ num_members = len(members)
 if num_members < 2: st.error("Please enter at least 2 member names."); st.stop()
 
 for m in members:
-    if m not in st.session_state.member_tiers:
-        st.session_state.member_tiers[m] = st.session_state.base_monthly
+    st.session_state.member_tiers.setdefault(m, st.session_state.base_monthly)
 
 total_weeks = num_members * 4
 
@@ -369,63 +428,81 @@ except ValueError: st.error("Date format must be YYYY-MM-DD."); st.stop()
 
 end_date = start_dt + timedelta(weeks=total_weeks)
 
-if list(st.session_state.payments.keys()) != members:
-    st.session_state.payments = {m:{str(w):False for w in range(1,total_weeks+1)} for m in members}
-if not st.session_state.payout_status:
-    st.session_state.payout_status = {f"Month {i+1}":{"amount_collected":0.0} for i in range(num_members)}
+# #1: merge instead of reset — existing ticks survive member list edits
+for m in members:
+    st.session_state.payments.setdefault(m, {})
+    for w in range(1,total_weeks+1):
+        st.session_state.payments[m].setdefault(str(w), False)
+for i in range(num_members):
+    st.session_state.payout_status.setdefault(f"Month {i+1}", {})
+
+# #3: ensure every member has a token (admin only — member view must not write)
+if not member_view:
+    tok_changed = False
+    for m in members:
+        if not st.session_state.member_tokens.get(m):
+            st.session_state.member_tokens[m] = pysecrets.token_urlsafe(6); tok_changed = True
+    if tok_changed: save_cell(gsheet,"tokens",st.session_state.member_tokens)
 
 today                = datetime.today()
 days_passed          = (today-start_dt).days
 current_elapsed_week = min(max(0,days_passed//7)+1 if today>=start_dt else 0, total_weeks)
 program_pct          = int(current_elapsed_week/total_weeks*100) if total_weeks else 0
+fee_frac             = st.session_state.admin_fee_percentage/100.0
 
-total_cash_collected = sum(
-    st.session_state.member_tiers.get(m,st.session_state.base_monthly)/4.0
-    * sum(1 for w in range(1,total_weeks+1) if st.session_state.payments.get(m,{}).get(str(w),False))
-    for m in members
-)
-total_payouts_dist = sum(
-    float(st.session_state.payout_status.get(f"Month {i+1}",{}).get("amount_collected",0.0))
-    for i in range(num_members)
-)
-total_cash_held = total_cash_collected - total_payouts_dist
+def tier(m):   return st.session_state.member_tiers.get(m,st.session_state.base_monthly)
+def weekly(m): return tier(m)/4.0
+def paid(m,w): return bool(st.session_state.payments.get(m,{}).get(str(w),False))
 
-total_expected_so_far = sum(
-    st.session_state.member_tiers.get(m,st.session_state.base_monthly)/4.0*current_elapsed_week
-    for m in members
-)
-collection_gap = total_expected_so_far - total_cash_collected
+# #2: single source of truth — collections are derived from the weekly ticks
+def gross_collected_for_month(i):        # i is 0-based month index → weeks 4i+1..4i+4
+    return sum(weekly(m) for m in members for w in range(4*i+1,4*i+5) if paid(m,w))
+
+total_cash_collected = sum(weekly(m) for m in members for w in range(1,total_weeks+1) if paid(m,w))
+
+def disbursed_amount(month_lbl):
+    ps = st.session_state.payout_status.get(month_lbl,{})
+    if not ps.get("disbursed",False): return 0.0
+    # backward compat: older records only had amount_collected
+    return float(ps.get("disbursed_amount", ps.get("amount_collected",0.0)))
+
+total_payouts_dist = sum(disbursed_amount(f"Month {i+1}") for i in range(num_members))
+total_cash_held    = total_cash_collected - total_payouts_dist
+
+total_expected_so_far = sum(weekly(m)*current_elapsed_week for m in members)
+collection_gap        = total_expected_so_far - total_cash_collected
 
 next_recipient,next_payout_date,next_net_pool,days_to_payout = None,None,0,0
 cur_d = start_dt
 for i in range(num_members):
     pd_date = cur_d+timedelta(weeks=4)
     if pd_date >= today:
-        next_recipient  = members[i]
-        next_payout_date= pd_date
-        rm              = st.session_state.member_tiers.get(members[i],st.session_state.base_monthly)
-        next_net_pool   = rm*num_members*(1-st.session_state.admin_fee_percentage/100.0)
-        days_to_payout  = (pd_date-today).days
+        next_recipient   = members[i]
+        next_payout_date = pd_date
+        next_net_pool    = tier(members[i])*num_members*(1-fee_frac)
+        days_to_payout   = (pd_date-today).days
         break
     cur_d = pd_date
 
+# #7: make sure the current week always has a snapshot (admin only)
+if not member_view and current_elapsed_week>0 and str(current_elapsed_week) not in st.session_state.get("snapshots",{}):
+    save_snapshot(gsheet,current_elapsed_week,total_cash_held)
+
 # ── streak & contrib calc ─────────────────────────────────────────────────────
 def missed_streak(member):
-    pmts = st.session_state.payments.get(member,{})
     streak = 0
     for w in range(current_elapsed_week, 0, -1):
-        if not pmts.get(str(w),False): streak += 1
+        if not paid(member,w): streak += 1
         else: break
     return streak
 
 contrib_rows, wa_contrib_rows = [], []
 for member in members:
-    m_monthly   = st.session_state.member_tiers.get(member,st.session_state.base_monthly)
-    m_weekly    = m_monthly/4.0
-    m_pmts      = st.session_state.payments.get(member,{})
-    paid_passed = sum(1 for w in range(1,current_elapsed_week+1) if m_pmts.get(str(w),False))
+    m_monthly   = tier(member)
+    m_weekly    = weekly(member)
+    paid_passed = sum(1 for w in range(1,current_elapsed_week+1) if paid(member,w))
     owing       = (current_elapsed_week-paid_passed)*m_weekly
-    total_paid  = sum(1 for w in range(1,total_weeks+1) if m_pmts.get(str(w),False))
+    total_paid  = sum(1 for w in range(1,total_weeks+1) if paid(member,w))
     standing    = f"Owing GHS {fmt_num(owing)}" if owing>0 else "Up to date"
     streak      = missed_streak(member)
     contrib_rows.append({"member":member,"m_monthly":m_monthly,"m_weekly":m_weekly,"total_paid":total_paid,"owing":owing,"standing":standing,"streak":streak})
@@ -438,19 +515,20 @@ for i in range(num_members):
     month_lbl    = f"Month {i+1}"
     recipient    = members[i]
     payout_date  = cur_d+timedelta(weeks=4)
-    rec_monthly  = st.session_state.member_tiers.get(recipient,st.session_state.base_monthly)
-    gross_pool   = rec_monthly*num_members
-    admin_fee_v  = gross_pool*(st.session_state.admin_fee_percentage/100.0)
+    gross_pool   = tier(recipient)*num_members
+    admin_fee_v  = gross_pool*fee_frac
     net_pool_amt = gross_pool-admin_fee_v
-    collected    = float(st.session_state.payout_status.get(month_lbl,{}).get("amount_collected",0.0))
-    remaining    = max(0.0,net_pool_amt-collected)
-    pct_c        = int(collected/net_pool_amt*100) if net_pool_amt>0 else 0
-    disbursed    = st.session_state.payout_status.get(month_lbl,{}).get("disbursed",False)
+    gross_col    = gross_collected_for_month(i)
+    net_col      = gross_col*(1-fee_frac)
+    remaining    = max(0.0,net_pool_amt-net_col)
+    pct_c        = int(net_col/net_pool_amt*100) if net_pool_amt>0 else 0
+    ps           = st.session_state.payout_status.get(month_lbl,{})
+    disbursed    = ps.get("disbursed",False)
+    disb_amt     = disbursed_amount(month_lbl)
     days_away    = (payout_date-today).days if payout_date>=today else None
-    # early eligibility: collected >= net pool and not yet disbursed
-    early_ok     = (collected >= net_pool_amt) and not disbursed and (payout_date >= today)
-    schedule_rows.append({"turn":f"Month {i+1}","recipient":recipient,"date":format_date(payout_date),"payout_date":payout_date,"fee":fmt_num(admin_fee_v),"pool":fmt_num(net_pool_amt),"collected":fmt_num(collected),"remaining":fmt_num(remaining),"pct":pct_c,"disbursed":disbursed,"days_away":days_away,"early_ok":early_ok,"net_pool_amt":net_pool_amt})
-    wa_payout_rows.append({"recipient":recipient,"date":format_date(payout_date),"balance":fmt_num(remaining)})
+    early_ok     = (net_col >= net_pool_amt-0.005) and not disbursed and (payout_date >= today)
+    schedule_rows.append({"turn":month_lbl,"recipient":recipient,"date":format_date(payout_date),"payout_date":payout_date,"fee":fmt_num(admin_fee_v),"pool":fmt_num(net_pool_amt),"collected":fmt_num(net_col),"remaining":fmt_num(remaining),"pct":pct_c,"disbursed":disbursed,"disb_amt":disb_amt,"disb_date":ps.get("disbursed_date",""),"days_away":days_away,"early_ok":early_ok,"net_pool_amt":net_pool_amt,"net_col":net_col})
+    wa_payout_rows.append({"recipient":recipient,"date":format_date(payout_date),"balance":fmt_num(remaining),"disbursed":disbursed})
     cur_d = payout_date
 
 
@@ -458,9 +536,7 @@ for i in range(num_members):
 # MEMBER SELF-VIEW
 # ══════════════════════════════════════════════════════════════════════════════
 if member_view:
-    if member_view not in members: st.error(f"Member '{member_view}' not found."); st.stop()
     mr = next(r for r in contrib_rows if r["member"]==member_view)
-    m_pmts = st.session_state.payments.get(member_view,{})
 
     sync_ago = int((datetime.now()-st.session_state.last_sync).total_seconds()/60)
     sync_txt = "just now" if sync_ago<1 else f"{sync_ago}m ago"
@@ -485,10 +561,10 @@ if member_view:
 
     pills = ""
     for w in range(1,total_weeks+1):
-        paid   = m_pmts.get(str(w),False)
+        p      = paid(member_view,w)
         future = w>current_elapsed_week
-        cls    = "week-paid" if paid else ("week-upcoming" if future else "week-owe")
-        icon   = "✅" if paid else ("⏳" if future else "❌")
+        cls    = "week-paid" if p else ("week-upcoming" if future else "week-owe")
+        icon   = "✅" if p else ("⏳" if future else "❌")
         pills += f'<span class="week-pill {cls}">{icon} Wk {w}</span>'
 
     html(f"""<div class="glass-card">
@@ -507,7 +583,6 @@ if member_view:
                 <div class="countdown-days-label">days away</div></div>
         </div>""")
 
-    # Feature 6: individual member WhatsApp message
     ind = io.StringIO()
     ind.write(f"👋 Hi *{member_view}*!\n\n")
     ind.write(f"📊 *YOUR SUSU UPDATE — WK {current_elapsed_week}*\n")
@@ -516,14 +591,16 @@ if member_view:
     ind.write(f"✅ Weeks Paid: {mr['total_paid']} / {total_weeks}\n\n")
     ind.write("📅 *WEEKLY BREAKDOWN*\n")
     for w in range(1,total_weeks+1):
-        paid  = m_pmts.get(str(w),False)
-        icon  = "✅" if paid else ("⏳" if w>current_elapsed_week else "❌")
-        label = "Paid" if paid else ("Upcoming" if w>current_elapsed_week else "Owing")
+        p     = paid(member_view,w)
+        icon  = "✅" if p else ("⏳" if w>current_elapsed_week else "❌")
+        label = "Paid" if p else ("Upcoming" if w>current_elapsed_week else "Owing")
         ind.write(f"  Wk {w:02d}: {icon} {label}\n")
     if next_recipient:
         ind.write(f"\n🎁 Next payout: *{next_recipient}* on *{format_date(next_payout_date)}*\n")
     ind.write("\nThank you! 🙏")
-    st.download_button("📲 Download My Update", data=ind.getvalue(), file_name=f"{member_view}_W{current_elapsed_week}.txt", mime="text/plain", use_container_width=True)
+
+    html('<div class="glass-card"><p class="sec-label">Share</p><p class="sec-title">My Update</p><p class="sec-sub">Copy and paste into WhatsApp</p></div>')
+    wa_block(ind.getvalue(), f"{member_view}_W{current_elapsed_week}.txt", "dl_member")
 
     html(f'<div class="foot">Read-only view · {member_view} · Susu Savings</div>')
     st.stop()
@@ -534,16 +611,16 @@ if member_view:
 # ══════════════════════════════════════════════════════════════════════════════
 sync_ago = int((datetime.now()-st.session_state.last_sync).total_seconds()/60)
 sync_txt = "just now" if sync_ago<1 else f"{sync_ago}m ago"
-sb_col,tg_col = st.columns([4,1])
+sb_col,rf_col,tg_col = st.columns([3,1,1])
 with sb_col:
     html(f"""<div class="status-bar"><span><span class="status-dot"></span><span class="status-live">Live</span></span><span class="status-sync">Synced {sync_txt} &nbsp;·&nbsp; Google Sheets</span></div>""")
+with rf_col:
+    if st.button("↻ Refresh", key="refresh_btn", type="secondary"):
+        load_all_into_state(gsheet); flash("Refreshed from Google Sheets"); st.rerun()
 with tg_col:
-    st.markdown("<div style='padding-top:2px'>", unsafe_allow_html=True)
     if st.button(f"{T['toggle_icon']} {T['toggle_label']}", key="theme_toggle", type="secondary"):
         st.session_state.dark_mode = not st.session_state.dark_mode; st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
 
-# Hero with completion ring
 html(f"""
     <div class="hero">
         <div class="hero-left">
@@ -566,7 +643,7 @@ if prev_snap is not None and current_elapsed_week>1:
     d_color    = "#34d399" if snap_delta>=0 else "#f87171"
     delta_html = f'<div style="font-size:10px;color:{d_color};margin-top:3px;font-weight:600">{d_arrow} GHS {fmt_num(abs(snap_delta))} vs last week</div>'
 else:
-    delta_html = f'<div style="font-size:10px;color:#334155;margin-top:3px;">No prior snapshot yet</div>'
+    delta_html = f'<div style="font-size:10px;color:{T["sub_color"]};margin-top:3px;">No prior snapshot yet</div>'
 
 html(f"""
     <div class="chip-row">
@@ -576,7 +653,6 @@ html(f"""
         <div class="chip"><div class="chip-label">Collection</div><div class="{gap_class}">{gap_label}</div><div class="chip-sub">Expected GHS {fmt_num(total_expected_so_far)}</div></div>
     </div>
 """)
-
 
 # ── contributions card ────────────────────────────────────────────────────────
 rows_html = ""
@@ -600,22 +676,21 @@ html(f"""<div class="glass-card">
         <tbody>{rows_html}</tbody>
     </table></div>""")
 
-
 # ── payout schedule card ──────────────────────────────────────────────────────
 pay_rows_html = ""
 for r in schedule_rows:
-    bar_pct      = min(r['pct'],100)
-    status_badge = '<span class="badge-ok">✅ Done</span>' if r['disbursed'] else '<span class="badge-pending">⏳ Pending</span>'
-    # days badge in schedule table
+    bar_pct = min(r['pct'],100)
+    if r['disbursed']:
+        status_badge = f'<span class="badge-ok">✅ Paid GHS {fmt_num(r["disb_amt"])}</span>'
+        if r['disb_date']: status_badge += f'<div style="font-size:10px;color:{T["sub_color"]};margin-top:3px">{r["disb_date"]}</div>'
+    else:
+        status_badge = '<span class="badge-pending">⏳ Pending</span>'
     if r['days_away'] is not None:
         urg = "urgent" if r['days_away']<=7 else ""
         days_cell = f'<div style="margin-top:4px"><span class="days-badge {urg}">{r["days_away"]}d away</span></div>'
     else:
-        days_cell = '<div style="margin-top:4px;font-size:10px;color:#64748b">Past</div>'
-    # early eligibility note
+        days_cell = f'<div style="margin-top:4px;font-size:10px;color:{T["sub_color"]}">Past</div>'
     early_note = '<div class="early-eligible">⚡ Pool fully collected — eligible for early payout</div>' if r['early_ok'] else ""
-    # NOTE: built as a single-line string on purpose — a blank line followed by
-    # an indented line here is what made Streamlit render the table as code.
     pay_rows_html += (f'<tr class="plain">'
                       f'<td><span class="cell-name">{r["turn"]}</span></td>'
                       f'<td>{r["recipient"]}</td>'
@@ -630,14 +705,13 @@ for r in schedule_rows:
 html(f"""<div class="glass-card">
     <div id="section-payouts"></div><p class="sec-label">Rotation</p>
     <p class="sec-title">Payout Schedule</p>
-    <p class="sec-sub">Dates, fees and collection progress · ⚡ early payout eligible when pool is full</p>
+    <p class="sec-sub">Collected is calculated from weekly payments · ⚡ early payout eligible when pool is full</p>
     <table class="data-table">
         <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th><th>Admin Fee</th><th>Net Pool</th><th>Collected</th><th>Remaining</th><th>Status</th></tr></thead>
         <tbody>{pay_rows_html}</tbody>
     </table></div>""")
 
-
-# ── exports ───────────────────────────────────────────────────────────────────
+# ── exports (#6) ──────────────────────────────────────────────────────────────
 buf = io.StringIO()
 buf.write(f"📌 *WK {current_elapsed_week} UPDATE*\n")
 buf.write(f"💰 *Cash at Hand:* GHS {fmt_num(total_cash_held)}\n")
@@ -648,7 +722,8 @@ for r in wa_contrib_rows:
     buf.write(f"{'✅' if 'Up' in r['standing'] else '❌'} *{r['member']}*: {r['standing']}{streak_note}\n")
 buf.write("\n🎁 *PAYOUTS*\n")
 for r in wa_payout_rows:
-    buf.write(f"{r['recipient']} · {r['date']} · GHS {r['balance']}\n")
+    tag = " ✅ paid" if r['disbursed'] else f" · GHS {r['balance']} to go"
+    buf.write(f"{r['recipient']} · {r['date']}{tag}\n")
 
 owing_members = [r for r in wa_contrib_rows if "Owing" in r["standing"]]
 rem = io.StringIO()
@@ -658,38 +733,37 @@ if owing_members:
     for r in owing_members:
         streak_note = f" (🔴 {r['streak']} weeks in a row)" if r['streak']>=2 else ""
         rem.write(f"❌ *{r['member']}*: {r['standing']}{streak_note}\n")
-    rem.write(f"\nPlease make payment as soon as possible.\nNext payout: *{next_recipient}* on *{format_date(next_payout_date)}*\nThank you 🙏")
+    if next_recipient:
+        rem.write(f"\nPlease make payment as soon as possible.\nNext payout: *{next_recipient}* on *{format_date(next_payout_date)}*\n")
+    rem.write("Thank you 🙏")
 else:
     rem.write("✅ All members are up to date! Great work everyone 🎉")
 
 ob = io.StringIO()
 ob.write("📋 *SUSU GROUP — ONBOARDING DETAILS*\n")
 ob.write(f"🗓️ *Start Date:* {format_date(start_dt)}\n")
-ob.write(f"🏁 *End Date:* {format_date(end_date)}\n\n")
+ob.write(f"🏁 *End Date:* {format_date(end_date)}\n")
+ob.write(f"👥 *Members:* {num_members} · *Cycle:* {total_weeks} weeks\n\n")
+ob.write("ℹ️ *HOW IT WORKS*\n")
+ob.write("• Contributions are weekly. Each \"month\" in the schedule is exactly 4 weeks, so payout dates are fixed by week count and may not fall on the same calendar date each month.\n")
+if fee_frac>0: ob.write(f"• An admin fee of {fmt_num(st.session_state.admin_fee_percentage)}% is deducted from each payout.\n")
+ob.write("• Each member has a private link to check their own standing.\n\n")
 ob.write("👤 *MEMBER DETAILS*\n")
 for r in contrib_rows:
     ob.write(f"*{r['member']}*\n  • Monthly Tier: GHS {fmt_num(r['m_monthly'])}\n  • Weekly Target: GHS {fmt_num(r['m_weekly'])}\n\n")
 ob.write("🎁 *PAYOUT SCHEDULE*\n")
-ob_date = start_dt
-for i in range(num_members):
-    recipient   = members[i]; payout_date = ob_date+timedelta(weeks=4)
-    rm          = st.session_state.member_tiers.get(recipient,st.session_state.base_monthly)
-    net         = rm*num_members*(1-st.session_state.admin_fee_percentage/100.0)
-    ob.write(f"*Month {i+1} — {recipient}*\n  • Payout Date: {format_date(payout_date)}\n  • Net Pool: GHS {fmt_num(net)}\n\n")
-    ob_date = payout_date
+for r in schedule_rows:
+    ob.write(f"*{r['turn']} — {r['recipient']}*\n  • Payout Date: {r['date']}\n  • Net Pool: GHS {r['pool']}\n\n")
 
 ch = io.StringIO()
 ch.write(f"📊 *CONTRIBUTION HISTORY — WK {current_elapsed_week}*\n")
 ch.write(f"🗓️ *Period:* {format_date(start_dt)} → {format_date(end_date)}\n\n")
 for member in members:
-    m_monthly = st.session_state.member_tiers.get(member,st.session_state.base_monthly)
-    m_weekly  = m_monthly/4.0
-    m_pmts    = st.session_state.payments.get(member,{})
-    ch.write(f"👤 *{member}* (GHS {fmt_num(m_weekly)}/wk)\n")
+    ch.write(f"👤 *{member}* (GHS {fmt_num(weekly(member))}/wk)\n")
     for w in range(1,total_weeks+1):
-        paid  = m_pmts.get(str(w),False)
-        icon  = "✅" if paid else ("⏳" if w>current_elapsed_week else "❌")
-        label = "Paid" if paid else ("Upcoming" if w>current_elapsed_week else "Owing")
+        p     = paid(member,w)
+        icon  = "✅" if p else ("⏳" if w>current_elapsed_week else "❌")
+        label = "Paid" if p else ("Upcoming" if w>current_elapsed_week else "Owing")
         ch.write(f"  Wk {w:02d}: {icon} {label}\n")
     ch.write("\n")
 
@@ -697,19 +771,14 @@ html(f"""<div class="glass-card">
     <div id="section-exports"></div><p class="sec-label">Export</p>
     <p class="sec-title">WhatsApp Messages</p>
     <p class="sec-sub">Ready-to-paste updates for the group chat</p></div>""")
-dl_r1c1,dl_r1c2 = st.columns(2)
-dl_r2c1,dl_r2c2 = st.columns(2)
-with dl_r1c1: st.download_button("📥 Weekly Update", data=buf.getvalue(), file_name=f"Susu_W{current_elapsed_week}.txt", mime="text/plain", use_container_width=True)
-with dl_r1c2: st.download_button("🔔 Reminder",      data=rem.getvalue(), file_name=f"Susu_Reminder_W{current_elapsed_week}.txt", mime="text/plain", use_container_width=True)
-with dl_r2c1: st.download_button("📋 Onboarding",    data=ob.getvalue(),  file_name="Susu_Onboarding.txt", mime="text/plain", use_container_width=True)
-with dl_r2c2: st.download_button("📊 History",       data=ch.getvalue(),  file_name=f"Susu_History_W{current_elapsed_week}.txt", mime="text/plain", use_container_width=True)
-
+t1,t2,t3,t4 = st.tabs(["📥 Weekly Update","🔔 Reminder","📋 Onboarding","📊 History"])
+with t1: wa_block(buf.getvalue(), f"Susu_W{current_elapsed_week}.txt", "dl_weekly")
+with t2: wa_block(rem.getvalue(), f"Susu_Reminder_W{current_elapsed_week}.txt", "dl_rem")
+with t3: wa_block(ob.getvalue(),  "Susu_Onboarding.txt", "dl_ob")
+with t4: wa_block(ch.getvalue(),  f"Susu_History_W{current_elapsed_week}.txt", "dl_hist")
 
 # ── admin panel ───────────────────────────────────────────────────────────────
-st.markdown('<div id="section-admin"></div>', unsafe_allow_html=True)
-st.markdown(f'<p class="sec-label" style="margin-top:24px">Admin</p>', unsafe_allow_html=True)
-st.markdown('<p class="sec-title">Group Controls</p>', unsafe_allow_html=True)
-st.markdown('<p class="sec-sub">Update settings, record payments and payouts</p>', unsafe_allow_html=True)
+html('<div id="section-admin"></div><p class="sec-label" style="margin-top:24px">Admin</p><p class="sec-title">Group Controls</p><p class="sec-sub">Update settings, record payments and payouts</p>')
 
 with st.expander("⚙️  Group Settings"):
     c1,c2,c3 = st.columns(3)
@@ -717,43 +786,44 @@ with st.expander("⚙️  Group Settings"):
     with c2: new_base  = st.number_input("Base Monthly (GHS)", value=float(st.session_state.base_monthly), step=50.0)
     with c3: new_fee   = st.number_input("Admin Fee (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
     new_names = st.text_area("Members (comma-separated)", value=st.session_state.names_input)
+    html(f'<p style="font-size:11px;color:{T["sub_color"]}">Existing payment records are kept when you add or reorder members. Renaming a member starts them fresh, so fix typos before the first payment is recorded.</p>')
     if st.button("Save Settings", key="save_settings"):
+        try: datetime.strptime(new_start,"%Y-%m-%d")
+        except ValueError: st.error("Date format must be YYYY-MM-DD."); st.stop()
         st.session_state.start_date=new_start; st.session_state.base_monthly=new_base
         st.session_state.admin_fee_percentage=new_fee; st.session_state.names_input=new_names
         save_all(gsheet)
-        append_log(gsheet,{"type":"setting","text":"Group settings updated","time":datetime.now().strftime("%d %b %Y %H:%M")})
-        st.session_state.last_sync=datetime.now(); st.success("✓ Settings saved."); st.rerun()
+        append_log(gsheet,{"type":"setting","text":"Group settings updated","time":now_str()})
+        flash("Settings saved"); st.rerun()
 
 with st.expander("💰  Custom Member Tiers"):
     tier_cols = st.columns(min(num_members,4))
     new_tiers = {}
     for idx,m in enumerate(members):
         with tier_cols[idx%4]:
-            new_tiers[m] = st.number_input(m, value=float(st.session_state.member_tiers.get(m,st.session_state.base_monthly)), step=50.0, key=f"tier_{m}")
+            new_tiers[m] = st.number_input(m, value=float(tier(m)), step=50.0, key=f"tier_{m}")
     if st.button("Save Tiers", key="save_tiers"):
-        st.session_state.member_tiers=new_tiers; save_all(gsheet)
-        append_log(gsheet,{"type":"setting","text":"Member tiers updated","time":datetime.now().strftime("%d %b %Y %H:%M")})
-        st.session_state.last_sync=datetime.now(); st.success("✓ Tiers saved."); st.rerun()
+        st.session_state.member_tiers.update(new_tiers); save_all(gsheet)
+        append_log(gsheet,{"type":"setting","text":"Member tiers updated","time":now_str()})
+        flash("Tiers saved"); st.rerun()
 
 with st.expander("📝  Bulk Payment Entry"):
-    st.markdown(f'<p style="font-size:12px;color:{T["sub_color"]};margin-bottom:4px">Current week: <strong style="color:{T["sec_title"]}">Week {current_elapsed_week}</strong> of {total_weeks}. W* = current week.</p>', unsafe_allow_html=True)
+    html(f'<p style="font-size:12px;color:{T["sub_color"]};margin-bottom:4px">Current week: <strong style="color:{T["sec_title"]}">Week {current_elapsed_week}</strong> of {total_weeks}. W* = current week.</p>')
     bulk_payments = {}
     for member in members:
-        m_pmts = st.session_state.payments.get(member,{})
-        st.markdown(f'<div style="font-size:12px;font-weight:600;color:{T["td_color"]};margin:10px 0 6px">{member}</div>', unsafe_allow_html=True)
+        html(f'<div style="font-size:12px;font-weight:600;color:{T["td_color"]};margin:10px 0 6px">{member}</div>')
         cols = st.columns(min(total_weeks,8))
         week_vals = {}
         for w in range(1,total_weeks+1):
             with cols[(w-1)%8]:
                 label = f"W{w}*" if w==current_elapsed_week else f"W{w}"
-                week_vals[str(w)] = st.checkbox(label, value=m_pmts.get(str(w),False), key=f"bulk_{member}_{w}")
+                week_vals[str(w)] = st.checkbox(label, value=paid(member,w), key=f"bulk_{member}_{w}")
         bulk_payments[member] = week_vals
     if st.button("Save All Payments", key="bulk_save"):
         already_paid_warnings = []
         for mbr,wv in bulk_payments.items():
-            prev = st.session_state.payments.get(mbr,{})
             for wk,ticked in wv.items():
-                if not ticked and prev.get(wk,False):
+                if not ticked and paid(mbr,int(wk)):
                     already_paid_warnings.append(f"{mbr} — Week {wk} (was paid, now unticked)")
         if already_paid_warnings and not st.session_state.get("bulk_confirm_overwrite",False):
             st.warning("⚠️ The following weeks will be marked as **unpaid** — confirm?\n\n" + "\n".join(f"• {w}" for w in already_paid_warnings))
@@ -765,61 +835,89 @@ with st.expander("📝  Bulk Payment Entry"):
                 if st.button("✗ Cancel", key="bulk_confirm_no", type="secondary"): st.rerun()
         else:
             st.session_state.bulk_confirm_overwrite=False
-            st.session_state.payments=bulk_payments; save_all(gsheet)
+            for mbr,wv in bulk_payments.items():           # merge, never replace (#1)
+                st.session_state.payments.setdefault(mbr,{}).update(wv)
+            save_all(gsheet)
             total_checked = sum(sum(1 for v in wv.values() if v) for wv in bulk_payments.values())
-            append_log(gsheet,{"type":"payment","text":f"Bulk payment update — {total_checked} weeks marked paid","time":datetime.now().strftime("%d %b %Y %H:%M")})
-            save_snapshot(gsheet,current_elapsed_week,total_cash_held)
-            st.session_state.last_sync=datetime.now(); st.success("✓ All payments saved."); st.rerun()
+            append_log(gsheet,{"type":"payment","text":f"Bulk payment update — {total_checked} weeks marked paid","time":now_str()})
+            new_held = sum(weekly(m) for m in members for w in range(1,total_weeks+1) if paid(m,w)) - total_payouts_dist
+            save_snapshot(gsheet,current_elapsed_week,new_held)
+            flash("All payments saved"); st.rerun()
 
 with st.expander("🎁  Record Payout"):
-    month_options = [f"Month {i+1} — {members[i]}" for i in range(num_members)]
+    month_options = [f"{r['turn']} — {r['recipient']}" for r in schedule_rows]
     sel_month_lbl = st.selectbox("Payout Turn", month_options, key="payout_month")
-    mkey      = sel_month_lbl.split(" —")[0]
-    rec_idx   = int(mkey.split(" ")[1])-1
-    rec_name  = members[rec_idx]
-    rec_m     = st.session_state.member_tiers.get(rec_name,st.session_state.base_monthly)
-    net_v     = rec_m*num_members*(1-st.session_state.admin_fee_percentage/100.0)
-    cur_col   = float(st.session_state.payout_status.get(mkey,{}).get("amount_collected",0.0))
-    new_col   = st.number_input(f"Amount Collected for {rec_name} (max GHS {fmt_num(net_v)})", value=cur_col, min_value=0.0, max_value=float(net_v), step=50.0, key="payout_amt")
-    cur_disbursed = st.session_state.payout_status.get(mkey,{}).get("disbursed",False)
-    new_disbursed = st.checkbox("Mark as fully disbursed ✅", value=cur_disbursed, key="payout_disbursed")
+    sr        = schedule_rows[month_options.index(sel_month_lbl)]
+    mkey      = sr["turn"]; rec_name = sr["recipient"]
+    html(f"""<div style="font-size:12px;color:{T['td_color']};line-height:1.7;margin-bottom:8px">
+        Net pool: <strong style="color:{T['sec_title']}">GHS {sr['pool']}</strong> &nbsp;·&nbsp;
+        Collected so far (from weekly ticks): <strong style="color:{T['sec_title']}">GHS {sr['collected']}</strong> &nbsp;·&nbsp;
+        Remaining: <strong style="color:{T['sec_title']}">GHS {sr['remaining']}</strong></div>""")
+    if sr["remaining"] != "0" and not sr["disbursed"]:
+        st.warning(f"Pool is not yet fully collected. Record missing weeks in Bulk Payment Entry first, or disburse a partial amount.")
+    default_amt   = sr["disb_amt"] if sr["disbursed"] else min(sr["net_col"], sr["net_pool_amt"])
+    new_amt       = st.number_input(f"Amount handed to {rec_name} (GHS)", value=float(round(default_amt,2)), min_value=0.0, max_value=float(sr["net_pool_amt"]), step=50.0, key="payout_amt")
+    new_disbursed = st.checkbox("Mark as disbursed ✅", value=sr["disbursed"], key="payout_disbursed")
     if not st.session_state.get("confirm_payout",False):
         if st.button("Save Payout", key="save_payout_btn"):
             st.session_state.confirm_payout=True; st.rerun()
     else:
-        disbursed_txt = " · Marked as disbursed" if new_disbursed else ""
-        st.warning(f"⚠️ Confirm: Record GHS {fmt_num(new_col)} payout for {rec_name} ({mkey}){disbursed_txt}?")
+        verb = "Record disbursement of" if new_disbursed else "Clear disbursement for"
+        st.warning(f"⚠️ Confirm: {verb} GHS {fmt_num(new_amt)} — {rec_name} ({mkey})?")
         cc1,cc2 = st.columns(2)
         with cc1:
             if st.button("✓ Yes, confirm", key="confirm_yes"):
-                if mkey not in st.session_state.payout_status: st.session_state.payout_status[mkey]={}
-                st.session_state.payout_status[mkey]["amount_collected"]=new_col
-                st.session_state.payout_status[mkey]["disbursed"]=new_disbursed
+                ps = st.session_state.payout_status.setdefault(mkey,{})
+                ps.pop("amount_collected", None)            # legacy field — collections are now derived
+                ps["disbursed"] = new_disbursed
+                ps["disbursed_amount"] = new_amt if new_disbursed else 0.0
+                ps["disbursed_date"] = now_str() if new_disbursed else ""
                 save_all(gsheet)
-                disbursed_note = " · Disbursed" if new_disbursed else ""
-                append_log(gsheet,{"type":"payout","text":f"{mkey} payout recorded for {rec_name} — GHS {fmt_num(new_col)}{disbursed_note}","time":datetime.now().strftime("%d %b %Y %H:%M")})
-                st.session_state.last_sync=datetime.now(); st.session_state.confirm_payout=False
-                st.success(f"✓ Payout for {rec_name} saved."); st.rerun()
+                txt = f"{mkey} payout disbursed to {rec_name} — GHS {fmt_num(new_amt)}" if new_disbursed else f"{mkey} disbursement cleared for {rec_name}"
+                append_log(gsheet,{"type":"payout","text":txt,"time":now_str()})
+                new_dist = sum(disbursed_amount(f"Month {i+1}") for i in range(num_members))
+                save_snapshot(gsheet,current_elapsed_week,total_cash_collected-new_dist)
+                st.session_state.confirm_payout=False
+                flash(f"Payout for {rec_name} saved"); st.rerun()
         with cc2:
             if st.button("✗ Cancel", key="confirm_no", type="secondary"):
                 st.session_state.confirm_payout=False; st.rerun()
 
+with st.expander("🔗  Member Links"):
+    try:    base_url = st.context.url.split("?")[0]
+    except Exception: base_url = ""
+    html(f'<p style="font-size:12px;color:{T["sub_color"]};margin-bottom:10px">Each member gets a private link. Anyone with the link can see that member\'s standing, so share each link only with its owner.{"" if base_url else " Prefix each code with your app URL."}</p>')
+    link_rows = ""
+    for m in members:
+        tok  = st.session_state.member_tokens.get(m,"")
+        link = f"{base_url}?m={tok}" if base_url else f"?m={tok}"
+        link_rows += f'<tr class="plain"><td><span class="cell-name">{m}</span></td><td><span class="token-link">{link}</span></td></tr>'
+    html(f'<table class="data-table"><thead><tr><th>Member</th><th>Private link</th></tr></thead><tbody>{link_rows}</tbody></table>')
+    lk1,lk2 = st.columns([2,1])
+    with lk1: regen_member = st.selectbox("Regenerate link for", members, key="regen_member", label_visibility="collapsed")
+    with lk2:
+        if st.button("↻ New link", key="regen_btn", type="secondary"):
+            st.session_state.member_tokens[regen_member] = pysecrets.token_urlsafe(6)
+            save_cell(gsheet,"tokens",st.session_state.member_tokens)
+            append_log(gsheet,{"type":"setting","text":f"Member link regenerated for {regen_member}","time":now_str()})
+            flash(f"New link generated for {regen_member}"); st.rerun()
+
 with st.expander("🔑  Change Passcode"):
-    st.markdown(f'<p style="font-size:12px;color:{T["sub_color"]};margin-bottom:8px">Enter current passcode to confirm, then set a new one.</p>', unsafe_allow_html=True)
+    html(f'<p style="font-size:12px;color:{T["sub_color"]};margin-bottom:8px">Enter current passcode to confirm, then set a new one. Passcodes are stored hashed.</p>')
     cp1,cp2,cp3 = st.columns(3)
     with cp1: old_pw  = st.text_input("Current Passcode", type="password", key="old_pw")
     with cp2: new_pw1 = st.text_input("New Passcode", type="password", key="new_pw1")
     with cp3: new_pw2 = st.text_input("Confirm New Passcode", type="password", key="new_pw2")
     if st.button("Update Passcode", key="update_pw"):
         stored_pw = st.session_state.get("admin_passcode",ADMIN_PW)
-        if old_pw!=stored_pw: st.error("Current passcode is incorrect.")
-        elif not new_pw1: st.error("New passcode cannot be empty.")
+        if not check_pw(old_pw, stored_pw): st.error("Current passcode is incorrect.")
+        elif len(new_pw1) < 6: st.error("New passcode must be at least 6 characters.")
         elif new_pw1!=new_pw2: st.error("New passcodes do not match.")
         else:
-            st.session_state.admin_passcode=new_pw1
-            save_cell(gsheet,"passcode",new_pw1)
-            append_log(gsheet,{"type":"setting","text":"Passcode changed","time":datetime.now().strftime("%d %b %Y %H:%M")})
-            st.success("✓ Passcode updated."); st.rerun()
+            st.session_state.admin_passcode=hash_pw(new_pw1)
+            save_cell(gsheet,"passcode",st.session_state.admin_passcode)
+            append_log(gsheet,{"type":"setting","text":"Passcode changed","time":now_str()})
+            flash("Passcode updated"); st.rerun()
 
 if st.session_state.history:
     with st.expander("🕒  Activity Log"):
@@ -832,7 +930,7 @@ if st.session_state.history:
                          f'<div class="log-time">{entry.get("time","")}</div></div>')
         html(log_html)
 
-st.markdown('<div class="gdivider"></div>', unsafe_allow_html=True)
+html('<div class="gdivider"></div>')
 if st.button("🔒  Lock Dashboard", key="logout", type="secondary"):
     st.session_state.authenticated=False; st.rerun()
 
@@ -843,4 +941,4 @@ html(f'''<div class="bottom-nav">
     <button class="nav-item" onclick="navTo('section-exports')"><span class="nav-icon">📤</span><span class="nav-label">Export</span></button>
     <button class="nav-item" onclick="navTo('section-admin')"><span class="nav-icon">⚙️</span><span class="nav-label">Admin</span></button>
 </div>''')
-st.markdown('<div class="foot">Backed by Google Sheets · Secured with passcode</div>', unsafe_allow_html=True)
+html('<div class="foot">Backed by Google Sheets · Secured with passcode</div>')
