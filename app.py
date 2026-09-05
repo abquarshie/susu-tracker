@@ -195,12 +195,21 @@ st.markdown(f"""
     .stTextInput input:focus,.stNumberInput input:focus{{border-color:rgba(56,189,248,0.4)!important;box-shadow:0 0 0 2px rgba(56,189,248,0.08)!important;}}
     .stTextInput label,.stNumberInput label,.stTextArea label,.stSelectbox label,.stCheckbox label{{color:{T['label_color']}!important;font-size:11px!important;font-weight:600!important;text-transform:uppercase;letter-spacing:0.5px;}}
     .stSelectbox > div > div{{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;color:{T['input_color']}!important;border-radius:10px!important;}}
+    div[data-testid="stButton"]{{width:100%!important;}}
     .stButton > button{{background:{T['btn_bg']}!important;backdrop-filter:blur(8px)!important;color:white!important;border:1px solid {T['btn_border']}!important;border-radius:10px!important;font-weight:600!important;font-size:13px!important;padding:9px 20px!important;width:100%;box-shadow:0 2px 8px rgba(29,78,216,0.25)!important;transition:all 0.2s!important;}}
     .stButton > button:hover{{background:rgba(37,99,235,0.95)!important;box-shadow:0 4px 16px rgba(29,78,216,0.4)!important;}}
     .stButton > button[kind="secondary"]{{background:{T['btn2_bg']}!important;color:{T['btn2_color']}!important;border:1px solid {T['btn2_border']}!important;box-shadow:none!important;}}
-    .stDownloadButton > button{{background:{T['dl_bg']}!important;backdrop-filter:blur(8px)!important;color:{dl_color}!important;border:1px solid {T['dl_border']}!important;border-radius:10px!important;font-size:13px!important;font-weight:600!important;padding:9px 20px!important;width:100%!important;transition:all 0.2s!important;}}
-    .streamlit-expanderHeader{{background:{T['exp_bg']}!important;backdrop-filter:blur(12px)!important;border:1px solid {T['exp_border']}!important;border-radius:12px!important;color:{T['exp_color']}!important;font-size:13px!important;font-weight:600!important;transition:border-color 0.2s!important;}}
-    .streamlit-expanderContent{{background:{T['exp_content']}!important;border:1px solid {T['exp_border']}!important;border-top:none!important;border-radius:0 0 12px 12px!important;padding:18px!important;backdrop-filter:blur(12px)!important;}}
+    div[data-testid="stDownloadButton"],.stDownloadButton{{width:100%!important;}}
+    div[data-testid="stDownloadButton"] > button,.stDownloadButton > button{{background:{T['dl_bg']}!important;backdrop-filter:blur(8px)!important;color:{dl_color}!important;border:1px solid {T['dl_border']}!important;border-radius:10px!important;font-size:13px!important;font-weight:600!important;padding:9px 20px!important;width:100%!important;transition:all 0.2s!important;}}
+    /* Expanders (current Streamlit DOM) */
+    details[data-testid="stExpander"]{{background:{T['exp_bg']}!important;backdrop-filter:blur(12px)!important;border:1px solid {T['exp_border']}!important;border-radius:12px!important;margin-bottom:8px!important;overflow:hidden;}}
+    details[data-testid="stExpander"] summary{{background:transparent!important;padding:12px 16px!important;}}
+    details[data-testid="stExpander"] summary,details[data-testid="stExpander"] summary *{{color:{T['sec_title']}!important;font-size:13px!important;font-weight:600!important;}}
+    details[data-testid="stExpander"] summary:hover{{color:{dl_color}!important;}}
+    details[data-testid="stExpander"] summary svg{{fill:{T['sec_title']}!important;color:{T['sec_title']}!important;}}
+    details[data-testid="stExpander"] > div:not(summary){{background:{T['exp_content']}!important;border-top:1px solid {T['exp_border']}!important;padding:18px!important;}}
+    details[data-testid="stExpander"] p,details[data-testid="stExpander"] label,details[data-testid="stExpander"] .stCheckbox span{{color:{T['td_color']};}}
+    .streamlit-expanderHeader{{background:{T['exp_bg']}!important;color:{T['sec_title']}!important;font-size:13px!important;font-weight:600!important;border-radius:12px!important;}}
     div[data-testid="stSuccess"]{{background:rgba(16,185,129,0.07)!important;border:1px solid rgba(16,185,129,0.2)!important;border-radius:10px!important;color:#34d399!important;font-size:13px!important;}}
     div[data-testid="stError"]{{background:rgba(239,68,68,0.07)!important;border:1px solid rgba(239,68,68,0.2)!important;border-radius:10px!important;color:#f87171!important;font-size:13px!important;}}
     div[data-testid="stWarning"]{{background:rgba(251,191,36,0.07)!important;border:1px solid rgba(251,191,36,0.2)!important;border-radius:10px!important;color:#fbbf24!important;font-size:13px!important;}}
@@ -514,7 +523,7 @@ if member_view:
     if next_recipient:
         ind.write(f"\n🎁 Next payout: *{next_recipient}* on *{format_date(next_payout_date)}*\n")
     ind.write("\nThank you! 🙏")
-    st.download_button("📲 Download My Update", data=ind.getvalue(), file_name=f"{member_view}_W{current_elapsed_week}.txt", mime="text/plain")
+    st.download_button("📲 Download My Update", data=ind.getvalue(), file_name=f"{member_view}_W{current_elapsed_week}.txt", mime="text/plain", use_container_width=True)
 
     html(f'<div class="foot">Read-only view · {member_view} · Susu Savings</div>')
     st.stop()
@@ -690,10 +699,10 @@ html(f"""<div class="glass-card">
     <p class="sec-sub">Ready-to-paste updates for the group chat</p></div>""")
 dl_r1c1,dl_r1c2 = st.columns(2)
 dl_r2c1,dl_r2c2 = st.columns(2)
-with dl_r1c1: st.download_button("📥 Weekly Update", data=buf.getvalue(), file_name=f"Susu_W{current_elapsed_week}.txt", mime="text/plain")
-with dl_r1c2: st.download_button("🔔 Reminder",      data=rem.getvalue(), file_name=f"Susu_Reminder_W{current_elapsed_week}.txt", mime="text/plain")
-with dl_r2c1: st.download_button("📋 Onboarding",    data=ob.getvalue(),  file_name="Susu_Onboarding.txt", mime="text/plain")
-with dl_r2c2: st.download_button("📊 History",       data=ch.getvalue(),  file_name=f"Susu_History_W{current_elapsed_week}.txt", mime="text/plain")
+with dl_r1c1: st.download_button("📥 Weekly Update", data=buf.getvalue(), file_name=f"Susu_W{current_elapsed_week}.txt", mime="text/plain", use_container_width=True)
+with dl_r1c2: st.download_button("🔔 Reminder",      data=rem.getvalue(), file_name=f"Susu_Reminder_W{current_elapsed_week}.txt", mime="text/plain", use_container_width=True)
+with dl_r2c1: st.download_button("📋 Onboarding",    data=ob.getvalue(),  file_name="Susu_Onboarding.txt", mime="text/plain", use_container_width=True)
+with dl_r2c2: st.download_button("📊 History",       data=ch.getvalue(),  file_name=f"Susu_History_W{current_elapsed_week}.txt", mime="text/plain", use_container_width=True)
 
 
 # ── admin panel ───────────────────────────────────────────────────────────────
