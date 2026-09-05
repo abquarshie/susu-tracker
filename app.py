@@ -729,19 +729,12 @@ st.markdown(f"""
         <p class="sec-sub">Ready-to-paste updates for the group chat</p>
     </div>
 """, unsafe_allow_html=True)
-# Mobile-friendly: 2x2 grid on desktop, stacked on mobile
 dl_r1c1, dl_r1c2 = st.columns(2)
 dl_r2c1, dl_r2c2 = st.columns(2)
 with dl_r1c1: st.download_button("📥 Weekly Update",  data=buf.getvalue(), file_name=f"Susu_W{current_elapsed_week}.txt", mime="text/plain")
 with dl_r1c2: st.download_button("🔔 Reminder",       data=rem.getvalue(), file_name=f"Susu_Reminder_W{current_elapsed_week}.txt", mime="text/plain")
 with dl_r2c1: st.download_button("📋 Onboarding",     data=ob.getvalue(),  file_name="Susu_Onboarding.txt", mime="text/plain")
 with dl_r2c2: st.download_button("📊 History",        data=ch.getvalue(),  file_name=f"Susu_History_W{current_elapsed_week}.txt", mime="text/plain")
-# Web Share API buttons (mobile tap-to-share)
-st.markdown(f'''<div style="margin-top:10px">
-    <p class="sec-sub">📱 On mobile — tap to share directly to WhatsApp</p>
-    <button class="share-btn" style="margin-bottom:8px" onclick="shareText(`{buf.getvalue().replace("`","'").replace(chr(10),"\\n")}`, 'Weekly Update')">📤 Share Weekly Update</button>
-    <button class="share-btn" onclick="shareText(`{rem.getvalue().replace("`","'").replace(chr(10),"\\n")}`, 'Payment Reminder')">📤 Share Reminder</button>
-</div>''', unsafe_allow_html=True)
 
 
 # ── admin panel ───────────────────────────────────────────────────────────────
