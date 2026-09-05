@@ -50,18 +50,18 @@ if D:
         "hero_bg":"rgba(255,255,255,0.03)","hero_border":"rgba(255,255,255,0.07)",
         "chip_bg":"rgba(255,255,255,0.03)","chip_border":"rgba(255,255,255,0.07)",
         "status_bg":"rgba(255,255,255,0.02)","status_border":"rgba(255,255,255,0.05)",
-        "sync_color":"#334155","title_color":"#f1f5f9","sub_color":"#334155",
-        "label_color":"#1e3a5f","sec_title":"#cbd5e1","th_color":"#1e3a5f",
-        "td_color":"#94a3b8","td_border":"rgba(255,255,255,0.03)","th_border":"rgba(255,255,255,0.05)",
+        "sync_color":"#7b8ba3","title_color":"#f1f5f9","sub_color":"#8fa3bb",
+        "label_color":"#7dafd6","sec_title":"#e2e8f0","th_color":"#7dafd6",
+        "td_color":"#c3cede","td_border":"rgba(255,255,255,0.03)","th_border":"rgba(255,255,255,0.05)",
         "member_name":"#e2e8f0","input_bg":"rgba(255,255,255,0.04)","input_border":"rgba(255,255,255,0.08)",
         "input_color":"#e2e8f0","lock_bg":"rgba(255,255,255,0.04)","lock_border":"rgba(255,255,255,0.08)",
-        "lock_title":"#f1f5f9","lock_sub":"#334155","exp_bg":"rgba(255,255,255,0.025)",
-        "exp_border":"rgba(255,255,255,0.06)","exp_color":"#64748b","exp_content":"rgba(255,255,255,0.015)",
-        "gdiv":"rgba(56,189,248,0.12)","foot_color":"#0f1f35","foot_border":"rgba(255,255,255,0.03)",
+        "lock_title":"#f1f5f9","lock_sub":"#8fa3bb","exp_bg":"rgba(255,255,255,0.025)",
+        "exp_border":"rgba(255,255,255,0.06)","exp_color":"#cbd5e1","exp_content":"rgba(255,255,255,0.015)",
+        "gdiv":"rgba(56,189,248,0.12)","foot_color":"#5c6b80","foot_border":"rgba(255,255,255,0.03)",
         "btn_bg":"rgba(29,78,216,0.75)","btn_border":"rgba(59,130,246,0.35)",
-        "btn2_bg":"rgba(255,255,255,0.03)","btn2_color":"#334155","btn2_border":"rgba(255,255,255,0.07)",
+        "btn2_bg":"rgba(255,255,255,0.06)","btn2_color":"#cbd5e1","btn2_border":"rgba(255,255,255,0.07)",
         "dl_bg":"rgba(255,255,255,0.03)","dl_border":"rgba(56,189,248,0.2)",
-        "log_border":"rgba(255,255,255,0.03)","log_color":"#64748b","log_strong":"#94a3b8","log_time":"#1e3a5f",
+        "log_border":"rgba(255,255,255,0.03)","log_color":"#a8b6c9","log_strong":"#e2e8f0","log_time":"#7b8ba3",
         "toggle_icon":"☀️","toggle_label":"Light mode","ring_track":"rgba(255,255,255,0.06)",
         "bar_bg":"rgba(255,255,255,0.06)","week_upcoming_bg":"rgba(255,255,255,0.04)",
         "streak_bg":"rgba(239,68,68,0.08)","streak_color":"#f87171","streak_border":"rgba(239,68,68,0.2)",
@@ -222,22 +222,37 @@ st.markdown(f"""
     .gdivider{{height:1px;background:linear-gradient(90deg,transparent,{T['gdiv']},transparent);margin:22px 0;}}
     .foot{{text-align:center;font-size:11px;color:{T['foot_color']};margin-top:32px;padding-top:20px;border-top:1px solid {T['foot_border']};}}
     @media (max-width:600px){{
-        .block-container{{padding-bottom:5rem!important;padding-left:12px!important;padding-right:12px!important;}}
-        .hero{{padding:14px 16px!important;border-radius:14px!important;margin-bottom:10px!important;flex-direction:column;align-items:flex-start;}}
-        .hero-title{{font-size:15px!important;}} .hero-sub{{font-size:11px!important;}}
+        .block-container{{padding-bottom:6rem!important;padding-left:10px!important;padding-right:10px!important;}}
+        /* header row: keep Refresh + theme side by side instead of stacking */
+        .block-container div[data-testid="stHorizontalBlock"]:first-of-type{{flex-wrap:nowrap!important;gap:8px!important;}}
+        .block-container div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="stColumn"]{{min-width:0!important;flex:1 1 0!important;}}
+        .block-container div[data-testid="stHorizontalBlock"]:first-of-type button{{padding:7px 8px!important;font-size:12px!important;white-space:nowrap;}}
+        .status-bar{{margin-bottom:10px!important;padding:6px 0!important;}}
+        /* hero: ring stays beside the text */
+        .hero{{padding:14px 16px!important;border-radius:14px!important;margin-bottom:10px!important;flex-direction:row!important;align-items:center!important;gap:12px!important;}}
+        .hero svg{{width:56px!important;height:56px!important;}}
+        .hero-title{{font-size:15px!important;}} .hero-sub{{font-size:11px!important;line-height:1.35;}}
+        .hero-badge{{margin-top:6px!important;padding:3px 8px!important;}}
         .chip-row{{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;}}
         .chip{{min-width:0!important;padding:10px 12px!important;}}
         .chip-value,.chip-value-green,.chip-value-amber,.chip-value-red{{font-size:15px!important;}}
-        .data-table{{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}}
-        .data-table th,.data-table td{{padding:8px 10px!important;font-size:11px!important;}}
-        .glass-card{{padding:14px 14px!important;border-radius:12px!important;}}
+        .glass-card{{padding:14px 12px!important;border-radius:12px!important;}}
         .sec-title{{font-size:14px!important;}}
+        .sec-sub{{font-size:11px!important;line-height:1.35;}}
+        .data-table{{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}}
+        .data-table th,.data-table td{{padding:8px 9px!important;font-size:11px!important;}}
+        /* trim low-value columns so the important ones fit without scrolling */
+        .tbl-contrib th:nth-child(2),.tbl-contrib td:nth-child(2){{display:none;}}
+        .tbl-payout th:nth-child(4),.tbl-payout td:nth-child(4),
+        .tbl-payout th:nth-child(6),.tbl-payout td:nth-child(6){{display:none;}}
+        .swipe-hint{{display:block!important;}}
     }}
-    .bottom-nav{{display:none;position:fixed;bottom:0;left:0;right:0;z-index:999;background:{T['card_bg']};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid {T['card_border']};padding:8px 0 8px;justify-content:space-around;align-items:center;}}
+    .swipe-hint{{display:none;font-size:10px;color:{T['sub_color']};margin:6px 0 0;}}
+    .bottom-nav{{display:none;position:fixed;bottom:0;left:0;right:0;z-index:998;padding-right:64px!important;background:{T['card_bg']};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid {T['card_border']};padding:8px 0 8px;justify-content:space-around;align-items:center;}}
     @media (max-width:600px){{.bottom-nav{{display:flex!important;}}}}
-    .nav-item{{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 16px;border-radius:10px;text-decoration:none;border:none;background:none;}}
+    .nav-item{{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;flex:1 1 0;min-width:0;padding:4px 4px;border-radius:10px;text-decoration:none;border:none;background:none;}}
     .nav-icon{{font-size:20px;line-height:1;}}
-    .nav-label{{font-size:9px;font-weight:600;color:{T['sub_color']};letter-spacing:0.3px;text-transform:uppercase;}}
+    .nav-label{{font-size:9px;font-weight:600;color:{T['td_color']};letter-spacing:0.3px;text-transform:uppercase;}}
     </style>
 """, unsafe_allow_html=True)
 
@@ -302,6 +317,7 @@ def wa_block(text, fname, key):
 SCOPES    = ["https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/drive"]
 DATA_WS   = "susu_data"
 ADMIN_PW  = "Susu2026"
+ADMIN_NAME = "Abre"          # default name shown on the unlock screen / activity log
 LEGACY_WS = ["settings","tiers","payments","payout_status","history","snapshots","passcode"]
 
 DEFAULT_SETTINGS = {"start_date":"2026-08-17","base_monthly":1000,"admin_fee_percentage":0.0,
@@ -392,7 +408,7 @@ def commit(sheet, mutate):
         return False
     entries = mutate(current) or []
     if isinstance(entries, dict): entries = [entries]
-    who = st.session_state.get("admin_name","admin")
+    who = st.session_state.get("admin_name", ADMIN_NAME)
     for e in entries:
         e.setdefault("who", who); e.setdefault("time", now_str())
         current.setdefault("history",[]).insert(0,e)
@@ -417,7 +433,7 @@ if "initialized" not in st.session_state:
     st.session_state.authenticated  = False
     st.session_state.initialized    = True
     st.session_state.confirm_payout = False
-    st.session_state.admin_name     = ""
+    st.session_state.admin_name     = ADMIN_NAME
 
 STALE_MINUTES = 5
 if (datetime.now()-st.session_state.last_sync).total_seconds() > STALE_MINUTES*60:
@@ -436,7 +452,7 @@ if not st.session_state.authenticated:
     </div>""")
     col_l,col_c,col_r = st.columns([1,2,1])
     with col_c:
-        who = st.text_input("n", label_visibility="collapsed", placeholder="Your name (for the activity log)")
+        who = st.text_input("n", value=ADMIN_NAME, label_visibility="collapsed", placeholder="Your name (for the activity log)")
         pw  = st.text_input("p", type="password", label_visibility="collapsed", placeholder="Passcode…")
         if st.button("Unlock →"):
             stored = st.session_state.get("admin_passcode", ADMIN_PW)
@@ -583,9 +599,8 @@ for i in range(num_members):
 # ══════════════════════════════════════════════════════════════════════════════
 sync_ago = int((datetime.now()-st.session_state.last_sync).total_seconds()/60)
 sync_txt = "just now" if sync_ago<1 else f"{sync_ago}m ago"
-sb_col,rf_col,tg_col = st.columns([3,1,1])
-with sb_col:
-    html(f"""<div class="status-bar"><span><span class="status-dot"></span><span class="status-live">Live</span></span><span class="status-sync">Synced {sync_txt} &nbsp;·&nbsp; rev {st.session_state.rev}</span></div>""")
+html(f"""<div class="status-bar"><span><span class="status-dot"></span><span class="status-live">Live</span></span><span class="status-sync">Synced {sync_txt} &nbsp;·&nbsp; rev {st.session_state.rev}</span></div>""")
+rf_col,tg_col = st.columns(2)
 with rf_col:
     if st.button("↻ Refresh", key="refresh_btn", type="secondary"):
         reload_state(gsheet, fresh=True); flash("Refreshed from Google Sheets"); st.rerun()
@@ -643,10 +658,10 @@ html(f"""<div class="glass-card">
     <div id="section-payments"></div><p class="sec-label">Members</p>
     <p class="sec-title">Contributions</p>
     <p class="sec-sub">Weekly targets and payment standing · 🔴 streak = consecutive missed weeks · exited members owe nothing after their exit week</p>
-    <table class="data-table">
+    <table class="data-table tbl-contrib">
         <thead><tr><th>Member</th><th>Monthly</th><th>Weekly</th><th>Weeks Paid</th><th>Status</th></tr></thead>
         <tbody>{rows_html}</tbody>
-    </table></div>""")
+    </table><p class="swipe-hint">Swipe the table sideways for monthly tiers.</p></div>""")
 
 pay_rows_html = ""
 for r in schedule_rows:
@@ -678,10 +693,10 @@ html(f"""<div class="glass-card">
     <div id="section-payouts"></div><p class="sec-label">Rotation</p>
     <p class="sec-title">Payout Schedule</p>
     <p class="sec-sub">Collected is calculated from weekly payments · ⚡ early payout eligible when pool is full</p>
-    <table class="data-table">
+    <table class="data-table tbl-payout">
         <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th><th>Admin Fee</th><th>Net Pool</th><th>Collected</th><th>Remaining</th><th>Status</th></tr></thead>
         <tbody>{pay_rows_html}</tbody>
-    </table></div>""")
+    </table><p class="swipe-hint">Swipe the table sideways for admin fee and collected.</p></div>""")
 
 # ── exports ───────────────────────────────────────────────────────────────────
 buf = io.StringIO()
@@ -960,7 +975,7 @@ if st.session_state.history:
 
 html('<div class="gdivider"></div>')
 if st.button("🔒  Lock Dashboard", key="logout", type="secondary"):
-    st.session_state.authenticated=False; st.session_state.admin_name=""; st.rerun()
+    st.session_state.authenticated=False; st.session_state.admin_name=ADMIN_NAME; st.rerun()
 
 html(f'''<div class="bottom-nav">
     <button class="nav-item" onclick="navTo('top')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
