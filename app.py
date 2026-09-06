@@ -502,12 +502,13 @@ def gross_collected_for_month(i):
 
 total_cash_collected = money(sum(weekly(m) for m in members for w in range(1,total_weeks+1) if paid(m,w)))
 
-def disbursed_amount(month_lbl):
+def collected_amount(month_lbl):
+    """How much of their payout the recipient has actually collected so far.
+    Partial collections are normal; keys from older versions are still honoured."""
     ps = st.session_state.payout_status.get(month_lbl,{})
-    if not ps.get("disbursed",False): return 0.0
-    return money(ps.get("disbursed_amount", ps.get("amount_collected",0.0)))
+    return money(ps.get("collected", ps.get("disbursed_amount", ps.get("amount_collected",0.0))))
 
-total_payouts_dist    = money(sum(disbursed_amount(f"Month {i+1}") for i in range(num_members)))
+total_payouts_dist    = money(sum(collected_amount(f"Month {i+1}") for i in range(num_members)))
 total_cash_held       = money(total_cash_collected - total_payouts_dist)
 total_expected_so_far = money(sum(weekly(m)*sum(1 for w in range(1,current_elapsed_week+1) if liable(m,w)) for m in members))
 collection_gap        = money(total_expected_so_far - total_cash_collected)
@@ -564,18 +565,20 @@ for i in range(num_members):
     gross_pool   = money(tier(recipient)*num_members)
     admin_fee_v  = money(gross_pool*fee_frac)
     net_pool_amt = money(gross_pool-admin_fee_v)
-    net_col      = money(gross_collected_for_month(i)*(1-fee_frac))
-    remaining    = money(max(0.0,net_pool_amt-net_col))
-    pct_c        = int(net_col/net_pool_amt*100) if net_pool_amt>0 else 0
+    collected    = collected_amount(month_lbl)                     # paid out to the recipient
+    remaining    = money(max(0.0, net_pool_amt-collected))          # still owed to the recipient
+    pct_c        = int(collected/net_pool_amt*100) if net_pool_amt>0 else 0
+    funded       = money(gross_collected_for_month(i)*(1-fee_frac)) # contributions banked for this turn
     ps           = st.session_state.payout_status.get(month_lbl,{})
-    disbursed    = ps.get("disbursed",False)
+    disbursed    = ps.get("disbursed",False) or (collected >= net_pool_amt-0.005 and collected>0)
     days_away    = (payout_date-today).days if payout_date>=today else None
-    early_ok     = (net_col >= net_pool_amt-0.005) and not disbursed and (payout_date >= today)
+    early_ok     = (funded >= net_pool_amt-0.005) and remaining>0 and (payout_date >= today)
     schedule_rows.append({"turn":month_lbl,"recipient":recipient,"date":format_date(payout_date),"payout_date":payout_date,
-                          "fee":fmt_num(admin_fee_v),"pool":fmt_num(net_pool_amt),"collected":fmt_num(net_col),
-                          "remaining":fmt_num(remaining),"remaining_v":remaining,"pct":pct_c,"disbursed":disbursed,
-                          "disb_amt":disbursed_amount(month_lbl),"disb_date":ps.get("disbursed_date",""),
-                          "days_away":days_away,"early_ok":early_ok,"net_pool_amt":net_pool_amt,"net_col":net_col,
+                          "fee":fmt_num(admin_fee_v),"pool":fmt_num(net_pool_amt),"collected":fmt_num(collected),
+                          "remaining":fmt_num(remaining),"remaining_v":remaining,"collected_v":collected,"pct":pct_c,
+                          "disbursed":disbursed,"funded":funded,"funded_s":fmt_num(funded),
+                          "disb_date":ps.get("disbursed_date",""),
+                          "days_away":days_away,"early_ok":early_ok,"net_pool_amt":net_pool_amt,
                           "exited":exited(recipient)})
     wa_payout_rows.append({"recipient":recipient,"date":format_date(payout_date),"balance":fmt_num(remaining),"disbursed":disbursed})
     cur_d = payout_date
@@ -677,16 +680,18 @@ pay_rows_html = ""
 for r in schedule_rows:
     bar_pct = min(r['pct'],100)
     if r['disbursed']:
-        status_badge = f'<span class="badge-ok">✅ Paid GHS {fmt_num(r["disb_amt"])}</span>'
+        status_badge = '<span class="badge-ok">✅ Fully collected</span>'
         if r['disb_date']: status_badge += f'<div style="font-size:10px;color:{T["sub_color"]};margin-top:3px">{r["disb_date"]}</div>'
+    elif r['collected_v'] > 0:
+        status_badge = f'<span class="badge-owe">◐ Part collected</span>'
     else:
-        status_badge = '<span class="badge-pending">⏳ Pending</span>'
+        status_badge = '<span class="badge-pending">⏳ Not collected</span>'
     if r['days_away'] is not None:
         urg = "urgent" if r['days_away']<=7 else ""
         days_cell = f'<div style="margin-top:4px"><span class="days-badge {urg}">{r["days_away"]}d away</span></div>'
     else:
         days_cell = f'<div style="margin-top:4px;font-size:10px;color:{T["sub_color"]}">Past</div>'
-    early_note = '<div class="early-eligible">⚡ Pool fully collected — eligible for early payout</div>' if r['early_ok'] else ""
+    early_note = '<div class="early-eligible">⚡ Fully funded — ready to pay out</div>' if r['early_ok'] else ""
     exit_tag   = '<span class="exit-tag">exited</span>' if r['exited'] else ""
     pay_rows_html += (f'<tr class="plain">'
                       f'<td><span class="cell-name">{r["turn"].replace("Month","Turn")}</span></td>'
@@ -702,7 +707,7 @@ for r in schedule_rows:
 html(f"""<div class="glass-card">
     <div id="section-payouts"></div><p class="sec-label">Rotation</p>
     <p class="sec-title">Payout Schedule</p>
-    <p class="sec-sub">Collected is calculated from weekly payments</p>
+    <p class="sec-sub">Collected = amount the recipient has taken · Remaining = still owed to them</p>
     <table class="data-table tbl-payout {fee_cls}">
         <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th>{fee_col_head}<th>Net Pool</th><th>Collected</th><th>Remaining</th><th>Status</th></tr></thead>
         <tbody>{pay_rows_html}</tbody>
@@ -721,7 +726,7 @@ for r in wa_contrib_rows:
     buf.write(f"{'✅' if 'Up' in r['standing'] else '❌'} *{r['member']}*: {r['standing']}{streak_note}\n")
 buf.write("\n🎁 *PAYOUTS*\n")
 for r in wa_payout_rows:
-    tag = " ✅ paid" if r['disbursed'] else f" · GHS {r['balance']} to go"
+    tag = " ✅ collected" if r['disbursed'] else f" · GHS {r['balance']} still to collect"
     buf.write(f"{r['recipient']} · {r['date']}{tag}\n")
 
 owing_members = [r for r in wa_contrib_rows if "Owing" in r["standing"]]
@@ -904,42 +909,44 @@ with st.expander("🎁  Record Payout"):
     sr        = schedule_rows[month_options.index(sel_month_lbl)]
     mkey      = sr["turn"]; rec_name = sr["recipient"]
     html(f"""<div style="font-size:12px;color:{T['td_color']};line-height:1.7;margin-bottom:8px">
-        Net pool: <strong style="color:{T['sec_title']}">GHS {sr['pool']}</strong> &nbsp;·&nbsp;
-        Collected from weekly ticks: <strong style="color:{T['sec_title']}">GHS {sr['collected']}</strong> &nbsp;·&nbsp;
-        Remaining: <strong style="color:{T['sec_title']}">GHS {sr['remaining']}</strong></div>""")
-    if sr["remaining_v"] > 0 and not sr["disbursed"]:
-        st.warning("Pool is not yet fully collected. Record the missing weeks first, or disburse a partial amount.")
+        Net pool due to {rec_name}: <strong style="color:{T['sec_title']}">GHS {sr['pool']}</strong> &nbsp;·&nbsp;
+        Collected so far: <strong style="color:{T['sec_title']}">GHS {sr['collected']}</strong> &nbsp;·&nbsp;
+        Still owed: <strong style="color:{T['sec_title']}">GHS {sr['remaining']}</strong><br>
+        Contributions banked for this turn: <strong style="color:{T['sec_title']}">GHS {sr['funded_s']}</strong></div>""")
+    if sr["funded"] < sr["net_pool_amt"]-0.005 and sr["remaining_v"] > 0:
+        st.warning(f"Only GHS {sr['funded_s']} of the GHS {sr['pool']} pool has been contributed so far. Paying the full amount now draws on the group's other cash.")
     pc1,pc2 = st.columns(2)
     with pc1:
-        new_amt = st.number_input(f"Amount handed to {rec_name} (GHS)",
-                                  value=float(sr["disb_amt"] if sr["disbursed"] else min(sr["net_col"], sr["net_pool_amt"])),
-                                  min_value=0.0, max_value=float(sr["net_pool_amt"]), step=50.0, key="payout_amt")
+        new_amt = st.number_input(f"Total collected by {rec_name} (GHS)", value=float(sr["collected_v"]),
+                                  min_value=0.0, max_value=float(sr["net_pool_amt"]), step=50.0, key="payout_amt",
+                                  help="Running total, not just today's instalment.")
     with pc2:
         try:    default_dd = datetime.strptime(sr["disb_date"][:11].strip(), "%d %b %Y").date() if sr["disb_date"] else today.date()
         except Exception: default_dd = today.date()
-        disb_date = st.date_input("Date handed over", value=default_dd, key="payout_date_in")   # (#5) editable
-    new_disbursed = st.checkbox("Mark as disbursed ✅", value=sr["disbursed"], key="payout_disbursed")
+        coll_date = st.date_input("Date collected", value=default_dd, key="payout_date_in")
+    st.caption(f"Balance after this entry: GHS {fmt_num(money(sr['net_pool_amt']-new_amt))}"
+               + (" — fully collected ✅" if new_amt >= sr["net_pool_amt"]-0.005 else ""))
     if not st.session_state.get("confirm_payout",False):
         if st.button("Save Payout", key="save_payout_btn"):
             st.session_state.confirm_payout=True; st.rerun()
     else:
-        verb = "Record disbursement of" if new_disbursed else "Clear disbursement for"
-        st.warning(f"⚠️ Confirm: {verb} GHS {fmt_num(new_amt)} — {rec_name} ({mkey}) on {format_date(datetime.combine(disb_date, datetime.min.time()))}?")
+        st.warning(f"⚠️ Confirm: {rec_name} ({mkey.replace('Month','Turn')}) has collected GHS {fmt_num(new_amt)} of GHS {sr['pool']} as at {format_date(datetime.combine(coll_date, datetime.min.time()))}?")
         cc1,cc2 = st.columns(2)
         with cc1:
             if st.button("✓ Yes, confirm", key="confirm_yes"):
                 def _m(b):
                     ps = b.setdefault("payout_status",{}).setdefault(mkey,{})
-                    before_amt, before_flag = money(ps.get("disbursed_amount", ps.get("amount_collected",0.0))), ps.get("disbursed",False)
-                    ps.pop("amount_collected", None)
-                    ps["disbursed"]        = new_disbursed
-                    ps["disbursed_amount"] = money(new_amt) if new_disbursed else 0.0
-                    ps["disbursed_date"]   = format_date(datetime.combine(disb_date, datetime.min.time())) if new_disbursed else ""
-                    detail = [f"{mkey} disbursed: {before_flag} → {new_disbursed}",
-                              f"amount: GHS {fmt_num(before_amt)} → GHS {fmt_num(money(new_amt) if new_disbursed else 0)}",
+                    before = money(ps.get("collected", ps.get("disbursed_amount", ps.get("amount_collected",0.0))))
+                    ps.pop("amount_collected", None); ps.pop("disbursed_amount", None)
+                    full = money(new_amt) >= sr["net_pool_amt"]-0.005 and new_amt>0
+                    ps["collected"]      = money(new_amt)
+                    ps["disbursed"]      = full
+                    ps["disbursed_date"] = format_date(datetime.combine(coll_date, datetime.min.time())) if new_amt>0 else ""
+                    detail = [f"{mkey} collected: GHS {fmt_num(before)} → GHS {fmt_num(new_amt)}",
+                              f"balance owed to {rec_name}: GHS {fmt_num(money(sr['net_pool_amt']-new_amt))}",
                               f"date: {ps['disbursed_date'] or '—'}"]
-                    txt = (f"{mkey} payout disbursed to {rec_name} — GHS {fmt_num(new_amt)}" if new_disbursed
-                           else f"{mkey} disbursement cleared for {rec_name}")
+                    txt = (f"{mkey} fully collected by {rec_name} — GHS {fmt_num(new_amt)}" if full
+                           else f"{mkey} part collected by {rec_name} — GHS {fmt_num(new_amt)} of GHS {sr['pool']}")
                     return {"type":"payout","text":txt,"detail":detail}
                 ok = commit(gsheet,_m)
                 st.session_state.confirm_payout=False
