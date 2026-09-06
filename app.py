@@ -22,13 +22,6 @@ st.markdown("""
     };
     removeSidebar(); setTimeout(removeSidebar,300); setTimeout(removeSidebar,800);
     </script>
-    <script>
-    function navTo(id) {
-        const el = window.parent.document.getElementById(id);
-        if (el) el.scrollIntoView({behavior:'smooth'});
-        else window.parent.scrollTo({top: id==='top'?0:99999, behavior:'smooth'});
-    }
-    </script>
 """, unsafe_allow_html=True)
 
 # ── HTML helper ───────────────────────────────────────────────────────────────
@@ -47,7 +40,6 @@ if D:
         "bg":"linear-gradient(135deg,#080d1a 0%,#0b1525 50%,#080f1c 100%)",
         "card_bg":"rgba(255,255,255,0.025)","card_border":"rgba(255,255,255,0.06)",
         "card_shadow":"0 4px 20px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.04)",
-        "hero_bg":"rgba(255,255,255,0.03)","hero_border":"rgba(255,255,255,0.07)",
         "chip_bg":"rgba(255,255,255,0.03)","chip_border":"rgba(255,255,255,0.07)",
         "status_bg":"rgba(255,255,255,0.02)","status_border":"rgba(255,255,255,0.05)",
         "sync_color":"#7b8ba3","title_color":"#f1f5f9","sub_color":"#8fa3bb",
@@ -71,7 +63,6 @@ else:
         "bg":"linear-gradient(135deg,#e8edf5 0%,#f0f4fa 50%,#eaeff8 100%)",
         "card_bg":"rgba(255,255,255,0.75)","card_border":"rgba(0,0,0,0.07)",
         "card_shadow":"0 4px 20px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.9)",
-        "hero_bg":"rgba(255,255,255,0.7)","hero_border":"rgba(0,0,0,0.08)",
         "chip_bg":"rgba(255,255,255,0.8)","chip_border":"rgba(0,0,0,0.07)",
         "status_bg":"rgba(255,255,255,0.5)","status_border":"rgba(0,0,0,0.07)",
         "sync_color":"#64748b","title_color":"#0f172a","sub_color":"#475569",
@@ -103,7 +94,7 @@ st.markdown(f"""
     section[data-testid="stSidebar"]{{display:none!important;width:0!important;}}
     [data-testid="collapsedControl"]{{display:none!important;width:0!important;}}
     [data-testid="stSidebarNav"]{{display:none!important;}} button[kind="header"]{{display:none!important;}}
-    .block-container{{padding-top:0!important;padding-bottom:4rem!important;max-width:820px!important;}}
+    .block-container{{padding-top:0!important;padding-bottom:3rem!important;max-width:820px!important;}}
     html,body,[class*="css"]{{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;}}
     .main,.stApp{{background:{T['bg']}!important;min-height:100vh;}}
 
@@ -118,14 +109,15 @@ st.markdown(f"""
     .lock-title{{font-size:22px;font-weight:700;color:{T['lock_title']};margin-bottom:6px;}}
     .lock-sub{{font-size:13px;color:{T['lock_sub']};margin-bottom:0;}}
 
-    /* Hero with ring */
-    .hero{{background:{T['hero_bg']};backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid {T['hero_border']};border-radius:20px;padding:22px 28px;margin-bottom:14px;box-shadow:0 4px 24px rgba(0,0,0,0.1),inset 0 1px 0 rgba(255,255,255,0.3);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:16px;}}
-    .hero::before{{content:'';position:absolute;top:-60px;right:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(56,189,248,0.08) 0%,transparent 70%);pointer-events:none;}}
-    .hero-left{{flex:1;}}
-    .hero-title{{font-size:17px;font-weight:700;color:{T['title_color']};margin:0 0 3px 0;letter-spacing:-0.2px;}}
-    .hero-sub{{font-size:12px;color:{T['sub_color']};margin:0;}}
-    .hero-badge{{display:inline-flex;align-items:center;gap:5px;background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.2);border-radius:20px;padding:4px 10px;font-size:10px;font-weight:600;color:#38bdf8;margin-top:10px;letter-spacing:0.3px;}}
+    .topline{{margin-bottom:12px;}}
+    .topline-title{{font-size:18px;font-weight:700;color:{T['title_color']};letter-spacing:-0.3px;margin:0 0 2px;}}
+    .topline-sub{{font-size:11px;color:{T['sub_color']};margin:0;}}
 
+    .alert-bar{{background:rgba(251,191,36,0.09);border:1px solid rgba(251,191,36,0.28);border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;}}
+    .alert-title{{font-size:13px;font-weight:700;color:#fbbf24;}}
+    .alert-sub{{font-size:11px;color:{T['td_color']};margin-top:3px;line-height:1.4;}}
+    .alert-cta{{font-size:11px;font-weight:600;color:#fbbf24;white-space:nowrap;opacity:0.85;}}
+    .cell-sub{{font-size:10px;color:{T['sub_color']};margin-top:2px;}}
 
     .countdown-banner{{background:rgba(99,102,241,0.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(99,102,241,0.2);border-radius:14px;padding:16px 22px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 0 20px rgba(99,102,241,0.06);}}
     .countdown-left{{display:flex;flex-direction:column;gap:3px;}}
@@ -222,17 +214,15 @@ st.markdown(f"""
     .gdivider{{height:1px;background:linear-gradient(90deg,transparent,{T['gdiv']},transparent);margin:22px 0;}}
     .foot{{text-align:center;font-size:11px;color:{T['foot_color']};margin-top:32px;padding-top:20px;border-top:1px solid {T['foot_border']};}}
     @media (max-width:600px){{
-        .block-container{{padding-bottom:6rem!important;padding-left:10px!important;padding-right:10px!important;}}
+        .block-container{{padding-bottom:3rem!important;padding-left:10px!important;padding-right:10px!important;}}
         /* header row: keep Refresh + theme side by side instead of stacking */
         .block-container div[data-testid="stHorizontalBlock"]:first-of-type{{flex-wrap:nowrap!important;gap:8px!important;}}
         .block-container div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="stColumn"]{{min-width:0!important;flex:1 1 0!important;}}
         .block-container div[data-testid="stHorizontalBlock"]:first-of-type button{{padding:7px 8px!important;font-size:12px!important;white-space:nowrap;}}
         .status-bar{{margin-bottom:10px!important;padding:6px 0!important;}}
-        /* hero: ring stays beside the text */
-        .hero{{padding:14px 16px!important;border-radius:14px!important;margin-bottom:10px!important;flex-direction:row!important;align-items:center!important;gap:12px!important;}}
-        .hero svg{{width:56px!important;height:56px!important;}}
-        .hero-title{{font-size:15px!important;}} .hero-sub{{font-size:11px!important;line-height:1.35;}}
-        .hero-badge{{margin-top:6px!important;padding:3px 8px!important;}}
+        .topline-title{{font-size:16px!important;}} .topline-sub{{font-size:10px!important;line-height:1.4;}}
+        .alert-bar{{flex-direction:column;align-items:flex-start!important;padding:10px 12px!important;}}
+        .alert-cta{{display:none;}}
         .chip-row{{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;}}
         .chip{{min-width:0!important;padding:10px 12px!important;}}
         .chip-value,.chip-value-green,.chip-value-amber,.chip-value-red{{font-size:15px!important;}}
@@ -243,16 +233,12 @@ st.markdown(f"""
         .data-table th,.data-table td{{padding:8px 9px!important;font-size:11px!important;}}
         /* trim low-value columns so the important ones fit without scrolling */
         .tbl-contrib th:nth-child(2),.tbl-contrib td:nth-child(2){{display:none;}}
-        .tbl-payout th:nth-child(4),.tbl-payout td:nth-child(4),
-        .tbl-payout th:nth-child(6),.tbl-payout td:nth-child(6){{display:none;}}
+        .tbl-payout.has-fee th:nth-child(4),.tbl-payout.has-fee td:nth-child(4),
+        .tbl-payout.has-fee th:nth-child(6),.tbl-payout.has-fee td:nth-child(6),
+        .tbl-payout.no-fee th:nth-child(5),.tbl-payout.no-fee td:nth-child(5){{display:none;}}
         .swipe-hint{{display:block!important;}}
     }}
     .swipe-hint{{display:none;font-size:10px;color:{T['sub_color']};margin:6px 0 0;}}
-    .bottom-nav{{display:none;position:fixed;bottom:0;left:0;right:0;z-index:998;padding-right:64px!important;background:{T['card_bg']};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid {T['card_border']};padding:8px 0 8px;justify-content:space-around;align-items:center;}}
-    @media (max-width:600px){{.bottom-nav{{display:flex!important;}}}}
-    .nav-item{{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;flex:1 1 0;min-width:0;padding:4px 4px;border-radius:10px;text-decoration:none;border:none;background:none;}}
-    .nav-icon{{font-size:20px;line-height:1;}}
-    .nav-label{{font-size:9px;font-weight:600;color:{T['td_color']};letter-spacing:0.3px;text-transform:uppercase;}}
     </style>
 """, unsafe_allow_html=True)
 
@@ -563,6 +549,7 @@ for member in members:
     standing    = f"Owing GHS {fmt_num(owing)}" if owing>0 else ("Exited" if is_out else "Up to date")
     streak      = 0 if (is_out and owing<=0) else missed_streak(member)
     contrib_rows.append({"member":member,"m_monthly":tier(member),"m_weekly":m_weekly,"total_paid":total_paid,
+                         "paid_due":paid_passed,"due_so_far":due_weeks,
                          "due_total":liable_total(member),"owing":owing,"standing":standing,"streak":streak,
                          "exited":is_out,"exit_week":mstat(member).get("exit_week")})
     wa_contrib_rows.append({"member":member,"standing":standing,"streak":streak,"exited":is_out})
@@ -608,17 +595,6 @@ with tg_col:
     if st.button(f"{T['toggle_icon']} {T['toggle_label']}", key="theme_toggle", type="secondary"):
         st.session_state.dark_mode = not st.session_state.dark_mode; st.rerun()
 
-html(f"""
-    <div class="hero">
-        <div class="hero-left">
-            <div class="hero-title">💸 Susu Savings Dashboard</div>
-            <div class="hero-sub">{num_members} members &nbsp;·&nbsp; {format_date(start_dt)} → {format_date(end_date)}</div>
-            <div class="hero-badge">🔓 &nbsp;{st.session_state.admin_name}</div>
-        </div>
-        {completion_ring(program_pct)}
-    </div>
-""")
-
 gap_class  = "chip-value-red" if collection_gap>0 else "chip-value-green"
 gap_label  = f"−GHS {fmt_num(collection_gap)}" if collection_gap>0 else "On track"
 prev_snap  = st.session_state.get("snapshots",{}).get(str(current_elapsed_week-1))
@@ -626,18 +602,47 @@ if prev_snap is not None and current_elapsed_week>1:
     snap_delta = money(total_cash_held-float(prev_snap))
     d_arrow    = "↑" if snap_delta>=0 else "↓"
     d_color    = "#34d399" if snap_delta>=0 else "#f87171"
-    delta_html = f'<div style="font-size:10px;color:{d_color};margin-top:3px;font-weight:600">{d_arrow} GHS {fmt_num(abs(snap_delta))} vs last week</div>'
+    delta_html = f'<div class="chip-sub" style="color:{d_color};font-weight:600">{d_arrow} GHS {fmt_num(abs(snap_delta))} vs last week</div>'
 else:
-    delta_html = f'<div style="font-size:10px;color:{T["sub_color"]};margin-top:3px;">No prior snapshot yet</div>'
+    delta_html = '<div class="chip-sub">No prior snapshot yet</div>'
+
+# (3) next payout chip names the recipient
+if next_recipient:
+    urgent_cls  = "chip-value-amber" if days_to_payout<=7 else "chip-value"
+    payout_main = f'<div class="{urgent_cls}">{next_recipient}</div>'
+    payout_sub  = f'<div class="chip-sub">{format_date(next_payout_date)} · in {days_to_payout}d · GHS {fmt_num(next_net_pool)}</div>'
+else:
+    payout_main, payout_sub = '<div class="chip-value">—</div>', '<div class="chip-sub">Cycle complete</div>'
+
+# (1) progress lives in the Week chip
+week_bar = f'<div class="pbar-wrap" style="margin-top:7px"><div class="pbar-fill" style="width:{program_pct}%"></div></div><div class="chip-sub">{program_pct}% of cycle</div>'
+
+html(f"""
+    <div class="topline">
+        <div class="topline-title">💸 Susu Savings</div>
+        <div class="topline-sub">{num_members} members &nbsp;·&nbsp; {format_date(start_dt)} → {format_date(end_date)} &nbsp;·&nbsp; 🔓 {st.session_state.admin_name}</div>
+    </div>
+""")
 
 html(f"""
     <div class="chip-row">
         <div class="chip"><div class="chip-label">Cash Held</div><div class="chip-value">GHS {fmt_num(total_cash_held)}</div>{delta_html}</div>
-        <div class="chip"><div class="chip-label">Week</div><div class="chip-value">{current_elapsed_week} / {total_weeks}</div></div>
-        <div class="chip"><div class="chip-label">Next Payout</div><div class="chip-value-amber">{days_to_payout} days</div></div>
+        <div class="chip"><div class="chip-label">Week</div><div class="chip-value">{current_elapsed_week} / {total_weeks}</div>{week_bar}</div>
+        <div class="chip"><div class="chip-label">Next Payout</div>{payout_main}{payout_sub}</div>
         <div class="chip"><div class="chip-label">Collection</div><div class="{gap_class}">{gap_label}</div><div class="chip-sub">Expected GHS {fmt_num(total_expected_so_far)}</div></div>
     </div>
 """)
+
+# (4) owing banner — only when someone is behind
+owing_now = [r for r in contrib_rows if r["owing"]>0]
+if owing_now:
+    total_owed = money(sum(r["owing"] for r in owing_now))
+    who_owes   = ", ".join(f'{r["member"]} (GHS {fmt_num(r["owing"])})' for r in owing_now[:4])
+    if len(owing_now)>4: who_owes += f' +{len(owing_now)-4} more'
+    html(f"""<div class="alert-bar">
+        <div><div class="alert-title">⚠️ {len(owing_now)} member{"s" if len(owing_now)>1 else ""} owing GHS {fmt_num(total_owed)}</div>
+        <div class="alert-sub">{who_owes}</div></div>
+        <div class="alert-cta">Send the Reminder ↓</div></div>""")
 
 rows_html = ""
 for r in contrib_rows:
@@ -651,17 +656,22 @@ for r in contrib_rows:
     rows_html += (f'<tr class="{row_class}">'
                   f'<td><span class="cell-name">{r["member"]}</span>{exit_tag}</td>'
                   f'<td>GHS {fmt_num(r["m_monthly"])}</td><td>GHS {fmt_num(r["m_weekly"])}</td>'
-                  f'<td>{r["total_paid"]} / {r["due_total"]}</td>'
+                  f'<td>{r["paid_due"]} / {r["due_so_far"]}<div class="cell-sub">{r["total_paid"]} of {r["due_total"]} in cycle</div></td>'
                   f'<td>{badge}{streak_html}</td></tr>')
 
 html(f"""<div class="glass-card">
     <div id="section-payments"></div><p class="sec-label">Members</p>
     <p class="sec-title">Contributions</p>
-    <p class="sec-sub">Weekly targets and payment standing · 🔴 streak = consecutive missed weeks · exited members owe nothing after their exit week</p>
+    <p class="sec-sub">Week {current_elapsed_week} standing</p>
     <table class="data-table tbl-contrib">
-        <thead><tr><th>Member</th><th>Monthly</th><th>Weekly</th><th>Weeks Paid</th><th>Status</th></tr></thead>
+        <thead><tr><th>Member</th><th>Monthly</th><th>Weekly</th><th>Paid / Due</th><th>Status</th></tr></thead>
         <tbody>{rows_html}</tbody>
     </table><p class="swipe-hint">Swipe the table sideways for monthly tiers.</p></div>""")
+
+show_fee      = fee_frac > 0
+fee_col_head  = "<th>Admin Fee</th>" if show_fee else ""
+fee_cls       = "has-fee" if show_fee else "no-fee"
+def fee_cell(r): return f'<td>GHS {r["fee"]}</td>' if show_fee else ""
 
 pay_rows_html = ""
 for r in schedule_rows:
@@ -679,10 +689,10 @@ for r in schedule_rows:
     early_note = '<div class="early-eligible">⚡ Pool fully collected — eligible for early payout</div>' if r['early_ok'] else ""
     exit_tag   = '<span class="exit-tag">exited</span>' if r['exited'] else ""
     pay_rows_html += (f'<tr class="plain">'
-                      f'<td><span class="cell-name">{r["turn"]}</span></td>'
+                      f'<td><span class="cell-name">{r["turn"].replace("Month","Turn")}</span></td>'
                       f'<td>{r["recipient"]}{exit_tag}</td>'
                       f'<td>{r["date"]}{days_cell}</td>'
-                      f'<td>GHS {r["fee"]}</td>'
+                      + fee_cell(r) +
                       f'<td>GHS {r["pool"]}{early_note}'
                       f'<div class="pbar-wrap"><div class="pbar-fill" style="width:{bar_pct}%"></div></div></td>'
                       f'<td>GHS {r["collected"]}</td>'
@@ -692,11 +702,11 @@ for r in schedule_rows:
 html(f"""<div class="glass-card">
     <div id="section-payouts"></div><p class="sec-label">Rotation</p>
     <p class="sec-title">Payout Schedule</p>
-    <p class="sec-sub">Collected is calculated from weekly payments · ⚡ early payout eligible when pool is full</p>
-    <table class="data-table tbl-payout">
-        <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th><th>Admin Fee</th><th>Net Pool</th><th>Collected</th><th>Remaining</th><th>Status</th></tr></thead>
+    <p class="sec-sub">Collected is calculated from weekly payments</p>
+    <table class="data-table tbl-payout {fee_cls}">
+        <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th>{fee_col_head}<th>Net Pool</th><th>Collected</th><th>Remaining</th><th>Status</th></tr></thead>
         <tbody>{pay_rows_html}</tbody>
-    </table><p class="swipe-hint">Swipe the table sideways for admin fee and collected.</p></div>""")
+    </table><p class="swipe-hint">Swipe the table sideways for the full breakdown.</p></div>""")
 
 # ── exports ───────────────────────────────────────────────────────────────────
 buf = io.StringIO()
@@ -743,7 +753,7 @@ for r in contrib_rows:
     ob.write(f"*{r['member']}*\n  • Monthly Tier: GHS {fmt_num(r['m_monthly'])}\n  • Weekly Target: GHS {fmt_num(r['m_weekly'])}\n\n")
 ob.write("🎁 *PAYOUT SCHEDULE*\n")
 for r in schedule_rows:
-    ob.write(f"*{r['turn']} — {r['recipient']}*\n  • Payout Date: {r['date']}\n  • Net Pool: GHS {r['pool']}\n\n")
+    ob.write(f"*{r['turn'].replace('Month','Turn')} — {r['recipient']}*\n  • Payout Date: {r['date']}\n  • Net Pool: GHS {r['pool']}\n\n")
 
 ch = io.StringIO()
 ch.write(f"📊 *CONTRIBUTION HISTORY — WK {current_elapsed_week}*\n")
@@ -763,7 +773,7 @@ for member in members:
 html(f"""<div class="glass-card">
     <div id="section-exports"></div><p class="sec-label">Export</p>
     <p class="sec-title">WhatsApp Messages</p>
-    <p class="sec-sub">Ready-to-paste updates for the group chat</p></div>""")
+    <p class="sec-sub">Copy and paste into the group chat</p></div>""")
 t1,t2,t3,t4 = st.tabs(["📥 Weekly Update","🔔 Reminder","📋 Onboarding","📊 History"])
 with t1: wa_block(buf.getvalue(), f"Susu_W{current_elapsed_week}.txt", "dl_weekly")
 with t2: wa_block(rem.getvalue(), f"Susu_Reminder_W{current_elapsed_week}.txt", "dl_rem")
@@ -889,7 +899,7 @@ with st.expander("📝  Bulk Payment Entry"):
                 st.rerun()
 
 with st.expander("🎁  Record Payout"):
-    month_options = [f"{r['turn']} — {r['recipient']}" for r in schedule_rows]
+    month_options = [f"{r['turn'].replace('Month','Turn')} — {r['recipient']}" for r in schedule_rows]
     sel_month_lbl = st.selectbox("Payout Turn", month_options, key="payout_month")
     sr        = schedule_rows[month_options.index(sel_month_lbl)]
     mkey      = sr["turn"]; rec_name = sr["recipient"]
@@ -977,11 +987,4 @@ html('<div class="gdivider"></div>')
 if st.button("🔒  Lock Dashboard", key="logout", type="secondary"):
     st.session_state.authenticated=False; st.session_state.admin_name=ADMIN_NAME; st.rerun()
 
-html(f'''<div class="bottom-nav">
-    <button class="nav-item" onclick="navTo('top')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
-    <button class="nav-item" onclick="navTo('section-payments')"><span class="nav-icon">👥</span><span class="nav-label">Members</span></button>
-    <button class="nav-item" onclick="navTo('section-payouts')"><span class="nav-icon">🎁</span><span class="nav-label">Payouts</span></button>
-    <button class="nav-item" onclick="navTo('section-exports')"><span class="nav-icon">📤</span><span class="nav-label">Export</span></button>
-    <button class="nav-item" onclick="navTo('section-admin')"><span class="nav-icon">⚙️</span><span class="nav-label">Admin</span></button>
-</div>''')
 html('<div class="foot">Backed by Google Sheets · Secured with passcode</div>')
