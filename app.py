@@ -117,6 +117,8 @@ st.markdown(f"""
     .alert-title{{font-size:13px;font-weight:700;color:#fbbf24;}}
     .alert-sub{{font-size:11px;color:{T['td_color']};margin-top:3px;line-height:1.4;}}
     .alert-cta{{font-size:11px;font-weight:600;color:#fbbf24;white-space:nowrap;opacity:0.85;}}
+    .chip-calc{{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:{T['sub_color']};margin-top:3px;}}
+    .chip-calc span:last-child{{font-variant-numeric:tabular-nums;color:{T['td_color']};}}
     .cell-sub{{font-size:10px;color:{T['sub_color']};margin-top:2px;}}
 
     .countdown-banner{{background:rgba(99,102,241,0.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(99,102,241,0.2);border-radius:14px;padding:16px 22px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 0 20px rgba(99,102,241,0.06);}}
@@ -629,7 +631,10 @@ html(f"""
 
 html(f"""
     <div class="chip-row">
-        <div class="chip"><div class="chip-label">Cash Held</div><div class="chip-value">GHS {fmt_num(total_cash_held)}</div>{delta_html}</div>
+        <div class="chip"><div class="chip-label">Cash Held</div><div class="chip-value">GHS {fmt_num(total_cash_held)}</div>
+            <div class="chip-calc"><span>Contributions in</span><span>{fmt_num(total_cash_collected)}</span></div>
+            <div class="chip-calc"><span>Payouts collected</span><span>−{fmt_num(total_payouts_dist)}</span></div>
+            {delta_html}</div>
         <div class="chip"><div class="chip-label">Week</div><div class="chip-value">{current_elapsed_week} / {total_weeks}</div>{week_bar}</div>
         <div class="chip"><div class="chip-label">Next Payout</div>{payout_main}{payout_sub}</div>
         <div class="chip"><div class="chip-label">Collection</div><div class="{gap_class}">{gap_label}</div><div class="chip-sub">Expected GHS {fmt_num(total_expected_so_far)}</div></div>
@@ -924,10 +929,18 @@ with st.expander("🎁  Record Payout"):
         try:    default_dd = datetime.strptime(sr["disb_date"][:11].strip(), "%d %b %Y").date() if sr["disb_date"] else today.date()
         except Exception: default_dd = today.date()
         coll_date = st.date_input("Date collected", value=default_dd, key="payout_date_in")
-    st.caption(f"Balance after this entry: GHS {fmt_num(money(sr['net_pool_amt']-new_amt))}"
-               + (" — fully collected ✅" if new_amt >= sr["net_pool_amt"]-0.005 else ""))
+    # cash effect of this entry: only the *change* in collected leaves the box
+    delta_out  = money(new_amt - sr["collected_v"])
+    cash_after = money(total_cash_held - delta_out)
+    st.caption(f"Balance still owed to {rec_name} after this entry: GHS {fmt_num(money(sr['net_pool_amt']-new_amt))}"
+               + (" — fully collected ✅" if new_amt >= sr["net_pool_amt"]-0.005 else "")
+               + f" · Group cash after: GHS {fmt_num(cash_after)}")
+    overdraw = cash_after < -0.005
+    if overdraw:
+        st.error(f"❌ The group only holds GHS {fmt_num(total_cash_held)}. Paying out GHS {fmt_num(delta_out)} now would leave it GHS {fmt_num(abs(cash_after))} short. Record the outstanding weekly payments first, or enter a smaller amount.")
+        st.session_state.confirm_payout = False
     if not st.session_state.get("confirm_payout",False):
-        if st.button("Save Payout", key="save_payout_btn"):
+        if st.button("Save Payout", key="save_payout_btn", disabled=overdraw):
             st.session_state.confirm_payout=True; st.rerun()
     else:
         st.warning(f"⚠️ Confirm: {rec_name} ({mkey.replace('Month','Turn')}) has collected GHS {fmt_num(new_amt)} of GHS {sr['pool']} as at {format_date(datetime.combine(coll_date, datetime.min.time()))}?")
@@ -937,6 +950,8 @@ with st.expander("🎁  Record Payout"):
                 def _m(b):
                     ps = b.setdefault("payout_status",{}).setdefault(mkey,{})
                     before = money(ps.get("collected", ps.get("disbursed_amount", ps.get("amount_collected",0.0))))
+                    if money(total_cash_held - money(new_amt-before)) < -0.005:
+                        raise ValueError("would overdraw the group")
                     ps.pop("amount_collected", None); ps.pop("disbursed_amount", None)
                     full = money(new_amt) >= sr["net_pool_amt"]-0.005 and new_amt>0
                     ps["collected"]      = money(new_amt)
@@ -948,7 +963,10 @@ with st.expander("🎁  Record Payout"):
                     txt = (f"{mkey} fully collected by {rec_name} — GHS {fmt_num(new_amt)}" if full
                            else f"{mkey} part collected by {rec_name} — GHS {fmt_num(new_amt)} of GHS {sr['pool']}")
                     return {"type":"payout","text":txt,"detail":detail}
-                ok = commit(gsheet,_m)
+                try:
+                    ok = commit(gsheet,_m)
+                except ValueError:
+                    ok = False; flash("Save cancelled — that payout would overdraw the group's cash.","warning")
                 st.session_state.confirm_payout=False
                 if ok: flash(f"Payout for {rec_name} saved")
                 st.rerun()
