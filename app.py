@@ -32,59 +32,32 @@ def html(s):
     st.markdown(re.sub(r"\n[ \t]+", "\n", s).strip(), unsafe_allow_html=True)
 
 # ── theme ─────────────────────────────────────────────────────────────────────
-if "dark_mode" not in st.session_state: st.session_state.dark_mode = True
-D = st.session_state.dark_mode
+# ── theme (single dark palette — softened so text stays legible) ─────────────
+T = {
+    "bg":"linear-gradient(135deg,#161f2f 0%,#1b2536 50%,#172131 100%)",
+    "card_bg":"rgba(255,255,255,0.05)","card_border":"rgba(255,255,255,0.09)",
+    "card_shadow":"0 4px 20px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.05)",
+    "chip_bg":"rgba(255,255,255,0.06)","chip_border":"rgba(255,255,255,0.10)",
+    "status_bg":"rgba(255,255,255,0.03)","status_border":"rgba(255,255,255,0.08)",
+    "sync_color":"#94a5bd","title_color":"#f4f7fb","sub_color":"#9db0c7",
+    "label_color":"#8cc6ec","sec_title":"#e9eff7","th_color":"#8cc6ec",
+    "td_color":"#d2dcea","td_border":"rgba(255,255,255,0.055)","th_border":"rgba(255,255,255,0.09)",
+    "member_name":"#f4f7fb","input_bg":"rgba(255,255,255,0.08)","input_border":"rgba(255,255,255,0.14)",
+    "input_color":"#eef3f9","lock_bg":"rgba(255,255,255,0.07)","lock_border":"rgba(255,255,255,0.13)",
+    "lock_title":"#f4f7fb","lock_sub":"#9db0c7","exp_bg":"rgba(255,255,255,0.05)",
+    "exp_border":"rgba(255,255,255,0.10)","exp_color":"#dbe4ef","exp_content":"rgba(255,255,255,0.03)",
+    "gdiv":"rgba(86,200,245,0.18)","foot_color":"#7386a0","foot_border":"rgba(255,255,255,0.07)",
+    "btn_bg":"rgba(37,99,235,0.85)","btn_border":"rgba(96,165,250,0.45)",
+    "btn2_bg":"rgba(255,255,255,0.08)","btn2_color":"#dbe4ef","btn2_border":"rgba(255,255,255,0.14)",
+    "dl_bg":"rgba(255,255,255,0.06)","dl_border":"rgba(86,200,245,0.32)",
+    "log_border":"rgba(255,255,255,0.06)","log_color":"#b7c4d6","log_strong":"#eef3f9","log_time":"#94a5bd",
+    "ring_track":"rgba(255,255,255,0.10)","bar_bg":"rgba(255,255,255,0.12)",
+    "streak_bg":"rgba(239,68,68,0.14)","streak_color":"#fca5a5","streak_border":"rgba(239,68,68,0.3)",
+}
 
-if D:
-    T = {
-        "bg":"linear-gradient(135deg,#080d1a 0%,#0b1525 50%,#080f1c 100%)",
-        "card_bg":"rgba(255,255,255,0.025)","card_border":"rgba(255,255,255,0.06)",
-        "card_shadow":"0 4px 20px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.04)",
-        "chip_bg":"rgba(255,255,255,0.03)","chip_border":"rgba(255,255,255,0.07)",
-        "status_bg":"rgba(255,255,255,0.02)","status_border":"rgba(255,255,255,0.05)",
-        "sync_color":"#7b8ba3","title_color":"#f1f5f9","sub_color":"#8fa3bb",
-        "label_color":"#7dafd6","sec_title":"#e2e8f0","th_color":"#7dafd6",
-        "td_color":"#c3cede","td_border":"rgba(255,255,255,0.03)","th_border":"rgba(255,255,255,0.05)",
-        "member_name":"#e2e8f0","input_bg":"rgba(255,255,255,0.04)","input_border":"rgba(255,255,255,0.08)",
-        "input_color":"#e2e8f0","lock_bg":"rgba(255,255,255,0.04)","lock_border":"rgba(255,255,255,0.08)",
-        "lock_title":"#f1f5f9","lock_sub":"#8fa3bb","exp_bg":"rgba(255,255,255,0.025)",
-        "exp_border":"rgba(255,255,255,0.06)","exp_color":"#cbd5e1","exp_content":"rgba(255,255,255,0.015)",
-        "gdiv":"rgba(56,189,248,0.12)","foot_color":"#5c6b80","foot_border":"rgba(255,255,255,0.03)",
-        "btn_bg":"rgba(29,78,216,0.75)","btn_border":"rgba(59,130,246,0.35)",
-        "btn2_bg":"rgba(255,255,255,0.06)","btn2_color":"#cbd5e1","btn2_border":"rgba(255,255,255,0.07)",
-        "dl_bg":"rgba(255,255,255,0.03)","dl_border":"rgba(56,189,248,0.2)",
-        "log_border":"rgba(255,255,255,0.03)","log_color":"#a8b6c9","log_strong":"#e2e8f0","log_time":"#7b8ba3",
-        "toggle_icon":"☀️","toggle_label":"Light mode","ring_track":"rgba(255,255,255,0.06)",
-        "bar_bg":"rgba(255,255,255,0.06)","week_upcoming_bg":"rgba(255,255,255,0.04)",
-        "streak_bg":"rgba(239,68,68,0.08)","streak_color":"#f87171","streak_border":"rgba(239,68,68,0.2)",
-    }
-else:
-    T = {
-        "bg":"linear-gradient(135deg,#e8edf5 0%,#f0f4fa 50%,#eaeff8 100%)",
-        "card_bg":"rgba(255,255,255,0.75)","card_border":"rgba(0,0,0,0.07)",
-        "card_shadow":"0 4px 20px rgba(0,0,0,0.08),inset 0 1px 0 rgba(255,255,255,0.9)",
-        "chip_bg":"rgba(255,255,255,0.8)","chip_border":"rgba(0,0,0,0.07)",
-        "status_bg":"rgba(255,255,255,0.5)","status_border":"rgba(0,0,0,0.07)",
-        "sync_color":"#64748b","title_color":"#0f172a","sub_color":"#475569",
-        "label_color":"#4f46e5","sec_title":"#0f172a","th_color":"#4f46e5",
-        "td_color":"#1e293b","td_border":"rgba(0,0,0,0.04)","th_border":"rgba(0,0,0,0.06)",
-        "member_name":"#0f172a","input_bg":"rgba(255,255,255,0.8)","input_border":"rgba(0,0,0,0.1)",
-        "input_color":"#0f172a","lock_bg":"rgba(255,255,255,0.8)","lock_border":"rgba(0,0,0,0.08)",
-        "lock_title":"#0f172a","lock_sub":"#94a3b8","exp_bg":"rgba(255,255,255,0.7)",
-        "exp_border":"rgba(0,0,0,0.07)","exp_color":"#334155","exp_content":"rgba(255,255,255,0.6)",
-        "gdiv":"rgba(99,102,241,0.2)","foot_color":"#94a3b8","foot_border":"rgba(0,0,0,0.06)",
-        "btn_bg":"rgba(29,78,216,0.9)","btn_border":"rgba(29,78,216,0.4)",
-        "btn2_bg":"rgba(0,0,0,0.04)","btn2_color":"#334155","btn2_border":"rgba(0,0,0,0.08)",
-        "dl_bg":"rgba(99,102,241,0.06)","dl_border":"rgba(99,102,241,0.3)",
-        "log_border":"rgba(0,0,0,0.05)","log_color":"#334155","log_strong":"#0f172a","log_time":"#64748b",
-        "toggle_icon":"🌙","toggle_label":"Dark mode","ring_track":"rgba(0,0,0,0.08)",
-        "bar_bg":"rgba(0,0,0,0.08)","week_upcoming_bg":"rgba(0,0,0,0.04)",
-        "streak_bg":"rgba(239,68,68,0.06)","streak_color":"#dc2626","streak_border":"rgba(239,68,68,0.15)",
-    }
-
-dl_color     = "#38bdf8" if D else "#6366f1"
-urgent_glow  = "0 0 16px rgba(251,191,36,0.5),0 0 32px rgba(251,191,36,0.2)" if D else "0 0 12px rgba(251,191,36,0.3)"
-ring_text_c  = "#38bdf8" if D else "#4f46e5"
+dl_color     = "#56c8f5"
+urgent_glow  = "0 0 16px rgba(251,191,36,0.45),0 0 32px rgba(251,191,36,0.18)"
+ring_text_c  = "#56c8f5"
 
 st.markdown(f"""
     <style>
@@ -170,11 +143,6 @@ st.markdown(f"""
     .pbar-fill{{height:4px;border-radius:4px;background:linear-gradient(90deg,#34d399,#38bdf8);transition:width 0.4s ease;}}
     .early-eligible{{font-size:10px;color:#34d399;margin-top:3px;font-weight:600;}}
 
-    .week-grid{{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}}
-    .week-pill{{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;}}
-    .week-paid{{background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.25);}}
-    .week-owe{{background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.25);}}
-    .week-upcoming{{background:{T['week_upcoming_bg']};color:{T['td_color']};border:1px solid {T['card_border']};}}
 
     .log-entry{{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid {T['log_border']};}}
     .log-entry:last-child{{border-bottom:none;}}
@@ -615,35 +583,10 @@ for i in range(num_members):
 sync_ago = int((datetime.now()-st.session_state.last_sync).total_seconds()/60)
 sync_txt = "just now" if sync_ago<1 else f"{sync_ago}m ago"
 html(f"""<div class="status-bar"><span><span class="status-dot"></span><span class="status-live">Live</span></span><span class="status-sync">Synced {sync_txt} &nbsp;·&nbsp; rev {st.session_state.rev}</span></div>""")
-rf_col,tg_col = st.columns(2)
+rf_col,_sp = st.columns([1,3])
 with rf_col:
     if st.button("↻ Refresh", key="refresh_btn", type="secondary"):
         reload_state(gsheet, fresh=True); flash("Refreshed from Google Sheets"); st.rerun()
-with tg_col:
-    if st.button(f"{T['toggle_icon']} {T['toggle_label']}", key="theme_toggle", type="secondary"):
-        st.session_state.dark_mode = not st.session_state.dark_mode; st.rerun()
-
-gap_class  = "chip-value-red" if collection_gap>0 else "chip-value-green"
-gap_label  = f"−GHS {fmt_num(collection_gap)}" if collection_gap>0 else "On track"
-prev_snap  = st.session_state.get("snapshots",{}).get(str(current_elapsed_week-1))
-if prev_snap is not None and current_elapsed_week>1:
-    snap_delta = money(total_cash_held-float(prev_snap))
-    d_arrow    = "↑" if snap_delta>=0 else "↓"
-    d_color    = "#34d399" if snap_delta>=0 else "#f87171"
-    delta_html = f'<div class="chip-sub" style="color:{d_color};font-weight:600">{d_arrow} GHS {fmt_num(abs(snap_delta))} vs last week</div>'
-else:
-    delta_html = '<div class="chip-sub">No prior snapshot yet</div>'
-
-# (3) next payout chip names the recipient
-if next_recipient:
-    urgent_cls  = "chip-value-amber" if days_to_payout<=7 else "chip-value"
-    payout_main = f'<div class="{urgent_cls}">{next_recipient}</div>'
-    payout_sub  = f'<div class="chip-sub">{format_date(next_payout_date)} · in {days_to_payout}d · GHS {fmt_num(next_net_pool)}</div>'
-else:
-    payout_main, payout_sub = '<div class="chip-value">—</div>', '<div class="chip-sub">Cycle complete</div>'
-
-# (1) progress lives in the Week chip
-week_bar = f'<div class="pbar-wrap" style="margin-top:7px"><div class="pbar-fill" style="width:{program_pct}%"></div></div><div class="chip-sub">{program_pct}% of cycle</div>'
 
 html(f"""
     <div class="topline">
