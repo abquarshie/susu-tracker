@@ -71,7 +71,7 @@ st.markdown(f"""
     html,body,[class*="css"]{{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;}}
     .main,.stApp{{background:{T['bg']}!important;min-height:100vh;}}
 
-    .status-bar{{background:{T['status_bg']};border-bottom:1px solid {T['status_border']};padding:8px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;font-size:11px;}}
+    .status-bar{{background:{T['status_bg']};border-bottom:1px solid {T['status_border']};padding:8px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;font-size:12px;}}
     .status-dot{{width:6px;height:6px;background:#34d399;border-radius:50%;display:inline-block;margin-right:6px;animation:pulse 2s infinite;}}
     @keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:0.4}}}}
     .status-live{{color:#34d399;font-weight:600;}} .status-sync{{color:{T['sync_color']};}}
@@ -83,106 +83,96 @@ st.markdown(f"""
     .lock-sub{{font-size:13px;color:{T['lock_sub']};margin-bottom:0;}}
 
     .topline{{margin-bottom:12px;}}
-    .topline-title{{font-size:18px;font-weight:700;color:{T['title_color']};letter-spacing:-0.3px;margin:0 0 2px;}}
-    .topline-sub{{font-size:11px;color:{T['sub_color']};margin:0;}}
+    .topline-title{{font-size:24px;font-weight:700;color:{T['title_color']};letter-spacing:-0.3px;margin:0 0 2px;}}
+    .topline-sub{{font-size:13px;color:{T['sub_color']};margin:0;}}
 
     .alert-bar{{background:rgba(251,191,36,0.09);border:1px solid rgba(251,191,36,0.28);border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;}}
-    .alert-title{{font-size:13px;font-weight:700;color:#fbbf24;}}
-    .alert-sub{{font-size:11px;color:{T['td_color']};margin-top:3px;line-height:1.4;}}
-    .alert-cta{{font-size:11px;font-weight:600;color:#fbbf24;white-space:nowrap;opacity:0.85;}}
-    .chip-calc{{display:flex;justify-content:space-between;gap:8px;font-size:10px;color:{T['sub_color']};margin-top:3px;}}
+    .alert-title{{font-size:16px;font-weight:700;color:#fbbf24;}}
+    .alert-sub{{font-size:13px;color:{T['td_color']};margin-top:3px;line-height:1.4;}}
+    .alert-cta{{font-size:13px;font-weight:600;color:#fbbf24;white-space:nowrap;opacity:0.85;}}
+    .chip-calc{{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:{T['sub_color']};margin-top:3px;}}
     .chip-calc span:last-child{{font-variant-numeric:tabular-nums;color:{T['td_color']};}}
-    .cell-sub{{font-size:10px;color:{T['sub_color']};margin-top:2px;}}
+    .cell-sub{{font-size:12px;color:{T['sub_color']};margin-top:2px;}}
 
-    .countdown-banner{{background:rgba(99,102,241,0.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(99,102,241,0.2);border-radius:14px;padding:16px 22px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 0 20px rgba(99,102,241,0.06);}}
-    .countdown-left{{display:flex;flex-direction:column;gap:3px;}}
-    .countdown-label{{font-size:10px;font-weight:600;color:#4f46e5;text-transform:uppercase;letter-spacing:0.8px;}}
-    .countdown-name{{font-size:15px;font-weight:700;color:{T['title_color']};}}
-    .countdown-pool{{font-size:12px;color:{T['sub_color']};}}
-    .countdown-right{{text-align:right;}}
-    .countdown-days{{font-size:32px;font-weight:800;color:#818cf8;line-height:1;}}
-    .countdown-days.urgent{{color:#fbbf24;animation:urgentPulse 1.5s ease-in-out infinite;text-shadow:{urgent_glow};}}
-    @keyframes urgentPulse{{0%,100%{{opacity:1}}50%{{opacity:0.7}}}}
-    .countdown-days-label{{font-size:10px;color:#4f46e5;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}}
-    .days-badge{{display:inline-block;background:rgba(129,140,248,0.12);color:#818cf8;border:1px solid rgba(129,140,248,0.25);border-radius:10px;padding:1px 7px;font-size:10px;font-weight:600;white-space:nowrap;}}
+    .days-badge{{display:inline-block;background:rgba(129,140,248,0.12);color:#818cf8;border:1px solid rgba(129,140,248,0.25);border-radius:10px;padding:2px 8px;font-size:12px;font-weight:600;white-space:nowrap;}}
     .days-badge.urgent{{background:rgba(251,191,36,0.12);color:#fbbf24;border-color:rgba(251,191,36,0.3);}}
 
     .chip-row{{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}}
     .chip{{flex:1;min-width:110px;background:{T['chip_bg']};backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid {T['chip_border']};border-radius:14px;padding:14px 16px;box-shadow:0 2px 12px rgba(0,0,0,0.1),inset 0 1px 0 rgba(255,255,255,0.2);}}
-    .chip-label{{font-size:10px;font-weight:600;color:{T['label_color']};text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px;}}
-    .chip-value{{font-size:16px;font-weight:700;color:#38bdf8;}}
-    .chip-value-green{{font-size:16px;font-weight:700;color:#34d399;}}
-    .chip-value-amber{{font-size:16px;font-weight:700;color:#fbbf24;}}
-    .chip-value-red{{font-size:16px;font-weight:700;color:#f87171;}}
+    .chip-label{{font-size:12px;font-weight:600;color:{T['label_color']};text-transform:uppercase;letter-spacing:0.7px;margin-bottom:6px;}}
+    .chip-value{{font-size:21px;font-weight:700;color:#38bdf8;}}
+    .chip-value-green{{font-size:21px;font-weight:700;color:#34d399;}}
+    .chip-value-amber{{font-size:21px;font-weight:700;color:#fbbf24;}}
+    .chip-value-red{{font-size:21px;font-weight:700;color:#f87171;}}
     @keyframes countUp{{from{{opacity:0;transform:translateY(6px)}}to{{opacity:1;transform:translateY(0)}}}}
     .chip-value,.chip-value-green,.chip-value-amber,.chip-value-red{{animation:countUp 0.6s ease-out;}}
-    .chip-sub{{font-size:10px;color:{T['sub_color']};margin-top:3px;}}
+    .chip-sub{{font-size:12px;color:{T['sub_color']};margin-top:3px;}}
 
     .glass-card{{background:{T['card_bg']};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid {T['card_border']};border-radius:16px;padding:20px 22px;margin-bottom:14px;box-shadow:{T['card_shadow']};}}
-    .sec-label{{font-size:10px;font-weight:700;color:{T['label_color']};text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}}
-    .sec-title{{font-size:15px;font-weight:700;color:{T['sec_title']};margin:0 0 2px 0;}}
-    .sec-sub{{font-size:11px;color:{T['sub_color']};margin:0 0 14px 0;}}
+    .sec-label{{font-size:11px;font-weight:700;color:{T['label_color']};text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}}
+    .sec-title{{font-size:18px;font-weight:700;color:{T['sec_title']};margin:0 0 2px 0;}}
+    .sec-sub{{font-size:13px;color:{T['sub_color']};margin:0 0 14px 0;}}
 
     .data-table{{width:100%;border-collapse:collapse;}}
-    .data-table th{{font-size:10px;font-weight:600;color:{T['th_color']};text-transform:uppercase;letter-spacing:0.6px;padding:8px 12px;border-bottom:1px solid {T['th_border']};text-align:left;}}
-    .data-table td{{font-size:13px;color:{T['td_color']};padding:10px 12px;border-bottom:1px solid {T['td_border']};vertical-align:middle;}}
+    .data-table th{{font-size:12px;font-weight:600;color:{T['th_color']};text-transform:uppercase;letter-spacing:0.6px;padding:8px 12px;border-bottom:1px solid {T['th_border']};text-align:left;}}
+    .data-table td{{font-size:15px;color:{T['td_color']};padding:10px 12px;border-bottom:1px solid {T['td_border']};vertical-align:middle;}}
     .data-table tr:last-child td{{border-bottom:none;}}
     .data-table tr.owing td:first-child{{border-left:2px solid #fbbf24;padding-left:10px;}}
     .data-table tr.ok td:first-child{{border-left:2px solid #34d399;padding-left:10px;}}
     .data-table tr.plain td:first-child{{border-left:2px solid transparent;padding-left:10px;}}
     .cell-name{{font-weight:600;color:{T['member_name']};}}
-    .badge-ok{{background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.25);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;white-space:nowrap;}}
-    .badge-owe{{background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.25);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;white-space:nowrap;}}
-    .badge-pending{{background:rgba(148,163,184,0.1);color:#64748b;border:1px solid rgba(148,163,184,0.2);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;white-space:nowrap;}}
-    .streak-badge{{background:{T['streak_bg']};color:{T['streak_color']};border:1px solid {T['streak_border']};border-radius:20px;padding:2px 8px;font-size:10px;font-weight:600;white-space:nowrap;margin-left:6px;}}
+    .badge-ok{{background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.25);border-radius:20px;padding:2px 10px;font-size:13px;font-weight:600;white-space:nowrap;}}
+    .badge-owe{{background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.25);border-radius:20px;padding:2px 10px;font-size:13px;font-weight:600;white-space:nowrap;}}
+    .badge-pending{{background:rgba(148,163,184,0.1);color:#64748b;border:1px solid rgba(148,163,184,0.2);border-radius:20px;padding:2px 10px;font-size:13px;font-weight:600;white-space:nowrap;}}
+    .streak-badge{{background:{T['streak_bg']};color:{T['streak_color']};border:1px solid {T['streak_border']};border-radius:20px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap;margin-left:6px;}}
 
-    .badge-exempt{{background:rgba(148,163,184,0.1);color:{T['sub_color']};border:1px dashed {T['card_border']};border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600;white-space:nowrap;}}
-    .exit-tag{{font-size:10px;color:{T['sub_color']};font-weight:600;margin-left:6px;text-transform:uppercase;letter-spacing:0.4px;}}
-    .diff-line{{font-size:11px;color:{T['td_color']};font-family:ui-monospace,Menlo,monospace;}}
+    .badge-exempt{{background:rgba(148,163,184,0.1);color:{T['sub_color']};border:1px dashed {T['card_border']};border-radius:20px;padding:2px 10px;font-size:13px;font-weight:600;white-space:nowrap;}}
+    .exit-tag{{font-size:11px;color:{T['sub_color']};font-weight:600;margin-left:6px;text-transform:uppercase;letter-spacing:0.4px;}}
+    .diff-line{{font-size:12px;color:{T['td_color']};font-family:ui-monospace,Menlo,monospace;}}
     .pbar-wrap{{margin-top:6px;background:{T['bar_bg']};border-radius:4px;height:4px;overflow:hidden;}}
     .pbar-fill{{height:4px;border-radius:4px;background:linear-gradient(90deg,#34d399,#38bdf8);transition:width 0.4s ease;}}
-    .early-eligible{{font-size:10px;color:#34d399;margin-top:3px;font-weight:600;}}
+    .early-eligible{{font-size:12px;color:#34d399;margin-top:3px;font-weight:600;}}
 
 
     .log-entry{{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid {T['log_border']};}}
     .log-entry:last-child{{border-bottom:none;}}
     .log-dot{{width:8px;height:8px;border-radius:50%;background:#38bdf8;margin-top:4px;flex-shrink:0;}}
     .log-dot-payout{{background:#818cf8;}} .log-dot-setting{{background:#34d399;}}
-    .log-text{{font-size:12px;color:{T['log_color']};line-height:1.4;}}
+    .log-text{{font-size:14px;color:{T['log_color']};line-height:1.4;}}
     .log-text strong{{color:{T['log_strong']};font-weight:600;}}
-    .log-time{{font-size:11px;color:{T['log_time']};margin-left:auto;white-space:nowrap;padding-left:12px;}}
+    .log-time{{font-size:12px;color:{T['log_time']};margin-left:auto;white-space:nowrap;padding-left:12px;}}
 
-    .stTextInput input,.stNumberInput input,.stTextArea textarea{{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;color:{T['input_color']}!important;border-radius:10px!important;font-size:13px!important;}}
+    .stTextInput input,.stNumberInput input,.stTextArea textarea{{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;color:{T['input_color']}!important;border-radius:10px!important;font-size:15px!important;}}
     .stTextInput input:focus,.stNumberInput input:focus{{border-color:rgba(56,189,248,0.4)!important;box-shadow:0 0 0 2px rgba(56,189,248,0.08)!important;}}
-    .stTextInput label,.stNumberInput label,.stTextArea label,.stSelectbox label,.stCheckbox label{{color:{T['label_color']}!important;font-size:11px!important;font-weight:600!important;text-transform:uppercase;letter-spacing:0.5px;}}
+    .stTextInput label,.stNumberInput label,.stTextArea label,.stSelectbox label,.stCheckbox label{{color:{T['label_color']}!important;font-size:12px!important;font-weight:600!important;text-transform:uppercase;letter-spacing:0.5px;}}
     .stSelectbox > div > div{{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;color:{T['input_color']}!important;border-radius:10px!important;}}
     div[data-testid="stButton"]{{width:100%!important;}}
-    .stButton > button{{background:{T['btn_bg']}!important;backdrop-filter:blur(8px)!important;color:white!important;border:1px solid {T['btn_border']}!important;border-radius:10px!important;font-weight:600!important;font-size:13px!important;padding:9px 20px!important;width:100%;box-shadow:0 2px 8px rgba(29,78,216,0.25)!important;transition:all 0.2s!important;}}
+    .stButton > button{{background:{T['btn_bg']}!important;backdrop-filter:blur(8px)!important;color:white!important;border:1px solid {T['btn_border']}!important;border-radius:10px!important;font-weight:600!important;font-size:15px!important;padding:10px 20px!important;width:100%;box-shadow:0 2px 8px rgba(29,78,216,0.25)!important;transition:all 0.2s!important;}}
     .stButton > button:hover{{background:rgba(37,99,235,0.95)!important;box-shadow:0 4px 16px rgba(29,78,216,0.4)!important;}}
     .stButton > button[kind="secondary"]{{background:{T['btn2_bg']}!important;color:{T['btn2_color']}!important;border:1px solid {T['btn2_border']}!important;box-shadow:none!important;}}
     div[data-testid="stDownloadButton"],.stDownloadButton{{width:100%!important;}}
-    div[data-testid="stDownloadButton"] > button,.stDownloadButton > button{{background:{T['dl_bg']}!important;backdrop-filter:blur(8px)!important;color:{dl_color}!important;border:1px solid {T['dl_border']}!important;border-radius:10px!important;font-size:13px!important;font-weight:600!important;padding:9px 20px!important;width:100%!important;transition:all 0.2s!important;}}
+    div[data-testid="stDownloadButton"] > button,.stDownloadButton > button{{background:{T['dl_bg']}!important;backdrop-filter:blur(8px)!important;color:{dl_color}!important;border:1px solid {T['dl_border']}!important;border-radius:10px!important;font-size:15px!important;font-weight:600!important;padding:10px 20px!important;width:100%!important;transition:all 0.2s!important;}}
     /* Expanders (current Streamlit DOM) */
     details[data-testid="stExpander"]{{background:{T['exp_bg']}!important;backdrop-filter:blur(12px)!important;border:1px solid {T['exp_border']}!important;border-radius:12px!important;margin-bottom:8px!important;overflow:hidden;}}
     details[data-testid="stExpander"] summary{{background:transparent!important;padding:12px 16px!important;}}
-    details[data-testid="stExpander"] summary,details[data-testid="stExpander"] summary *{{color:{T['sec_title']}!important;font-size:13px!important;font-weight:600!important;}}
+    details[data-testid="stExpander"] summary,details[data-testid="stExpander"] summary *{{color:{T['sec_title']}!important;font-size:15px!important;font-weight:600!important;}}
     details[data-testid="stExpander"] summary:hover{{color:{dl_color}!important;}}
     details[data-testid="stExpander"] summary svg{{fill:{T['sec_title']}!important;color:{T['sec_title']}!important;}}
     details[data-testid="stExpander"] > div:not(summary){{background:{T['exp_content']}!important;border-top:1px solid {T['exp_border']}!important;padding:18px!important;}}
     details[data-testid="stExpander"] p,details[data-testid="stExpander"] label,details[data-testid="stExpander"] .stCheckbox span{{color:{T['td_color']};}}
     .streamlit-expanderHeader{{background:{T['exp_bg']}!important;color:{T['sec_title']}!important;font-size:13px!important;font-weight:600!important;border-radius:12px!important;}}
-    div[data-testid="stSuccess"]{{background:rgba(16,185,129,0.07)!important;border:1px solid rgba(16,185,129,0.2)!important;border-radius:10px!important;color:#34d399!important;font-size:13px!important;}}
-    div[data-testid="stError"]{{background:rgba(239,68,68,0.07)!important;border:1px solid rgba(239,68,68,0.2)!important;border-radius:10px!important;color:#f87171!important;font-size:13px!important;}}
-    div[data-testid="stWarning"]{{background:rgba(251,191,36,0.07)!important;border:1px solid rgba(251,191,36,0.2)!important;border-radius:10px!important;color:#fbbf24!important;font-size:13px!important;}}
+    div[data-testid="stSuccess"]{{background:rgba(16,185,129,0.07)!important;border:1px solid rgba(16,185,129,0.2)!important;border-radius:10px!important;color:#34d399!important;font-size:14px!important;}}
+    div[data-testid="stError"]{{background:rgba(239,68,68,0.07)!important;border:1px solid rgba(239,68,68,0.2)!important;border-radius:10px!important;color:#f87171!important;font-size:14px!important;}}
+    div[data-testid="stWarning"]{{background:rgba(251,191,36,0.07)!important;border:1px solid rgba(251,191,36,0.2)!important;border-radius:10px!important;color:#fbbf24!important;font-size:14px!important;}}
     .stTabs [data-baseweb="tab-list"]{{gap:6px;background:transparent;}}
     .stTabs [data-baseweb="tab"]{{background:{T['btn2_bg']};border:1px solid {T['btn2_border']};border-radius:10px;padding:6px 14px;color:{T['btn2_color']};font-size:12px;font-weight:600;}}
     .stTabs [aria-selected="true"]{{background:{T['dl_bg']}!important;color:{dl_color}!important;border-color:{T['dl_border']}!important;}}
     .stTabs [data-baseweb="tab-highlight"],.stTabs [data-baseweb="tab-border"]{{display:none;}}
-    div[data-testid="stCode"] pre,div[data-testid="stCodeBlock"] pre{{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;border-radius:12px!important;font-size:12px!important;line-height:1.5!important;}}
+    div[data-testid="stCode"] pre,div[data-testid="stCodeBlock"] pre{{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;border-radius:12px!important;font-size:14px!important;line-height:1.55!important;}}
     div[data-testid="stCode"] code,div[data-testid="stCodeBlock"] code{{color:{T['td_color']}!important;white-space:pre-wrap!important;}}
-    .copy-hint{{font-size:11px;color:{T['sub_color']};margin:-6px 0 8px;}}
+    .copy-hint{{font-size:13px;color:{T['sub_color']};margin:-6px 0 8px;}}
     .gdivider{{height:1px;background:linear-gradient(90deg,transparent,{T['gdiv']},transparent);margin:22px 0;}}
-    .foot{{text-align:center;font-size:11px;color:{T['foot_color']};margin-top:32px;padding-top:20px;border-top:1px solid {T['foot_border']};}}
+    .foot{{text-align:center;font-size:12px;color:{T['foot_color']};margin-top:32px;padding-top:20px;border-top:1px solid {T['foot_border']};}}
     @media (max-width:600px){{
         .block-container{{padding-bottom:3rem!important;padding-left:10px!important;padding-right:10px!important;}}
         /* header row: keep Refresh + theme side by side instead of stacking */
@@ -190,18 +180,18 @@ st.markdown(f"""
         .block-container div[data-testid="stHorizontalBlock"]:first-of-type div[data-testid="stColumn"]{{min-width:0!important;flex:1 1 0!important;}}
         .block-container div[data-testid="stHorizontalBlock"]:first-of-type button{{padding:7px 8px!important;font-size:12px!important;white-space:nowrap;}}
         .status-bar{{margin-bottom:10px!important;padding:6px 0!important;}}
-        .topline-title{{font-size:16px!important;}} .topline-sub{{font-size:10px!important;line-height:1.4;}}
+        .topline-title{{font-size:20px!important;}} .topline-sub{{font-size:12px!important;line-height:1.4;}}
         .alert-bar{{flex-direction:column;align-items:flex-start!important;padding:10px 12px!important;}}
         .alert-cta{{display:none;}}
         .chip-row{{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;}}
         .chip{{min-width:0!important;padding:10px 12px!important;}}
         .chip-row .chip:last-child:nth-child(odd){{grid-column:1 / -1;}}
-        .chip-value,.chip-value-green,.chip-value-amber,.chip-value-red{{font-size:15px!important;}}
+        .chip-value,.chip-value-green,.chip-value-amber,.chip-value-red{{font-size:18px!important;}}
         .glass-card{{padding:14px 12px!important;border-radius:12px!important;}}
-        .sec-title{{font-size:14px!important;}}
-        .sec-sub{{font-size:11px!important;line-height:1.35;}}
+        .sec-title{{font-size:16px!important;}}
+        .sec-sub{{font-size:12px!important;line-height:1.35;}}
         .data-table{{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}}
-        .data-table th,.data-table td{{padding:8px 9px!important;font-size:11px!important;}}
+        .data-table th,.data-table td{{padding:9px 10px!important;font-size:13px!important;}}
         /* trim low-value columns so the important ones fit without scrolling */
         .tbl-contrib th:nth-child(2),.tbl-contrib td:nth-child(2){{display:none;}}
         .tbl-payout.has-fee th:nth-child(4),.tbl-payout.has-fee td:nth-child(4),
@@ -211,15 +201,15 @@ st.markdown(f"""
     }}
     /* tablets and small laptops — the phone sizes read far too small here */
     @media (min-width:601px) and (max-width:1280px){{
-        .topline-title{{font-size:22px;}} .topline-sub{{font-size:13px;}}
+        .topline-title{{font-size:26px;}} .topline-sub{{font-size:14px;}}
         .chip{{padding:16px 18px;}}
-        .chip-label{{font-size:11px;}} .chip-sub,.chip-calc{{font-size:11px;}}
-        .chip-value,.chip-value-green,.chip-value-amber,.chip-value-red{{font-size:20px;}}
+        .chip-label{{font-size:12px;}} .chip-sub,.chip-calc{{font-size:13px;}}
+        .chip-value,.chip-value-green,.chip-value-amber,.chip-value-red{{font-size:23px;}}
         .glass-card{{padding:22px 24px;}}
-        .sec-title{{font-size:17px;}} .sec-sub{{font-size:12px;}} .sec-label{{font-size:11px;}}
-        .data-table th{{font-size:11px;padding:10px 14px;}}
-        .data-table td{{font-size:14px;padding:12px 14px;}}
-        .alert-title{{font-size:15px;}} .alert-sub{{font-size:12px;}}
+        .sec-title{{font-size:19px;}} .sec-sub{{font-size:14px;}} .sec-label{{font-size:12px;}}
+        .data-table th{{font-size:12px;padding:11px 15px;}}
+        .data-table td{{font-size:16px;padding:13px 15px;}}
+        .alert-title{{font-size:17px;}} .alert-sub{{font-size:14px;}}
         .badge-ok,.badge-owe,.badge-pending,.badge-exempt{{font-size:12px;padding:3px 12px;}}
         div[data-testid="stCode"] pre,div[data-testid="stCodeBlock"] pre{{font-size:13px!important;}}
         details[data-testid="stExpander"] summary,details[data-testid="stExpander"] summary *{{font-size:14px!important;}}
@@ -232,7 +222,7 @@ st.markdown(f"""
         .topline{{margin-bottom:10px;}}
         .data-table td{{padding:9px 14px;}}
     }}
-    .swipe-hint{{display:none;font-size:10px;color:{T['sub_color']};margin:6px 0 0;}}
+    .swipe-hint{{display:none;font-size:12px;color:{T['sub_color']};margin:6px 0 0;}}
     </style>
 """, unsafe_allow_html=True)
 
@@ -706,7 +696,7 @@ for r in schedule_rows:
     bar_pct = min(r['pct'],100)
     if r['disbursed']:
         status_badge = '<span class="badge-ok">✅ Fully collected</span>'
-        if r['disb_date']: status_badge += f'<div style="font-size:10px;color:{T["sub_color"]};margin-top:3px">{r["disb_date"]}</div>'
+        if r['disb_date']: status_badge += f'<div style="font-size:13px;color:{T["sub_color"]};margin-top:3px">{r["disb_date"]}</div>'
     elif r['collected_v'] > 0:
         status_badge = f'<span class="badge-owe">◐ Part collected</span>'
     else:
@@ -715,7 +705,7 @@ for r in schedule_rows:
         urg = "urgent" if r['days_away']<=7 else ""
         days_cell = f'<div style="margin-top:4px"><span class="days-badge {urg}">{r["days_away"]}d away</span></div>'
     else:
-        days_cell = f'<div style="margin-top:4px;font-size:10px;color:{T["sub_color"]}">Past</div>'
+        days_cell = f'<div style="margin-top:4px;font-size:12px;color:{T["sub_color"]}">Past</div>'
     early_note = '<div class="early-eligible">⚡ Fully funded — ready to pay out</div>' if r['early_ok'] else ""
     exit_tag   = '<span class="exit-tag">exited</span>' if r['exited'] else ""
     pay_rows_html += (f'<tr class="plain">'
@@ -819,7 +809,7 @@ with st.expander("⚙️  Group Settings"):
     with c2: new_base  = st.number_input("Base Monthly (GHS)", value=float(st.session_state.base_monthly), step=50.0)
     with c3: new_fee   = st.number_input("Admin Fee (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
     new_names = st.text_area("Members (comma-separated)", value=st.session_state.names_input)
-    html(f'<p style="font-size:11px;color:{T["sub_color"]}">Payment records are kept when you add or reorder members. To remove someone mid-cycle use Member Status below — deleting the name here shifts every payout date.</p>')
+    html(f'<p style="font-size:13px;color:{T["sub_color"]}">Payment records are kept when you add or reorder members. To remove someone mid-cycle use Member Status below — deleting the name here shifts every payout date.</p>')
     if st.button("Save Settings", key="save_settings"):
         try: datetime.strptime(new_start,"%Y-%m-%d")
         except ValueError: st.error("Date format must be YYYY-MM-DD."); st.stop()
@@ -851,7 +841,7 @@ with st.expander("💰  Custom Member Tiers"):
         st.rerun()
 
 with st.expander("👤  Member Status"):
-    html(f'<p style="font-size:12px;color:{T["sub_color"]};margin-bottom:8px">Mark a member as exited instead of deleting them. Their history and rotation slot stay intact; they simply stop owing from the exit week onward.</p>')
+    html(f'<p style="font-size:13px;color:{T["sub_color"]};margin-bottom:8px">Mark a member as exited instead of deleting them. Their history and rotation slot stay intact; they simply stop owing from the exit week onward.</p>')
     ms1,ms2,ms3 = st.columns([2,1,1])
     with ms1: sm = st.selectbox("Member", members, key="status_member", label_visibility="collapsed")
     with ms2: new_status = st.selectbox("Status", ["active","exited"], index=0 if not exited(sm) else 1, key="status_val", label_visibility="collapsed")
@@ -874,17 +864,17 @@ with st.expander("📝  Bulk Payment Entry"):
     if not week_range:
         st.info("The cycle has not started yet.")
     else:
-        html(f'<p style="font-size:12px;color:{T["sub_color"]};margin-bottom:4px">Current week: <strong style="color:{T["sec_title"]}">Week {current_elapsed_week}</strong> of {total_weeks}{" · showing this week only" if not show_all else ""}.</p>')
+        html(f'<p style="font-size:13px;color:{T["sub_color"]};margin-bottom:4px">Current week: <strong style="color:{T["sec_title"]}">Week {current_elapsed_week}</strong> of {total_weeks}{" · showing this week only" if not show_all else ""}.</p>')
         entered = {}
         if show_all:
             for member in members:
-                html(f'<div style="font-size:12px;font-weight:600;color:{T["td_color"]};margin:10px 0 6px">{member}{" (exited)" if exited(member) else ""}</div>')
+                html(f'<div style="font-size:14px;font-weight:600;color:{T["td_color"]};margin:10px 0 6px">{member}{" (exited)" if exited(member) else ""}</div>')
                 cols = st.columns(8)
                 vals = {}
                 for w in week_range:
                     with cols[(w-1)%8]:
                         if not liable(member,w) and not paid(member,w):
-                            html(f'<div style="font-size:11px;color:{T["sub_color"]};padding:6px 0">W{w} —</div>'); continue
+                            html(f'<div style="font-size:13px;color:{T["sub_color"]};padding:6px 0">W{w} —</div>'); continue
                         label = f"W{w}*" if w==current_elapsed_week else f"W{w}"
                         vals[str(w)] = st.checkbox(label, value=paid(member,w), key=f"bulk_{member}_{w}")
                 entered[member] = vals
@@ -894,7 +884,7 @@ with st.expander("📝  Bulk Payment Entry"):
             for idx,member in enumerate(members):
                 with cols[idx%2]:
                     if not liable(member,w) and not paid(member,w):
-                        html(f'<div style="font-size:12px;color:{T["sub_color"]};padding:8px 0">{member} — exempt</div>'); entered[member]={}; continue
+                        html(f'<div style="font-size:13px;color:{T["sub_color"]};padding:8px 0">{member} — exempt</div>'); entered[member]={}; continue
                     entered[member] = {str(w): st.checkbox(f"{member} · GHS {fmt_num(weekly(member))}", value=paid(member,w), key=f"wk_{member}_{w}")}
 
         if st.button("Save Payments", key="bulk_save"):
@@ -933,7 +923,7 @@ with st.expander("🎁  Record Payout"):
     sel_month_lbl = st.selectbox("Payout Turn", month_options, key="payout_month")
     sr        = schedule_rows[month_options.index(sel_month_lbl)]
     mkey      = sr["turn"]; rec_name = sr["recipient"]
-    html(f"""<div style="font-size:12px;color:{T['td_color']};line-height:1.7;margin-bottom:8px">
+    html(f"""<div style="font-size:14px;color:{T['td_color']};line-height:1.7;margin-bottom:8px">
         Net pool due to {rec_name}: <strong style="color:{T['sec_title']}">GHS {sr['pool']}</strong> &nbsp;·&nbsp;
         Collected so far: <strong style="color:{T['sec_title']}">GHS {sr['collected']}</strong> &nbsp;·&nbsp;
         Still owed: <strong style="color:{T['sec_title']}">GHS {sr['remaining']}</strong><br>
@@ -995,7 +985,7 @@ with st.expander("🎁  Record Payout"):
                 st.session_state.confirm_payout=False; st.rerun()
 
 with st.expander("🔑  Change Passcode"):
-    html(f'<p style="font-size:12px;color:{T["sub_color"]};margin-bottom:8px">Enter the current passcode to confirm, then set a new one. Passcodes are stored hashed.</p>')
+    html(f'<p style="font-size:13px;color:{T["sub_color"]};margin-bottom:8px">Enter the current passcode to confirm, then set a new one. Passcodes are stored hashed.</p>')
     cp1,cp2,cp3 = st.columns(3)
     with cp1: old_pw  = st.text_input("Current Passcode", type="password", key="old_pw")
     with cp2: new_pw1 = st.text_input("New Passcode", type="password", key="new_pw1")
@@ -1024,7 +1014,7 @@ if st.session_state.history:
             if len(detail)>12: det_html += f'<div class="diff-line">• …and {len(detail)-12} more</div>'
             log_html += (f'<div class="log-entry"><div class="{dot_class}"></div>'
                          f'<div class="log-text"><strong>{entry.get("text","—")}</strong>'
-                         f'{f"<div style=\"font-size:11px\">by {who}</div>" if who else ""}{det_html}</div>'
+                         f'{f"<div style=\"font-size:12px\">by {who}</div>" if who else ""}{det_html}</div>'
                          f'<div class="log-time">{entry.get("time","")}</div></div>')
         html(log_html)
 
