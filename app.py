@@ -94,7 +94,7 @@ st.markdown(f"""
     section[data-testid="stSidebar"]{{display:none!important;width:0!important;}}
     [data-testid="collapsedControl"]{{display:none!important;width:0!important;}}
     [data-testid="stSidebarNav"]{{display:none!important;}} button[kind="header"]{{display:none!important;}}
-    .block-container{{padding-top:0!important;padding-bottom:3rem!important;max-width:820px!important;}}
+    .block-container{{padding-top:0!important;padding-bottom:3rem!important;max-width:min(1180px,96vw)!important;padding-left:clamp(12px,2vw,40px)!important;padding-right:clamp(12px,2vw,40px)!important;}}
     html,body,[class*="css"]{{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;}}
     .main,.stApp{{background:{T['bg']}!important;min-height:100vh;}}
 
@@ -239,6 +239,29 @@ st.markdown(f"""
         .tbl-payout.has-fee th:nth-child(6),.tbl-payout.has-fee td:nth-child(6),
         .tbl-payout.no-fee th:nth-child(5),.tbl-payout.no-fee td:nth-child(5){{display:none;}}
         .swipe-hint{{display:block!important;}}
+    }}
+    /* tablets and small laptops — the phone sizes read far too small here */
+    @media (min-width:601px) and (max-width:1280px){{
+        .topline-title{{font-size:22px;}} .topline-sub{{font-size:13px;}}
+        .chip{{padding:16px 18px;}}
+        .chip-label{{font-size:11px;}} .chip-sub,.chip-calc{{font-size:11px;}}
+        .chip-value,.chip-value-green,.chip-value-amber,.chip-value-red{{font-size:20px;}}
+        .glass-card{{padding:22px 24px;}}
+        .sec-title{{font-size:17px;}} .sec-sub{{font-size:12px;}} .sec-label{{font-size:11px;}}
+        .data-table th{{font-size:11px;padding:10px 14px;}}
+        .data-table td{{font-size:14px;padding:12px 14px;}}
+        .alert-title{{font-size:15px;}} .alert-sub{{font-size:12px;}}
+        .badge-ok,.badge-owe,.badge-pending,.badge-exempt{{font-size:12px;padding:3px 12px;}}
+        div[data-testid="stCode"] pre,div[data-testid="stCodeBlock"] pre{{font-size:13px!important;}}
+        details[data-testid="stExpander"] summary,details[data-testid="stExpander"] summary *{{font-size:14px!important;}}
+        .stButton > button,.stDownloadButton > button{{font-size:14px!important;padding:10px 22px!important;}}
+    }}
+    /* landscape tablets: reclaim vertical space */
+    @media (min-width:601px) and (max-height:820px) and (orientation:landscape){{
+        .glass-card{{padding:16px 20px;margin-bottom:12px;}}
+        .chip{{padding:12px 16px;}}
+        .topline{{margin-bottom:10px;}}
+        .data-table td{{padding:9px 14px;}}
     }}
     .swipe-hint{{display:none;font-size:10px;color:{T['sub_color']};margin:6px 0 0;}}
     </style>
