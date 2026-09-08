@@ -588,6 +588,28 @@ with rf_col:
     if st.button("↻ Refresh", key="refresh_btn", type="secondary"):
         reload_state(gsheet, fresh=True); flash("Refreshed from Google Sheets"); st.rerun()
 
+gap_class  = "chip-value-red" if collection_gap>0 else "chip-value-green"
+gap_label  = f"−GHS {fmt_num(collection_gap)}" if collection_gap>0 else "On track"
+prev_snap  = st.session_state.get("snapshots",{}).get(str(current_elapsed_week-1))
+if prev_snap is not None and current_elapsed_week>1:
+    snap_delta = money(total_cash_held-float(prev_snap))
+    d_arrow    = "\u2191" if snap_delta>=0 else "\u2193"
+    d_color    = "#34d399" if snap_delta>=0 else "#f87171"
+    delta_html = f'<div class="chip-sub" style="color:{d_color};font-weight:600">{d_arrow} GHS {fmt_num(abs(snap_delta))} vs last week</div>'
+else:
+    delta_html = '<div class="chip-sub">No prior snapshot yet</div>'
+
+# next payout chip names the recipient
+if next_recipient:
+    urgent_cls  = "chip-value-amber" if days_to_payout<=7 else "chip-value"
+    payout_main = f'<div class="{urgent_cls}">{next_recipient}</div>'
+    payout_sub  = f'<div class="chip-sub">{format_date(next_payout_date)} \u00b7 in {days_to_payout}d \u00b7 GHS {fmt_num(next_net_pool)}</div>'
+else:
+    payout_main, payout_sub = '<div class="chip-value">\u2014</div>', '<div class="chip-sub">Cycle complete</div>'
+
+# cycle progress lives inside the Week chip
+week_bar = f'<div class="pbar-wrap" style="margin-top:7px"><div class="pbar-fill" style="width:{program_pct}%"></div></div><div class="chip-sub">{program_pct}% of cycle</div>'
+
 html(f"""
     <div class="topline">
         <div class="topline-title">💸 Susu Savings</div>
