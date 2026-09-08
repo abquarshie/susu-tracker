@@ -195,6 +195,7 @@ st.markdown(f"""
         .alert-cta{{display:none;}}
         .chip-row{{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;}}
         .chip{{min-width:0!important;padding:10px 12px!important;}}
+        .chip-row .chip:last-child:nth-child(odd){{grid-column:1 / -1;}}
         .chip-value,.chip-value-green,.chip-value-amber,.chip-value-red{{font-size:15px!important;}}
         .glass-card{{padding:14px 12px!important;border-radius:12px!important;}}
         .sec-title{{font-size:14px!important;}}
@@ -504,7 +505,13 @@ def collected_amount(month_lbl):
 total_payouts_dist    = money(sum(collected_amount(f"Month {i+1}") for i in range(num_members)))
 total_cash_held       = money(total_cash_collected - total_payouts_dist)
 total_expected_so_far = money(sum(weekly(m)*sum(1 for w in range(1,current_elapsed_week+1) if liable(m,w)) for m in members))
-collection_gap        = money(total_expected_so_far - total_cash_collected)
+# money due-but-unpaid up to this week — matches the owing banner exactly
+collection_gap        = money(sum(weekly(m) for m in members
+                                  for w in range(1,current_elapsed_week+1)
+                                  if liable(m,w) and not paid(m,w)))
+# weeks ticked beyond the current week — cash in hand, but not yet "due"
+paid_ahead            = money(sum(weekly(m) for m in members
+                                  for w in range(current_elapsed_week+1,total_weeks+1) if paid(m,w)))
 
 next_recipient,next_payout_date,next_net_pool,days_to_payout = None,None,0,0
 cur_d = start_dt
@@ -590,6 +597,25 @@ with rf_col:
 
 gap_class  = "chip-value-red" if collection_gap>0 else "chip-value-green"
 gap_label  = f"−GHS {fmt_num(collection_gap)}" if collection_gap>0 else "On track"
+
+# fourth chip: funding progress on the turn that pays out next
+next_turn = next((r for r in schedule_rows if not r["disbursed"]), None)
+if next_turn:
+    funded_pct  = int(min(next_turn["funded"]/next_turn["net_pool_amt"],1)*100) if next_turn["net_pool_amt"] else 0
+    fund_class  = "chip-value-green" if funded_pct>=100 else "chip-value"
+    fund_main   = f'<div class="{fund_class}">{funded_pct}% funded</div>'
+    fund_sub    = (f'<div class="chip-calc"><span>{next_turn["turn"].replace("Month","Turn")} pool</span>'
+                   f'<span>{next_turn["funded_s"]} / {next_turn["pool"]}</span></div>'
+                   f'<div class="pbar-wrap" style="margin-top:5px"><div class="pbar-fill" style="width:{min(funded_pct,100)}%"></div></div>')
+else:
+    fund_main, fund_sub = '<div class="chip-value-green">All paid out</div>', '<div class="chip-sub">Cycle complete</div>'
+
+# (2) don't show a negative zero before any payout has been taken
+payouts_line = (f'<div class="chip-calc"><span>Payouts collected</span><span>−{fmt_num(total_payouts_dist)}</span></div>'
+                if total_payouts_dist>0 else
+                '<div class="chip-calc"><span>Payouts collected</span><span>None yet</span></div>')
+ahead_line   = (f'<div class="chip-sub" style="color:#34d399">+GHS {fmt_num(paid_ahead)} paid ahead</div>'
+                if paid_ahead>0 else "")
 prev_snap  = st.session_state.get("snapshots",{}).get(str(current_elapsed_week-1))
 if prev_snap is not None and current_elapsed_week>1:
     snap_delta = money(total_cash_held-float(prev_snap))
@@ -621,11 +647,12 @@ html(f"""
     <div class="chip-row">
         <div class="chip"><div class="chip-label">Cash Held</div><div class="chip-value">GHS {fmt_num(total_cash_held)}</div>
             <div class="chip-calc"><span>Contributions in</span><span>{fmt_num(total_cash_collected)}</span></div>
-            <div class="chip-calc"><span>Payouts collected</span><span>−{fmt_num(total_payouts_dist)}</span></div>
+            {payouts_line}
             {delta_html}</div>
         <div class="chip"><div class="chip-label">Week</div><div class="chip-value">{current_elapsed_week} / {total_weeks}</div>{week_bar}</div>
         <div class="chip"><div class="chip-label">Next Payout</div>{payout_main}{payout_sub}</div>
-        <div class="chip"><div class="chip-label">Collection</div><div class="{gap_class}">{gap_label}</div><div class="chip-sub">Expected GHS {fmt_num(total_expected_so_far)}</div></div>
+        <div class="chip"><div class="chip-label">Due this week</div><div class="{gap_class}">{gap_label}</div><div class="chip-calc"><span>Expected to date</span><span>{fmt_num(total_expected_so_far)}</span></div>{ahead_line}</div>
+        <div class="chip"><div class="chip-label">Next Pool</div>{fund_main}{fund_sub}</div>
     </div>
 """)
 
@@ -640,6 +667,11 @@ if owing_now:
         <div class="alert-sub">{who_owes}</div></div>
         <div class="alert-cta">Send the Reminder ↓</div></div>""")
 
+def ahead_cell(r):
+    """Only worth a second line when the member has paid beyond this week."""
+    n = r["total_paid"] - r["paid_due"]
+    return f'<div class="cell-sub" style="color:#34d399">+{n} wk ahead</div>' if n>0 else ""
+
 rows_html = ""
 for r in contrib_rows:
     is_owing  = r["owing"]>0
@@ -652,7 +684,7 @@ for r in contrib_rows:
     rows_html += (f'<tr class="{row_class}">'
                   f'<td><span class="cell-name">{r["member"]}</span>{exit_tag}</td>'
                   f'<td>GHS {fmt_num(r["m_monthly"])}</td><td>GHS {fmt_num(r["m_weekly"])}</td>'
-                  f'<td>{r["paid_due"]} / {r["due_so_far"]}<div class="cell-sub">{r["total_paid"]} of {r["due_total"]} in cycle</div></td>'
+                  f'<td>{r["paid_due"]} / {r["due_so_far"]}{ahead_cell(r)}</td>'
                   f'<td>{badge}{streak_html}</td></tr>')
 
 html(f"""<div class="glass-card">
