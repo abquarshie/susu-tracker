@@ -779,7 +779,7 @@ html(f"""
     <div class="v3-kpi-meta">{program_pct}% of rotation completed</div>
   </div>
   <div class="v3-kpi">
-    <div class="v3-kpi-label">OUTSTANDING</div>
+    <div class="v3-kpi-label">OUTSTANDING MEMBERS</div>
     <div class="v3-kpi-value {gap_class}">GHS {fmt_num(collection_gap)}</div>
     <div class="v3-kpi-meta">{len(owing_rows)} member{'s' if len(owing_rows) != 1 else ''} behind this week{ahead_note}</div>
   </div>
