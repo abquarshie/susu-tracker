@@ -85,15 +85,10 @@ st.markdown(f"""
     .v3-status strong{{color:#34d399;font-weight:700;}}
     .v3-status-muted{{color:{T['sync_color']};}}
 
-    .v3-header{{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:18px;}}
+    .v3-header{{margin-bottom:16px;}}
     .v3-kicker{{font-size:11px;font-weight:700;color:{T['label_color']};letter-spacing:1.4px;text-transform:uppercase;margin-bottom:6px;}}
     .v3-title{{font-size:28px;font-weight:800;color:{T['title_color']};letter-spacing:-0.5px;line-height:1.15;margin:0 0 6px;}}
     .v3-subtitle{{font-size:14px;color:{T['sub_color']};margin:0;}}
-    .v3-header-actions{{display:flex;gap:8px;flex-wrap:wrap;}}
-    .v3-action{{display:inline-block;font-size:13px;font-weight:600;padding:9px 15px;border-radius:11px;text-decoration:none!important;white-space:nowrap;transition:all 0.18s;}}
-    .v3-action.secondary{{background:{T['btn2_bg']};border:1px solid {T['btn2_border']};color:{T['btn2_color']}!important;}}
-    .v3-action.primary{{background:rgba(37,99,235,0.9);border:1px solid {T['btn_border']};color:#fff!important;box-shadow:0 2px 10px rgba(29,78,216,0.28);}}
-    .v3-action:hover{{transform:translateY(-1px);filter:brightness(1.12);}}
 
     .v3-kpis{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}}
     .v3-kpi{{background:{T['chip_bg']};border:1px solid {T['chip_border']};border-radius:16px;padding:18px 20px;
@@ -228,8 +223,7 @@ st.markdown(f"""
         .data-table th{{font-size:12px;padding:11px 15px;}}
         .data-table td{{font-size:16px;padding:13px 15px;}}
         .v3-recipient{{font-size:25px;}} .v3-next-amount{{font-size:23px;}}
-        .v3-action{{font-size:14px;padding:10px 17px;}}
-    }}
+        }}
     /* landscape tablets: reclaim vertical space */
     @media (min-width:601px) and (max-height:820px) and (orientation:landscape){{
         .glass-card,.v3-section-card{{padding:16px 20px;margin-bottom:12px;}}
@@ -239,19 +233,29 @@ st.markdown(f"""
     @media (max-width:600px){{
         .block-container{{padding-bottom:3rem!important;padding-left:10px!important;padding-right:10px!important;}}
         .v3-status{{font-size:12px;padding:8px 12px;flex-wrap:wrap;gap:4px;}}
-        .v3-header{{flex-direction:column;align-items:stretch;gap:12px;margin-bottom:14px;}}
+        .v3-header{{margin-bottom:12px;}}
         .v3-title{{font-size:22px;}} .v3-subtitle{{font-size:12px;line-height:1.45;}}
-        .v3-header-actions{{display:grid;grid-template-columns:1fr 1fr;gap:8px;}}
-        .v3-header-actions .v3-action{{text-align:center;padding:11px 8px;font-size:13px;}}
-        .v3-header-actions .v3-action.primary{{grid-column:1 / -1;}}
-        .v3-kpis{{grid-template-columns:1fr 1fr;gap:8px;}}
-        .v3-kpi{{padding:13px 14px;}}
-        .v3-kpi-value{{font-size:21px;}}
-        .v3-kpi-primary{{grid-column:1 / -1;}}
+            .v3-kpis,.v3-kpis-2{{grid-template-columns:1fr 1fr!important;gap:8px;}}
+        .v3-kpi{{padding:12px 13px;}}
+        .v3-kpi-label{{font-size:10px;letter-spacing:0.8px;margin-bottom:5px;}}
+        .v3-kpi-value{{font-size:19px;}}
+        .v3-kpi-value span{{font-size:13px;}}
+        .v3-kpi-meta,.v3-kpi-delta{{font-size:11px;margin-top:5px;line-height:1.35;}}
+        .v3-progress{{margin-top:7px;height:4px;}}
         .v3-command-grid{{grid-template-columns:1fr;}}
-        .v3-alert{{padding:14px 15px;}}
-        .v3-alert-amount{{font-size:23px;}}
-        .v3-kpis-2{{grid-template-columns:1fr;}}
+        .v3-alert,.v3-next-card{{padding:13px 14px;}}
+        .v3-alert-amount{{font-size:21px;}}
+        .v3-alert-names{{font-size:12px;margin-top:4px;}}
+        .v3-alert-foot{{font-size:11px;margin-top:9px;}}
+        .v3-alert-top,.v3-next-top{{margin-bottom:6px;}}
+        .v3-kicker{{font-size:10px;letter-spacing:1px;}}
+        .v3-days{{font-size:11px;padding:2px 9px;}}
+        .v3-recipient{{font-size:19px;}}
+        .v3-next-amount{{font-size:18px;}}
+        .v3-next-date,.v3-funding-row,.v3-funding-meta{{font-size:11px;}}
+        .v3-funding-meta{{margin-top:5px;line-height:1.35;}}
+        .v3-next-main{{margin-bottom:9px;}}
+        .v3-command-grid{{gap:8px;margin-bottom:12px;}}
         .v3-next-main{{flex-direction:column;align-items:flex-start;gap:6px;}}
         .glass-card,.v3-section-card{{padding:14px 12px!important;border-radius:12px!important;}}
         .v3-section-head{{gap:6px;}}
@@ -764,11 +768,6 @@ html(f"""
     <div class="v3-kicker">SUSU SAVINGS</div>
     <div class="v3-title">{greeting()}, {st.session_state.admin_name} 👋</div>
     <div class="v3-subtitle">Week {current_elapsed_week} of {total_weeks} · {num_members} members · {format_date(start_dt)} → {format_date(end_date)}</div>
-  </div>
-  <div class="v3-header-actions">
-    <a class="v3-action secondary" href="#section-payments">💳 Record payments</a>
-    <a class="v3-action secondary" href="#section-payouts">🎁 Record payout</a>
-    <a class="v3-action primary" href="#section-exports">📤 Share update</a>
   </div>
 </div>
 """)
