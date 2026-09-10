@@ -1072,6 +1072,102 @@ with tab_money:
                 st.caption("To reverse or correct this, use Undo / Correct a Record below — a reason is required.")
             st.divider()
 
+    with st.expander("⚡  Bulk Payment Entry", expanded=True):
+        st.caption("Tick everyone who has paid for a week and save once. Each tick writes a real payment "
+                   "(with a receipt); unticking reverses it. Fastest way to run the weekly collection.")
+        bc1,bc2,bc3 = st.columns([1,1,1])
+        with bc1: bulk_week   = st.number_input("Week", min_value=1, max_value=total_weeks,
+                                                value=max(1,current_elapsed_week), step=1, key="bulk_week")
+        with bc2: bulk_method = st.selectbox("Method for new ticks", ["Cash","MoMo","Bank transfer","Other"], key="bulk_method")
+        with bc3: bulk_date   = st.date_input("Payment date", value=today.date(), key="bulk_date")
+        bw = int(bulk_week)
+
+        ticks, rows_meta = {}, {}
+        cols = st.columns(2)
+        for idx, m in enumerate(members):
+            already = paid_amount(m, bw)
+            target  = weekly(m)
+            rows_meta[m] = {"already":already, "target":target, "was":paid(m,bw)}
+            with cols[idx % 2]:
+                if not liable(m,bw) and already <= 0:
+                    html(f'<div style="font-size:13px;color:{T["sub_color"]};padding:9px 0">{m} — exempt</div>')
+                    continue
+                part = f" · GHS {fmt_num(already)} banked" if 0 < already < target else ""
+                ticks[m] = st.checkbox(f"{m} · GHS {fmt_num(target)}{part}",
+                                       value=rows_meta[m]["was"], key=f"bulk_{bw}_{m}")
+
+        adds    = [(m, money(rows_meta[m]["target"]-rows_meta[m]["already"]))
+                   for m,t in ticks.items() if t and not rows_meta[m]["was"]]
+        removes = [m for m,t in ticks.items() if not t and rows_meta[m]["was"]]
+        if adds or removes:
+            summary = []
+            if adds:    summary.append(f"{len(adds)} to record (GHS {fmt_num(sum(a for _,a in adds))})")
+            if removes: summary.append(f"{len(removes)} to reverse")
+            st.caption(" · ".join(summary))
+
+        def save_bulk(adds, removes):
+            who_now = st.session_state.get("admin_name", ADMIN_NAME)
+            bdate   = bulk_date.strftime("%d %b %Y")
+            def _m(b, adds=adds, removes=removes, bw=bw, who_now=who_now, bdate=bdate, method=bulk_method):
+                detail, touched = [], set()
+                for m, amt in adds:
+                    if amt <= 0: continue
+                    tx = {"id":new_id("PAY"),"member":m,"week":bw,"amount":money(amt),"date":bdate,
+                          "time":now_str(),"method":method,"reference":"Bulk entry",
+                          "status":"completed","who":who_now}
+                    b.setdefault("payment_transactions",[]).insert(0, tx)
+                    b.setdefault("payment_ledger",[]).insert(0,{"member":m,"week":bw,"amount":tx["amount"],
+                        "action":"paid","time":tx["time"],"who":who_now,"reference":"Bulk entry","method":method})
+                    detail.append(f"{m} Wk {bw:02d}: recorded GHS {fmt_num(amt)}")
+                    touched.add(m)
+                for m in removes:
+                    reversed_any = 0.0
+                    for row in b.get("payment_transactions",[]):
+                        if row.get("member")==m and int(row.get("week",0))==bw and row.get("status","completed")=="completed":
+                            row["status"]="reversed"; row["reversed_at"]=now_str()
+                            row["reversed_by"]=who_now; row["reversal_reason"]="Bulk untick"
+                            reversed_any += money(row.get("amount",0))
+                    if reversed_any:
+                        b.setdefault("payment_ledger",[]).insert(0,{"member":m,"week":bw,"amount":money(reversed_any),
+                            "action":"reversed","time":now_str(),"who":who_now,
+                            "reference":"Bulk untick","method":"","reason":"Bulk untick"})
+                        detail.append(f"{m} Wk {bw:02d}: reversed GHS {fmt_num(reversed_any)}")
+                    else:
+                        detail.append(f"{m} Wk {bw:02d}: earlier tick cleared")
+                    touched.add(m)
+                for m in touched:
+                    banked = money(sum(float(x.get("amount",0) or 0) for x in b.get("payment_transactions",[])
+                                       if x.get("member")==m and int(x.get("week",0))==bw
+                                       and x.get("status","completed")=="completed"))
+                    tgt = money(b.get("tiers",{}).get(m, b["settings"]["base_monthly"])/4.0)
+                    b.setdefault("payments",{}).setdefault(m,{})[str(bw)] = banked >= tgt-0.005
+                b["payment_ledger"] = b.get("payment_ledger",[])[:500]
+                return {"type":"payment",
+                        "text":f"Week {bw:02d} bulk entry — {len(adds)} recorded, {len(removes)} reversed",
+                        "detail":detail}
+            if commit(gsheet,_m): flash(f"Week {bw:02d} saved")
+            st.session_state.bulk_confirm = False
+            st.rerun()
+
+        if st.session_state.get("bulk_confirm") and removes:
+            st.warning("⚠️ These members will be marked unpaid for Week %02d and their payments reversed:\n\n" % bw
+                       + "\n".join(f"• {m}" for m in removes))
+            uc1,uc2 = st.columns(2)
+            with uc1:
+                if st.button("✓ Confirm and save", key="bulk_confirm_yes"):
+                    save_bulk(adds, removes)
+            with uc2:
+                if st.button("✗ Cancel", key="bulk_confirm_no", type="secondary"):
+                    st.session_state.bulk_confirm = False; st.rerun()
+        else:
+            if st.button(f"Save Week {bw:02d} Payments", key="bulk_save"):
+                if not adds and not removes:
+                    flash("No changes to save","info"); st.rerun()
+                elif removes:
+                    st.session_state.bulk_confirm = True; st.rerun()
+                else:
+                    save_bulk(adds, removes)
+
     html('<span class="anchor" id="section-payouts"></span>')
     with st.expander("🎁  Record Payout"):
         turn_options = [f"{r['turn']} — {r['recipient']}" for r in schedule_rows]
@@ -1440,41 +1536,6 @@ with tab_tools:
                              f'{" · " + rec.get("note","") if rec.get("note") else ""}</div></div>'
                              f'<div class="log-time">{rec.get("date","")}</div></div>')
             html(rec_html)
-
-    with st.expander("🛠️  Legacy Week Grid / Corrections"):
-        st.caption("For historical checkbox records only. New payments should go through Record Payment so each one "
-                   "gets a receipt. Ticking a box here counts as the full weekly target for that week.")
-        show_all   = st.toggle("Show all weeks", value=False, key="show_all_weeks")
-        week_range = list(range(1,total_weeks+1)) if show_all else ([current_elapsed_week] if current_elapsed_week>0 else [])
-        entered = {}
-        if not week_range:
-            st.info("The cycle has not started yet.")
-        else:
-            for member in members:
-                html(f'<div style="font-size:14px;font-weight:600;color:{T["td_color"]};margin:10px 0 6px">{member}</div>')
-                vals = {}
-                cols = st.columns(8)
-                for w in week_range:
-                    with cols[(w-1)%8]:
-                        vals[str(w)] = st.checkbox(f"W{w}", value=paid(member,w), key=f"legacy_{member}_{w}")
-                entered[member] = vals
-            if st.button("Save Legacy Grid", key="legacy_grid_save"):
-                diffs = [f"{mbr} Wk {int(wk):02d}: {'paid' if ticked else 'unpaid'}"
-                         for mbr,vals in entered.items() for wk,ticked in vals.items() if ticked != paid(mbr,int(wk))]
-                blocked = [f"{mbr} Wk {int(wk):02d}" for mbr,vals in entered.items() for wk,ticked in vals.items()
-                           if ticked != paid(mbr,int(wk)) and txs_for(mbr,int(wk))]
-                if blocked:
-                    st.error("These weeks have itemised transactions and cannot be changed here — reverse the payment "
-                             "instead: " + ", ".join(blocked))
-                elif diffs:
-                    def _m(b):
-                        for mbr,vals in entered.items():
-                            b.setdefault("payments",{}).setdefault(mbr,{}).update(vals)
-                        return {"type":"payment","text":f"Legacy payment grid updated — {len(diffs)} change(s)","detail":diffs}
-                    if commit(gsheet,_m): flash("Legacy grid saved")
-                    st.rerun()
-                else:
-                    flash("No changes to save","info"); st.rerun()
 
     with st.expander("🧾  Payment Audit"):
         ledger = st.session_state.get("payment_ledger", [])
