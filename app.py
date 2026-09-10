@@ -299,6 +299,9 @@ def greeting():
     h = now_dt().hour
     return "Good morning" if h < 12 else ("Good afternoon" if h < 17 else "Good evening")
 
+def new_id(prefix):
+    return f"{prefix}-{now_dt().strftime('%Y%m%d%H%M%S')}-{pysecrets.token_hex(3).upper()}"
+
 # Passwords are stored as salted scrypt hashes. The old SHA-256 format is still
 # recognised so existing groups can be upgraded automatically on successful login.
 def hash_pw(pw):
@@ -365,7 +368,8 @@ DEFAULT_SETTINGS = {"start_date":"2026-08-17","base_monthly":1000,"admin_fee_per
 
 def blank_blob():
     return {"rev":0,"settings":dict(DEFAULT_SETTINGS),"tiers":{},"payments":{},
-            "payout_status":{},"history":[],"snapshots":{},"member_status":{},"payment_ledger":[],
+            "payout_status":{},"history":[],"snapshots":{},"member_status":{},
+            "payment_ledger":[],"payment_transactions":[],"payout_ledger":[],"reconciliations":[],
             "passcode":hash_pw(BOOTSTRAP_ADMIN_PW) if BOOTSTRAP_ADMIN_PW else ""}
 
 @st.cache_resource
@@ -448,15 +452,8 @@ def apply_blob(b):
     st.session_state.member_status        = b.get("member_status",{})
     st.session_state.payment_ledger       = b.get("payment_ledger",[])
     st.session_state.payment_transactions = b.get("payment_transactions",[])
-    st.session_state.payout_ledger       = b.get("payout_ledger",[])
-    st.session_state.reconciliations = b.get("reconciliations",[])
-    if not st.session_state.payment_transactions:
-        legacy_txs = []
-        for _m, _weeks in st.session_state.payments.items():
-            for _w, _is_paid in _weeks.items():
-                if _is_paid:
-                    legacy_txs.append({"id":f"LEGACY-{_m}-{_w}","member":_m,"week":int(_w),"amount":money(st.session_state.member_tiers.get(_m, st.session_state.base_monthly)/4.0),"date":"","time":"","method":"Legacy","reference":"","status":"completed","who":"legacy"})
-        st.session_state.payment_transactions = legacy_txs
+    st.session_state.payout_ledger        = b.get("payout_ledger",[])
+    st.session_state.reconciliations      = b.get("reconciliations",[])
     st.session_state.admin_passcode       = b.get("passcode","")
     st.session_state.last_sync            = now_dt()
 
@@ -581,30 +578,43 @@ fee_frac             = st.session_state.admin_fee_percentage/100.0
 
 def tier(m):    return st.session_state.member_tiers.get(m,st.session_state.base_monthly)
 def weekly(m):  return money(tier(m)/4.0)
+
 def txs_for(m=None, w=None, status="completed"):
-    out=[]
+    out = []
     for tx in st.session_state.get("payment_transactions",[]):
         if status and tx.get("status","completed") != status: continue
         if m is not None and tx.get("member") != m: continue
         if w is not None and int(tx.get("week",0)) != int(w): continue
         out.append(tx)
     return out
-def paid_amount(m,w):
-    rows=[tx for tx in st.session_state.get("payment_transactions",[]) if tx.get("member")==m and int(tx.get("week",0))==int(w)]
+
+def paid_amount(m, w):
+    """Amount banked for one member-week.
+
+    Transactions are the source of truth. Where a week has no transaction at all
+    (records made before receipts existed, or via the legacy grid), fall back to
+    the checkbox: ticked means the full weekly target was received.
+    """
+    rows = [tx for tx in st.session_state.get("payment_transactions",[])
+            if tx.get("member")==m and int(tx.get("week",0))==int(w)]
     if rows:
         return money(sum(float(tx.get("amount",0) or 0) for tx in rows if tx.get("status","completed")=="completed"))
     return weekly(m) if bool(st.session_state.payments.get(m,{}).get(str(w),False)) else 0.0
+
 def paid(m,w):  return paid_amount(m,w) >= weekly(m)-0.005
+
 def receipt_text(tx):
     return (f"🧾 *SUSU PAYMENT RECEIPT*\n\n"
             f"Member: *{tx.get('member','—')}*\nWeek: *{int(tx.get('week',0)):02d}*\n"
             f"Amount: *GHS {fmt_num(tx.get('amount',0))}*\nMethod: {tx.get('method','—')}\n"
             f"Reference: {tx.get('reference') or '—'}\nDate: {tx.get('date') or now_dt().strftime('%d %b %Y')}\n"
-            f"Recorded by: {tx.get('who','—')}\nReceipt ID: `{tx.get('id','—')}`\n\nThank you for your contribution 🙏")
+            f"Recorded by: {tx.get('who','—')}\nReceipt ID: {tx.get('id','—')}\n\nThank you for your contribution 🙏")
+
 def payout_receipt_text(p):
     return (f"🧾 *SUSU PAYOUT RECEIPT*\n\nRecipient: *{p.get('recipient','—')}*\nTurn: *{p.get('turn','—')}*\n"
             f"Amount: *GHS {fmt_num(p.get('amount',0))}*\nMethod: {p.get('method','—')}\nReference: {p.get('reference') or '—'}\n"
-            f"Date: {p.get('date') or now_dt().strftime('%d %b %Y')}\nRecorded by: {p.get('who','—')}\nReceipt ID: `{p.get('id','—')}`")
+            f"Date: {p.get('date') or now_dt().strftime('%d %b %Y')}\nRecorded by: {p.get('who','—')}\nReceipt ID: {p.get('id','—')}")
+
 def mstat(m):   return st.session_state.member_status.get(m,{"status":"active","exit_week":None})
 def exited(m):  return mstat(m).get("status")=="exited"
 def exit_week(m):
@@ -620,11 +630,12 @@ def gross_collected_for_turn(i):
     """Contributions banked against turn i (0-based) — its four weeks."""
     return money(sum(paid_amount(m,w) for m in members for w in range(4*i+1,4*i+5)))
 
-total_cash_collected = money(sum(float(tx.get("amount",0) or 0) for tx in st.session_state.get("payment_transactions",[]) if tx.get("status","completed")=="completed"))
+# Every money figure below goes through paid_amount so transactions and any
+# legacy checkbox records are counted exactly once, on the same basis.
+total_cash_collected = money(sum(paid_amount(m,w) for m in members for w in range(1,total_weeks+1)))
 
 def collected_amount(turn_lbl):
-    """How much of their payout the recipient has actually collected so far.
-    Partial collections are normal; keys from older versions are still honoured."""
+    """How much of their payout the recipient has actually collected so far."""
     ps = st.session_state.payout_status.get(turn_lbl,{})
     return money(ps.get("collected", ps.get("disbursed_amount", ps.get("amount_collected",0.0))))
 
@@ -633,8 +644,8 @@ total_cash_held       = money(total_cash_collected - total_payouts_dist)
 total_expected_so_far = money(sum(weekly(m)*sum(1 for w in range(1,current_elapsed_week+1) if liable(m,w)) for m in members))
 # due-but-unpaid up to this week — matches the alert banner exactly
 collection_gap        = money(sum(max(0.0, sum(weekly(m) for w in range(1,current_elapsed_week+1) if liable(m,w)) -
-                                  sum(paid_amount(m,w) for w in range(1,current_elapsed_week+1))) for m in members))
-# weeks ticked beyond the current week — cash in hand, but not yet "due"
+                                       sum(paid_amount(m,w) for w in range(1,current_elapsed_week+1))) for m in members))
+# banked against weeks that are not yet due
 paid_ahead            = money(sum(paid_amount(m,w) for m in members
                                   for w in range(current_elapsed_week+1,total_weeks+1)))
 
@@ -668,22 +679,21 @@ contrib_rows, wa_contrib_rows = [], []
 for member in members:
     m_weekly    = weekly(member)
     due_weeks   = sum(1 for w in range(1,current_elapsed_week+1) if liable(member,w))
-    paid_passed_amount = money(sum(paid_amount(member,w) for w in range(1,current_elapsed_week+1) if liable(member,w)))
+    paid_so_far = money(sum(paid_amount(member,w) for w in range(1,current_elapsed_week+1) if liable(member,w)))
     paid_passed = sum(1 for w in range(1,current_elapsed_week+1) if liable(member,w) and paid(member,w))
-    owing       = money(max(0.0, due_weeks*m_weekly-paid_passed_amount))
+    owing       = money(max(0.0, due_weeks*m_weekly - paid_so_far))
     total_paid  = sum(1 for w in range(1,total_weeks+1) if paid(member,w))
     is_out      = exited(member)
     standing    = f"Owing GHS {fmt_num(owing)}" if owing>0 else ("Exited" if is_out else "Up to date")
     streak      = 0 if (is_out and owing<=0) else missed_streak(member)
     contrib_rows.append({"member":member,"m_monthly":tier(member),"m_weekly":m_weekly,"total_paid":total_paid,
-                         "paid_due":paid_passed,"due_so_far":due_weeks,
+                         "paid_due":paid_passed,"due_so_far":due_weeks,"paid_value":paid_so_far,
                          "due_total":liable_total(member),"owing":owing,"standing":standing,"streak":streak,
                          "exited":is_out,"exit_week":mstat(member).get("exit_week")})
     wa_contrib_rows.append({"member":member,"standing":standing,"streak":streak,"exited":is_out})
 
-# Members with an outstanding balance, used by WhatsApp reminders.
-# Keep this separate from the contribution-row loop so the reminder export
-# always has a defined list, including when nobody owes anything.
+# Defined outside the loop so the reminder export always has a list, even when
+# nobody owes anything.
 owing_members = [r for r in wa_contrib_rows if r["standing"].startswith("Owing ")]
 
 # ── payout schedule ───────────────────────────────────────────────────────────
@@ -696,8 +706,8 @@ for i in range(num_members):
     gross_pool   = money(tier(recipient)*num_members)
     admin_fee_v  = money(gross_pool*fee_frac)
     net_pool_amt = money(gross_pool-admin_fee_v)
-    collected    = collected_amount(turn_lbl)                        # paid out to the recipient
-    remaining    = money(max(0.0, net_pool_amt-collected))           # still owed to the recipient
+    collected    = collected_amount(turn_lbl)                        # taken by the recipient
+    remaining    = money(max(0.0, net_pool_amt-collected))           # still owed to them
     pct_c        = int(collected/net_pool_amt*100) if net_pool_amt>0 else 0
     funded       = money(gross_collected_for_turn(i)*(1-fee_frac))   # contributions banked for this turn
     ps           = st.session_state.payout_status.get(turn_lbl,{})
@@ -721,10 +731,10 @@ for i in range(num_members):
 sync_ago = int((now_dt()-st.session_state.last_sync).total_seconds()/60)
 sync_txt = "just now" if sync_ago < 1 else f"{sync_ago}m ago"
 
-gap_class = "v3-kpi-bad" if collection_gap > 0 else "v3-kpi-good"
+gap_class  = "v3-kpi-bad" if collection_gap > 0 else "v3-kpi-good"
 owing_rows = [r for r in contrib_rows if r["owing"] > 0]
 
-next_turn = next((r for r in schedule_rows if not r["disbursed"]), None)
+next_turn  = next((r for r in schedule_rows if not r["disbursed"]), None)
 funded_pct = int(min(next_turn["funded"]/next_turn["net_pool_amt"], 1)*100) if next_turn and next_turn["net_pool_amt"] else 100
 
 prev_snap = st.session_state.get("snapshots", {}).get(str(current_elapsed_week-1))
@@ -779,7 +789,7 @@ html(f"""
     <div class="v3-kpi-meta">{program_pct}% of rotation completed</div>
   </div>
   <div class="v3-kpi">
-    <div class="v3-kpi-label">OUTSTANDING MEMBERS</div>
+    <div class="v3-kpi-label">OUTSTANDING</div>
     <div class="v3-kpi-value {gap_class}">GHS {fmt_num(collection_gap)}</div>
     <div class="v3-kpi-meta">{len(owing_rows)} member{'s' if len(owing_rows) != 1 else ''} behind this week{ahead_note}</div>
   </div>
@@ -920,78 +930,276 @@ html(f"""
 
 # ── exports ───────────────────────────────────────────────────────────────────
 buf = io.StringIO()
-buf.write(f"📌 *SUSU WEEK {current_elapsed_week} UPDATE*\n💰 *Cash held:* GHS {fmt_num(total_cash_held)}\n📥 *Collected:* GHS {fmt_num(total_cash_collected)}\n🎁 *Paid out:* GHS {fmt_num(total_payouts_dist)}\n🏁 *Cycle:* Week {current_elapsed_week} of {total_weeks}\n\n")
+buf.write(f"📌 *SUSU WEEK {current_elapsed_week} UPDATE*\n💰 *Cash held:* GHS {fmt_num(total_cash_held)}\n"
+          f"📥 *Collected:* GHS {fmt_num(total_cash_collected)}\n🎁 *Paid out:* GHS {fmt_num(total_payouts_dist)}\n"
+          f"🏁 *Cycle:* Week {current_elapsed_week} of {total_weeks}\n\n")
 buf.write("👥 *MEMBER STANDING*\n")
 for r in wa_contrib_rows:
-    if r["exited"] and "Owing" not in r["standing"]:
+    if r["exited"] and not r["standing"].startswith("Owing "):
         buf.write(f"⚪ *{r['member']}*: Exited\n"); continue
     streak_note = f" · 🔴 {r['streak']} weeks behind" if r['streak']>=2 else ""
-    buf.write(f"{'✅' if 'Up' in r['standing'] else '❌'} *{r['member']}*: {r['standing']}{streak_note}\n")
+    buf.write(f"{'✅' if r['standing']=='Up to date' else '❌'} *{r['member']}*: {r['standing']}{streak_note}\n")
 buf.write("\n🎁 *PAYOUTS*\n")
 for r in wa_payout_rows:
     tag = " · ✅ fully collected" if r['disbursed'] else f" · GHS {r['balance']} remaining"
     buf.write(f"*{r['recipient']}* · {r['date']}{tag}\n")
-if next_recipient: buf.write(f"\n➡️ *Next payout:* {next_recipient} on {format_date(next_payout_date)}\n")
+if next_recipient:
+    buf.write(f"\n➡️ *Next payout:* {next_recipient} on {format_date(next_payout_date)}\n")
 buf.write("\nThank you everyone for keeping the susu on track 🙏")
 
 rem = io.StringIO()
 rem.write(f"🔔 *SUSU PAYMENT REMINDER — WEEK {current_elapsed_week}*\n\n")
 if owing_members:
     rem.write("Hi everyone 👋 A quick reminder for members with outstanding contributions:\n\n")
-    for r in owing_members: rem.write(f"• ❌ *{r['member']}*: {r['standing']}\n")
-    if next_recipient: rem.write(f"\nPlease settle your outstanding amount when you can so we can keep the next payout on schedule.\n🎁 *Next payout:* {next_recipient} · {format_date(next_payout_date)}\n")
+    for r in owing_members:
+        rem.write(f"• ❌ *{r['member']}*: {r['standing']}\n")
+    if next_recipient:
+        rem.write(f"\nPlease settle your outstanding amount when you can so we can keep the next payout on schedule.\n"
+                  f"🎁 *Next payout:* {next_recipient} · {format_date(next_payout_date)}\n")
     rem.write("\nThank you 🙏")
-else: rem.write("✅ *Everyone is up to date this week!* 🎉\n\nThank you all for staying on track 🙏")
+else:
+    rem.write("✅ *Everyone is up to date this week!* 🎉\n\nThank you all for staying on track 🙏")
 
 ob = io.StringIO()
 ob.write("📋 *SUSU GROUP — ONBOARDING DETAILS*\n\n")
-ob.write(f"🗓️ *Start:* {format_date(start_dt)}\n🏁 *End:* {format_date(end_date)}\n👥 *Members:* {num_members}\n🔄 *Cycle:* {total_weeks} weeks\n\n")
-ob.write("ℹ️ *HOW IT WORKS*\n• Contributions are weekly.\n• Each turn lasts exactly 4 weeks.\n• Payout dates are fixed by the rotation schedule.\n")
-if fee_frac>0: ob.write(f"• An admin fee of {fmt_num(st.session_state.admin_fee_percentage)}% is deducted from each payout.\n")
+ob.write(f"🗓️ *Start:* {format_date(start_dt)}\n🏁 *End:* {format_date(end_date)}\n"
+         f"👥 *Members:* {num_members}\n🔄 *Cycle:* {total_weeks} weeks\n\n")
+ob.write("ℹ️ *HOW IT WORKS*\n• Contributions are weekly.\n• Each turn lasts exactly 4 weeks.\n"
+         "• Payout dates are fixed by the rotation schedule.\n")
+if fee_frac>0:
+    ob.write(f"• An admin fee of {fmt_num(st.session_state.admin_fee_percentage)}% is deducted from each payout.\n")
 ob.write("\n👤 *MEMBER TARGETS*\n")
 for r in contrib_rows:
-    if not r["exited"]: ob.write(f"*{r['member']}* — GHS {fmt_num(r['m_weekly'])}/week\n")
+    if not r["exited"]:
+        ob.write(f"*{r['member']}* — GHS {fmt_num(r['m_weekly'])}/week\n")
 ob.write("\n🎁 *PAYOUT SCHEDULE*\n")
-for r in schedule_rows: ob.write(f"*{r['turn']} — {r['recipient']}* · {r['date']} · GHS {r['pool']}\n")
+for r in schedule_rows:
+    ob.write(f"*{r['turn']} — {r['recipient']}* · {r['date']} · GHS {r['pool']}\n")
 
 ch = io.StringIO()
-ch.write(f"📊 *SUSU CONTRIBUTION HISTORY — WEEK {current_elapsed_week}*\n🗓️ *Period:* {format_date(start_dt)} → {format_date(end_date)}\n\n")
+ch.write(f"📊 *SUSU CONTRIBUTION HISTORY — WEEK {current_elapsed_week}*\n"
+         f"🗓️ *Period:* {format_date(start_dt)} → {format_date(end_date)}\n\n")
 for member in members:
-    tag=" (exited)" if exited(member) else ""; ch.write(f"👤 *{member}*{tag} · GHS {fmt_num(weekly(member))}/wk\n")
+    tag = " (exited)" if exited(member) else ""
+    ch.write(f"👤 *{member}*{tag} · GHS {fmt_num(weekly(member))}/wk\n")
     for w in range(1,total_weeks+1):
-        amt=paid_amount(member,w)
-        if not liable(member,w) and amt<=0: ch.write(f"  Wk {w:02d}: ⚪ Exempt\n"); continue
-        icon="✅" if paid(member,w) else ("⏳" if w>current_elapsed_week else "❌")
-        label="Paid" if paid(member,w) else (f"Partial · GHS {fmt_num(amt)}" if amt>0 else ("Upcoming" if w>current_elapsed_week else "Owing"))
-        ch.write(f"  Wk {w:02d}: {icon} {label}\n")
+        amt = paid_amount(member,w)
+        if not liable(member,w) and amt<=0:
+            ch.write(f"  Wk {w:02d}: ⚪ Exempt\n"); continue
+        if paid(member,w):
+            ch.write(f"  Wk {w:02d}: ✅ Paid\n")
+        elif amt > 0:
+            ch.write(f"  Wk {w:02d}: 🟡 Partial · GHS {fmt_num(amt)} of {fmt_num(weekly(member))}\n")
+        else:
+            ch.write(f"  Wk {w:02d}: {'⏳ Upcoming' if w>current_elapsed_week else '❌ Owing'}\n")
     ch.write("\n")
+
 html("""<span class="anchor" id="section-exports"></span>
 <div class="glass-card v3-section-card">
   <div class="sec-label">EXPORT</div><div class="sec-title">WhatsApp messages</div>
   <div class="sec-sub">Ready-to-send updates, reminders, onboarding details and contribution history.</div></div>""")
-t1,t2,t3,t4=st.tabs(["📥 Weekly Update","🔔 Reminder","📋 Onboarding","📊 History"])
-with t1: wa_block(buf.getvalue(),f"Susu_W{current_elapsed_week}.txt","dl_weekly")
-with t2: wa_block(rem.getvalue(),f"Susu_Reminder_W{current_elapsed_week}.txt","dl_rem")
-with t3: wa_block(ob.getvalue(),"Susu_Onboarding.txt","dl_ob")
-with t4: wa_block(ch.getvalue(),f"Susu_History_W{current_elapsed_week}.txt","dl_hist")
+t1,t2,t3,t4 = st.tabs(["📥 Weekly Update","🔔 Reminder","📋 Onboarding","📊 History"])
+with t1: wa_block(buf.getvalue(), f"Susu_W{current_elapsed_week}.txt", "dl_weekly")
+with t2: wa_block(rem.getvalue(), f"Susu_Reminder_W{current_elapsed_week}.txt", "dl_rem")
+with t3: wa_block(ob.getvalue(),  "Susu_Onboarding.txt", "dl_ob")
+with t4: wa_block(ch.getvalue(),  f"Susu_History_W{current_elapsed_week}.txt", "dl_hist")
 
 # ── admin panel ───────────────────────────────────────────────────────────────
 html('<span class="anchor" id="section-admin"></span>'
      '<div class="sec-label" style="margin-top:24px">ADMIN</div>'
      '<div class="sec-title">Group controls</div>'
-     '<div class="sec-sub">Update settings, record payments and payouts.</div>')
+     '<div class="sec-sub">Record money in and out, then manage settings and tools.</div>')
 
+tab_money, tab_settings, tab_tools = st.tabs(["💰 Money", "⚙️ Settings", "🛠️ Tools"])
 
-tab_settings, tab_money, tab_tools = st.tabs(["⚙️ Settings", "💰 Money", "🛠️ Tools"])
+with tab_money:
+    html('<span class="anchor" id="section-payments"></span>')
+    with st.expander("💳  Record Payment", expanded=True):
+        st.caption("Record the payment as received. Partial, late, multiple and corrected payments are all supported.")
+        pm1,pm2 = st.columns(2)
+        with pm1: pay_member = st.selectbox("Member", members, key="tx_member")
+        with pm2: pay_week   = st.number_input("Week", min_value=1, max_value=total_weeks,
+                                               value=max(1,current_elapsed_week), step=1, key="tx_week")
+        target  = weekly(pay_member)
+        already = paid_amount(pay_member, int(pay_week))
+        default_amt = money(max(0.0, target-already)) if already < target else target
+        pm3,pm4 = st.columns(2)
+        with pm3: pay_amount = st.number_input("Amount received (GHS)", min_value=0.0,
+                                               value=float(default_amt), step=10.0, key="tx_amount")
+        with pm4: pay_method = st.selectbox("Payment method", ["Cash","MoMo","Bank transfer","Other"], key="tx_method")
+        pm5,pm6 = st.columns(2)
+        with pm5: pay_ref  = st.text_input("Reference / note", key="tx_reference", placeholder="MoMo ref, bank ref, or cash note")
+        with pm6: pay_date = st.date_input("Payment date", value=today.date(), key="tx_date")
+        html(f'<div style="font-size:13px;color:{T["sub_color"]};margin:4px 0 10px">Weekly target: '
+             f'<strong style="color:{T["sec_title"]}">GHS {fmt_num(target)}</strong> · Already recorded for Week '
+             f'{int(pay_week):02d}: <strong style="color:{T["sec_title"]}">GHS {fmt_num(already)}</strong></div>')
+        if st.button("Save Payment", key="save_transaction"):
+            if pay_amount <= 0:
+                st.error("Enter an amount greater than zero.")
+            else:
+                tx = {"id":new_id("PAY"),"member":pay_member,"week":int(pay_week),"amount":money(pay_amount),
+                      "date":pay_date.strftime("%d %b %Y"),"time":now_str(),"method":pay_method,
+                      "reference":pay_ref.strip(),"status":"completed",
+                      "who":st.session_state.get("admin_name",ADMIN_NAME)}
+                def _m(b, tx=tx, target=target):
+                    b.setdefault("payment_transactions",[]).insert(0, tx)
+                    banked = money(sum(float(x.get("amount",0) or 0) for x in b["payment_transactions"]
+                                       if x.get("member")==tx["member"] and int(x.get("week",0))==tx["week"]
+                                       and x.get("status","completed")=="completed"))
+                    b.setdefault("payments",{}).setdefault(tx["member"],{})[str(tx["week"])] = banked >= target-0.005
+                    b.setdefault("payment_ledger",[]).insert(0,{"member":tx["member"],"week":tx["week"],
+                        "amount":tx["amount"],"action":"paid","time":tx["time"],"who":tx["who"],
+                        "reference":tx["reference"],"method":tx["method"]})
+                    b["payment_ledger"] = b["payment_ledger"][:500]
+                    return {"type":"payment",
+                            "text":f"Payment received — {tx['member']} · Week {tx['week']:02d} · GHS {fmt_num(tx['amount'])}",
+                            "detail":[f"method: {tx['method']}", f"reference: {tx['reference'] or '—'}",
+                                      f"banked for the week: GHS {fmt_num(banked)} of {fmt_num(target)}",
+                                      f"receipt: {tx['id']}"]}
+                if commit(gsheet,_m): flash(f"Payment saved for {pay_member}")
+                st.rerun()
+
+    with st.expander("🧾  Recent Payment Receipts"):
+        tx_rows = st.session_state.get("payment_transactions",[])[:10]
+        if not tx_rows:
+            st.info("No payment receipts yet.")
+        for tx in tx_rows:
+            reversed_tag = " · ↩︎ REVERSED" if tx.get("status") != "completed" else ""
+            st.markdown(f"**{tx.get('member','—')} · Week {int(tx.get('week',0)):02d} · "
+                        f"GHS {fmt_num(tx.get('amount',0))}**{reversed_tag} · {tx.get('method','—')} · {tx.get('date','')}")
+            wa_block(receipt_text(tx), f"Receipt_{tx.get('id','payment')}.txt", f"receipt_{tx.get('id','payment')}")
+            if tx.get("status","completed") == "completed":
+                if st.button("Reverse this payment", key=f"reverse_{tx.get('id')}", type="secondary"):
+                    def _m(b, tx_id=tx.get("id")):
+                        for row in b.get("payment_transactions",[]):
+                            if row.get("id")==tx_id and row.get("status","completed")=="completed":
+                                row["status"]      = "reversed"
+                                row["reversed_at"] = now_str()
+                                row["reversed_by"] = st.session_state.get("admin_name",ADMIN_NAME)
+                                mbr, wk = row.get("member"), int(row.get("week",0))
+                                # keep the week flag in step with what is actually banked
+                                banked = money(sum(float(x.get("amount",0) or 0) for x in b["payment_transactions"]
+                                                   if x.get("member")==mbr and int(x.get("week",0))==wk
+                                                   and x.get("status","completed")=="completed"))
+                                tgt = money(b.get("tiers",{}).get(mbr, b["settings"]["base_monthly"])/4.0)
+                                b.setdefault("payments",{}).setdefault(mbr,{})[str(wk)] = banked >= tgt-0.005
+                                b.setdefault("payment_ledger",[]).insert(0,{"member":mbr,"week":wk,
+                                    "amount":row.get("amount",0),"action":"reversed","time":now_str(),
+                                    "who":st.session_state.get("admin_name",ADMIN_NAME),
+                                    "reference":row.get("reference",""),"method":row.get("method","")})
+                                b["payment_ledger"] = b["payment_ledger"][:500]
+                                return {"type":"payment",
+                                        "text":f"Payment reversed — {mbr} · Week {wk:02d} · GHS {fmt_num(row.get('amount',0))}",
+                                        "detail":[f"receipt: {tx_id}", f"still banked for the week: GHS {fmt_num(banked)}"]}
+                        return None
+                    if commit(gsheet,_m): flash("Payment reversed","warning")
+                    st.rerun()
+            st.divider()
+
+    html('<span class="anchor" id="section-payouts"></span>')
+    with st.expander("🎁  Record Payout"):
+        turn_options = [f"{r['turn']} — {r['recipient']}" for r in schedule_rows]
+        sel_turn_lbl = st.selectbox("Payout Turn", turn_options, key="payout_turn")
+        sr           = schedule_rows[turn_options.index(sel_turn_lbl)]
+        tkey         = sr["turn"]; rec_name = sr["recipient"]
+        html(f"""<div style="font-size:14px;color:{T['td_color']};line-height:1.7;margin-bottom:8px">
+            Net pool due to {rec_name}: <strong style="color:{T['sec_title']}">GHS {sr['pool']}</strong> &nbsp;·&nbsp;
+            Collected so far: <strong style="color:{T['sec_title']}">GHS {sr['collected']}</strong> &nbsp;·&nbsp;
+            Still owed: <strong style="color:{T['sec_title']}">GHS {sr['remaining']}</strong><br>
+            Contributions banked for this turn: <strong style="color:{T['sec_title']}">GHS {sr['funded_s']}</strong></div>""")
+        if sr["funded"] < sr["net_pool_amt"]-0.005 and sr["remaining_v"] > 0:
+            st.warning(f"Only GHS {sr['funded_s']} of the GHS {sr['pool']} pool has been contributed so far. "
+                       f"Paying the full amount now draws on the group's other cash.")
+        po1,po2 = st.columns(2)
+        with po1:
+            new_amt = st.number_input(f"Total collected by {rec_name} (GHS)", value=float(sr["collected_v"]),
+                                      min_value=0.0, max_value=float(sr["net_pool_amt"]), step=50.0, key="payout_amt",
+                                      help="Running total, not just today's instalment.")
+        with po2:
+            coll_date = st.date_input("Date collected", value=parse_display_date(sr["disb_date"]) or today.date(),
+                                      key="payout_date_in")
+        po3,po4 = st.columns(2)
+        with po3: payout_method = st.selectbox("Payout method", ["Cash","MoMo","Bank transfer","Other"], key="payout_method")
+        with po4: payout_ref    = st.text_input("Payout reference / note", key="payout_reference",
+                                                placeholder="MoMo ref, bank ref, or cash note")
+        coll_dt    = datetime.combine(coll_date, datetime.min.time(), tzinfo=GH_TZ)
+        delta_out  = money(new_amt - sr["collected_v"])          # only the change leaves the box
+        cash_after = money(total_cash_held - delta_out)
+        st.caption(f"Balance still owed to {rec_name} after this entry: GHS {fmt_num(money(sr['net_pool_amt']-new_amt))}"
+                   + (" — fully collected ✅" if new_amt >= sr["net_pool_amt"]-0.005 else "")
+                   + f" · Group cash after: GHS {fmt_num(cash_after)}")
+        overdraw = cash_after < -0.005
+        if overdraw:
+            st.error(f"❌ The group only holds GHS {fmt_num(total_cash_held)}. Paying out GHS {fmt_num(delta_out)} now "
+                     f"would leave it GHS {fmt_num(abs(cash_after))} short. Record the outstanding weekly payments first, "
+                     f"or enter a smaller amount.")
+            st.session_state.confirm_payout = False
+        if not st.session_state.get("confirm_payout",False):
+            if st.button("Save Payout", key="save_payout_btn", disabled=overdraw):
+                st.session_state.confirm_payout=True; st.rerun()
+        else:
+            st.warning(f"⚠️ Confirm: {rec_name} ({tkey}) has collected GHS {fmt_num(new_amt)} of GHS {sr['pool']} "
+                       f"as at {format_date(coll_dt)}?")
+            cc1,cc2 = st.columns(2)
+            with cc1:
+                if st.button("✓ Yes, confirm", key="confirm_yes"):
+                    def _m(b):
+                        ps = b.setdefault("payout_status",{}).setdefault(tkey,{})
+                        before = money(ps.get("collected", ps.get("disbursed_amount", ps.get("amount_collected",0.0))))
+                        if money(total_cash_held - money(new_amt-before)) < -0.005:
+                            raise ValueError("would overdraw the group")
+                        ps.pop("amount_collected", None); ps.pop("disbursed_amount", None)
+                        full = money(new_amt) >= sr["net_pool_amt"]-0.005 and new_amt > 0
+                        ps["collected"]      = money(new_amt)
+                        ps["disbursed"]      = full
+                        ps["disbursed_date"] = format_date(coll_dt) if new_amt > 0 else ""
+                        if delta_out > 0:
+                            ptx = {"id":new_id("PAYOUT"),"turn":tkey,"recipient":rec_name,"amount":money(delta_out),
+                                   "date":format_date(coll_dt),"method":payout_method,"reference":payout_ref.strip(),
+                                   "who":st.session_state.get("admin_name",ADMIN_NAME),"time":now_str()}
+                            b.setdefault("payout_ledger",[]).insert(0, ptx)
+                            b["payout_ledger"] = b["payout_ledger"][:500]
+                        detail = [f"{tkey} collected: GHS {fmt_num(before)} → GHS {fmt_num(new_amt)}",
+                                  f"balance owed to {rec_name}: GHS {fmt_num(money(sr['net_pool_amt']-new_amt))}",
+                                  f"method: {payout_method}", f"date: {ps['disbursed_date'] or '—'}"]
+                        txt = (f"{tkey} fully collected by {rec_name} — GHS {fmt_num(new_amt)}" if full
+                               else f"{tkey} part collected by {rec_name} — GHS {fmt_num(new_amt)} of GHS {sr['pool']}")
+                        return {"type":"payout","text":txt,"detail":detail}
+                    try:
+                        ok = commit(gsheet,_m)
+                    except ValueError:
+                        ok = False; flash("Save cancelled — that payout would overdraw the group's cash.","warning")
+                    st.session_state.confirm_payout = False
+                    if ok:
+                        # commit() already refreshed session state — no extra sheet read needed
+                        led = st.session_state.get("payout_ledger",[])
+                        if led: st.session_state.last_payout_receipt = payout_receipt_text(led[0])
+                        flash(f"Payout for {rec_name} saved")
+                    st.rerun()
+            with cc2:
+                if st.button("✗ Cancel", key="confirm_no", type="secondary"):
+                    st.session_state.confirm_payout=False; st.rerun()
+
+    with st.expander("🧾  Recent Payout Receipts"):
+        pl = st.session_state.get("payout_ledger",[])[:6]
+        if not pl:
+            st.info("Record a payout to generate its receipt.")
+        for p in pl:
+            st.markdown(f"**{p.get('recipient','—')} · {p.get('turn','—')} · GHS {fmt_num(p.get('amount',0))}** · "
+                        f"{p.get('method','—')} · {p.get('date','')}")
+            wa_block(payout_receipt_text(p), f"Payout_{p.get('id','receipt')}.txt", f"payoutrcpt_{p.get('id','receipt')}")
+            st.divider()
 
 with tab_settings:
     with st.expander("⚙️  Group Settings"):
         c1,c2,c3 = st.columns(3)
         with c1: new_start = st.text_input("Start Date (YYYY-MM-DD)", value=st.session_state.start_date)
         with c2: new_base  = st.number_input("Base Monthly (GHS)", value=float(st.session_state.base_monthly), step=50.0)
-        with c3: new_fee   = st.number_input("Admin Fee (%)", value=float(st.session_state.admin_fee_percentage), min_value=0.0, max_value=100.0, step=0.5)
+        with c3: new_fee   = st.number_input("Admin Fee (%)", value=float(st.session_state.admin_fee_percentage),
+                                             min_value=0.0, max_value=100.0, step=0.5)
         new_names = st.text_area("Members (comma-separated)", value=st.session_state.names_input)
-        html(f'<p style="font-size:13px;color:{T["sub_color"]}">Payment records are kept when you add or reorder members. To remove someone mid-cycle use Member Status below — deleting the name here shifts every payout date.</p>')
+        html(f'<p style="font-size:13px;color:{T["sub_color"]}">Payment records are kept when you add or reorder members. '
+             f'To remove someone mid-cycle use Member Status below — deleting the name here shifts every payout date.</p>')
 
         def save_settings(vals, changes):
             st.session_state.start_date           = vals["start"]
@@ -1019,7 +1227,6 @@ with tab_settings:
             if not changes:
                 flash("No setting changes","info")
             elif structural:
-                # structural edits move payout dates — always confirm first
                 st.session_state.pending_settings = {"vals":vals,"changes":changes,"structural":structural}
                 st.session_state.confirm_settings = True
             else:
@@ -1029,7 +1236,8 @@ with tab_settings:
         if st.session_state.get("confirm_settings"):
             pending = st.session_state.get("pending_settings", {})
             st.warning("⚠️ This changes the cycle structure (" + ", ".join(pending.get("structural", [])) +
-                       "). Payment history is preserved, but payout dates or the rotation order can move. Confirm only if that is intended.")
+                       "). Payment history is preserved, but payout dates or the rotation order can move. "
+                       "Confirm only if that is intended.")
             sc1,sc2 = st.columns(2)
             with sc1:
                 if st.button("✓ Confirm change", key="confirm_settings_yes"):
@@ -1058,11 +1266,15 @@ with tab_settings:
             st.rerun()
 
     with st.expander("👤  Member Status"):
-        html(f'<p style="font-size:13px;color:{T["sub_color"]};margin-bottom:8px">Mark a member as exited instead of deleting them. Their history and rotation slot stay intact; they simply stop owing from the exit week onward.</p>')
+        html(f'<p style="font-size:13px;color:{T["sub_color"]};margin-bottom:8px">Mark a member as exited instead of '
+             f'deleting them. Their history and rotation slot stay intact; they simply stop owing from the exit week onward.</p>')
         ms1,ms2,ms3 = st.columns([2,1,1])
         with ms1: sm = st.selectbox("Member", members, key="status_member", label_visibility="collapsed")
-        with ms2: new_status = st.selectbox("Status", ["active","exited"], index=0 if not exited(sm) else 1, key="status_val", label_visibility="collapsed")
-        with ms3: new_exit_wk = st.number_input("Exit week", min_value=1, max_value=total_weeks, value=int(mstat(sm).get("exit_week") or max(1,current_elapsed_week)), step=1, key="status_week", label_visibility="collapsed")
+        with ms2: new_status = st.selectbox("Status", ["active","exited"], index=0 if not exited(sm) else 1,
+                                            key="status_val", label_visibility="collapsed")
+        with ms3: new_exit_wk = st.number_input("Exit week", min_value=1, max_value=total_weeks,
+                                                value=int(mstat(sm).get("exit_week") or max(1,current_elapsed_week)),
+                                                step=1, key="status_week", label_visibility="collapsed")
         if st.button("Save Member Status", key="save_status"):
             before = mstat(sm)
             after  = {"status":new_status,"exit_week":int(new_exit_wk) if new_status=="exited" else None}
@@ -1074,160 +1286,9 @@ with tab_settings:
             if commit(gsheet,_m): flash("Member status saved")
             st.rerun()
 
-
-with tab_money:
-    html('<span class="anchor" id="section-payments"></span>')
-    with st.expander("💳  Record Payment", expanded=True):
-        st.caption("Record the actual payment received. Partial, late, multiple and corrected payments are supported.")
-        pc1,pc2=st.columns(2)
-        with pc1: pay_member=st.selectbox("Member",members,key="tx_member")
-        with pc2: pay_week=st.number_input("Week",min_value=1,max_value=total_weeks,value=max(1,current_elapsed_week),step=1,key="tx_week")
-        target=weekly(pay_member); already=paid_amount(pay_member,int(pay_week)); default_amt=max(0.0,money(target-already)) if already<target else target
-        pc3,pc4=st.columns(2)
-        with pc3: pay_amount=st.number_input("Amount received (GHS)",min_value=0.0,value=float(default_amt),step=10.0,key="tx_amount")
-        with pc4: pay_method=st.selectbox("Payment method",["Cash","MoMo","Bank transfer","Other"],key="tx_method")
-        pc5,pc6=st.columns(2)
-        with pc5: pay_ref=st.text_input("Reference / note",key="tx_reference",placeholder="MoMo ref, bank ref, or cash note")
-        with pc6: pay_date=st.date_input("Payment date",value=today.date(),key="tx_date")
-        html(f'<div style="font-size:13px;color:{T["sub_color"]};margin:4px 0 10px">Weekly target: <strong style="color:{T["sec_title"]}">GHS {fmt_num(target)}</strong> · Already recorded for Week {int(pay_week):02d}: <strong style="color:{T["sec_title"]}">GHS {fmt_num(already)}</strong></div>')
-        if st.button("Save Payment",key="save_transaction"):
-            if pay_amount<=0: st.error("Enter an amount greater than zero.")
-            else:
-                tx={"id":f"PAY-{now_dt().strftime('%Y%m%d%H%M%S')}-{pysecrets.token_hex(3).upper()}","member":pay_member,"week":int(pay_week),"amount":money(pay_amount),"date":pay_date.strftime("%d %b %Y"),"time":now_str(),"method":pay_method,"reference":pay_ref.strip(),"status":"completed","who":st.session_state.get("admin_name",ADMIN_NAME)}
-                def _m(b):
-                    b.setdefault("payment_transactions",[]).insert(0,tx)
-                    prior=money(sum(float(x.get("amount",0) or 0) for x in b.get("payment_transactions",[])[1:] if x.get("member")==pay_member and int(x.get("week",0))==int(pay_week) and x.get("status","completed")=="completed"))
-                    b.setdefault("payments",{}).setdefault(pay_member,{})[str(pay_week)]=(money(prior+pay_amount)>=target-0.005)
-                    b.setdefault("payment_ledger",[]).insert(0,{"member":pay_member,"week":int(pay_week),"amount":money(pay_amount),"action":"paid","time":now_str(),"who":tx["who"],"reference":pay_ref.strip(),"method":pay_method})
-                    b["payment_ledger"]=b["payment_ledger"][:500]
-                    return {"type":"payment","text":f"Payment received — {pay_member} · Week {int(pay_week):02d} · GHS {fmt_num(pay_amount)}","detail":[f"method: {pay_method}",f"reference: {pay_ref.strip() or '—'}",f"receipt: {tx['id']}"]}
-                if commit(gsheet,_m): st.session_state.last_receipt=receipt_text(tx); flash(f"Payment saved for {pay_member}")
-                st.rerun()
-
-    with st.expander("🧾  Latest Payment Receipts"):
-        tx_rows=st.session_state.get("payment_transactions",[])[:12]
-        if not tx_rows: st.info("No payment receipts yet.")
-        for tx in tx_rows:
-            st.markdown(f"**{tx.get('member','—')} · Week {int(tx.get('week',0)):02d} · GHS {fmt_num(tx.get('amount',0))}** · {tx.get('method','—')} · {tx.get('date','')}")
-            wa_block(receipt_text(tx),f"Receipt_{tx.get('id','payment')}.txt",f"receipt_{tx.get('id','payment')}")
-            if tx.get("status","completed")=="completed" and not str(tx.get("id","")).startswith("LEGACY-"):
-                if st.button("Reverse this payment", key=f"reverse_{tx.get('id')}", type="secondary"):
-                    def _m(b, tx_id=tx.get("id")):
-                        for row in b.get("payment_transactions",[]):
-                            if row.get("id")==tx_id and row.get("status","completed")=="completed":
-                                row["status"]="reversed"; row["reversed_at"]=now_str(); row["reversed_by"]=st.session_state.get("admin_name",ADMIN_NAME)
-                                b.setdefault("payment_ledger",[]).insert(0,{"member":row.get("member"),"week":int(row.get("week",0)),"amount":row.get("amount",0),"action":"reversed","time":now_str(),"who":st.session_state.get("admin_name",ADMIN_NAME),"reference":row.get("reference",""),"method":row.get("method","")})
-                                b["payment_ledger"]=b["payment_ledger"][:500]
-                                return {"type":"payment","text":f"Payment reversed — {row.get('member')} · Week {int(row.get('week',0)):02d} · GHS {fmt_num(row.get('amount',0))}","detail":[f"transaction: {tx_id}"]}
-                        return None
-                    if commit(gsheet,_m): flash("Payment reversed","warning")
-                    st.rerun()
-            st.divider()
-
-    html('<span class="anchor" id="section-payouts"></span>')
-    with st.expander("🎁  Record Payout"):
-        turn_options  = [f"{r['turn']} — {r['recipient']}" for r in schedule_rows]
-        sel_turn_lbl  = st.selectbox("Payout Turn", turn_options, key="payout_turn")
-        sr            = schedule_rows[turn_options.index(sel_turn_lbl)]
-        tkey          = sr["turn"]; rec_name = sr["recipient"]
-        html(f"""<div style="font-size:14px;color:{T['td_color']};line-height:1.7;margin-bottom:8px">
-            Net pool due to {rec_name}: <strong style="color:{T['sec_title']}">GHS {sr['pool']}</strong> &nbsp;·&nbsp;
-            Collected so far: <strong style="color:{T['sec_title']}">GHS {sr['collected']}</strong> &nbsp;·&nbsp;
-            Still owed: <strong style="color:{T['sec_title']}">GHS {sr['remaining']}</strong><br>
-            Contributions banked for this turn: <strong style="color:{T['sec_title']}">GHS {sr['funded_s']}</strong></div>""")
-        if sr["funded"] < sr["net_pool_amt"]-0.005 and sr["remaining_v"] > 0:
-            st.warning(f"Only GHS {sr['funded_s']} of the GHS {sr['pool']} pool has been contributed so far. Paying the full amount now draws on the group's other cash.")
-        pc1,pc2 = st.columns(2)
-        with pc1:
-            new_amt = st.number_input(f"Total collected by {rec_name} (GHS)", value=float(sr["collected_v"]),
-                                      min_value=0.0, max_value=float(sr["net_pool_amt"]), step=50.0, key="payout_amt",
-                                      help="Running total, not just today's instalment.")
-        with pc2:
-            default_dd = parse_display_date(sr["disb_date"]) or today.date()
-            coll_date = st.date_input("Date collected", value=default_dd, key="payout_date_in")
-        pc3,pc4=st.columns(2)
-        with pc3: payout_method=st.selectbox("Payout method",["Cash","MoMo","Bank transfer","Other"],key="payout_method")
-        with pc4: payout_ref=st.text_input("Payout reference / note",key="payout_reference",placeholder="MoMo ref, bank ref, or cash note")
-        coll_dt    = datetime.combine(coll_date, datetime.min.time(), tzinfo=GH_TZ)
-        delta_out  = money(new_amt - sr["collected_v"])          # only the change leaves the box
-        cash_after = money(total_cash_held - delta_out)
-        st.caption(f"Balance still owed to {rec_name} after this entry: GHS {fmt_num(money(sr['net_pool_amt']-new_amt))}"
-                   + (" — fully collected ✅" if new_amt >= sr["net_pool_amt"]-0.005 else "")
-                   + f" · Group cash after: GHS {fmt_num(cash_after)}")
-        overdraw = cash_after < -0.005
-        if overdraw:
-            st.error(f"❌ The group only holds GHS {fmt_num(total_cash_held)}. Paying out GHS {fmt_num(delta_out)} now would leave it GHS {fmt_num(abs(cash_after))} short. Record the outstanding weekly payments first, or enter a smaller amount.")
-            st.session_state.confirm_payout = False
-        if not st.session_state.get("confirm_payout",False):
-            if st.button("Save Payout", key="save_payout_btn", disabled=overdraw):
-                st.session_state.confirm_payout=True; st.rerun()
-        else:
-            st.warning(f"⚠️ Confirm: {rec_name} ({tkey}) has collected GHS {fmt_num(new_amt)} of GHS {sr['pool']} as at {format_date(coll_dt)}?")
-            cc1,cc2 = st.columns(2)
-            with cc1:
-                if st.button("✓ Yes, confirm", key="confirm_yes"):
-                    def _m(b):
-                        ps = b.setdefault("payout_status",{}).setdefault(tkey,{})
-                        before = money(ps.get("collected", ps.get("disbursed_amount", ps.get("amount_collected",0.0))))
-                        if money(total_cash_held - money(new_amt-before)) < -0.005:
-                            raise ValueError("would overdraw the group")
-                        ps.pop("amount_collected", None); ps.pop("disbursed_amount", None)
-                        full = money(new_amt) >= sr["net_pool_amt"]-0.005 and new_amt>0
-                        ps["collected"]      = money(new_amt)
-                        ps["disbursed"]      = full
-                        ps["disbursed_date"] = format_date(coll_dt) if new_amt>0 else ""
-                        if delta_out > 0:
-                            ptx={"id":f"PAYOUT-{now_dt().strftime('%Y%m%d%H%M%S')}-{pysecrets.token_hex(3).upper()}","turn":tkey,"recipient":rec_name,"amount":money(delta_out),"date":format_date(coll_dt),"method":payout_method,"reference":payout_ref.strip(),"who":st.session_state.get("admin_name",ADMIN_NAME),"time":now_str()}
-                            b.setdefault("payout_ledger",[]).insert(0,ptx); b["payout_ledger"]=b["payout_ledger"][:500]
-                        detail = [f"{tkey} collected: GHS {fmt_num(before)} → GHS {fmt_num(new_amt)}",
-                                  f"balance owed to {rec_name}: GHS {fmt_num(money(sr['net_pool_amt']-new_amt))}",
-                                  f"date: {ps['disbursed_date'] or '—'}"]
-                        txt = (f"{tkey} fully collected by {rec_name} — GHS {fmt_num(new_amt)}" if full
-                               else f"{tkey} part collected by {rec_name} — GHS {fmt_num(new_amt)} of GHS {sr['pool']}")
-                        return {"type":"payout","text":txt,"detail":detail}
-                    try:
-                        ok = commit(gsheet,_m)
-                    except ValueError:
-                        ok = False; flash("Save cancelled — that payout would overdraw the group's cash.","warning")
-                    st.session_state.confirm_payout=False
-                    if ok:
-                        fresh_ps=read_blob_fresh(gsheet).get("payout_ledger",[])
-                        if fresh_ps: st.session_state.last_payout_receipt=payout_receipt_text(fresh_ps[0])
-                        flash(f"Payout for {rec_name} saved")
-                    st.rerun()
-            with cc2:
-                if st.button("✗ Cancel", key="confirm_no", type="secondary"):
-                    st.session_state.confirm_payout=False; st.rerun()
-
-    with st.expander("🧾  Latest Payout Receipt"):
-        if st.session_state.get("last_payout_receipt"): wa_block(st.session_state.last_payout_receipt,"Susu_Payout_Receipt.txt","payout_receipt_latest")
-        else: st.info("Save a payout to generate its receipt.")
-
-
-with tab_tools:
-    with st.expander("🛠️  Legacy Week Grid / Corrections"):
-        st.caption("Use this only for historical checkbox-based records. New payments should be entered above so each payment gets a receipt and audit trail.")
-        show_all=st.toggle("Show all weeks",value=False,key="show_all_weeks")
-        week_range=list(range(1,total_weeks+1)) if show_all else ([current_elapsed_week] if current_elapsed_week>0 else [])
-        entered={}
-        for member in members:
-            if not week_range: continue
-            vals={}; cols=st.columns(8)
-            for w in week_range:
-                with cols[(w-1)%8]: vals[str(w)]=st.checkbox(f"{member} W{w}",value=paid(member,w),key=f"legacy_{member}_{w}")
-            entered[member]=vals
-        if st.button("Save Legacy Grid",key="legacy_grid_save"):
-            diffs=[f"{mbr} Wk {wk}: {'paid' if ticked else 'unpaid'}" for mbr,vals in entered.items() for wk,ticked in vals.items() if ticked!=paid(mbr,int(wk))]
-            if diffs:
-                def _m(b):
-                    for mbr,vals in entered.items(): b.setdefault("payments",{}).setdefault(mbr,{}).update(vals)
-                    return {"type":"payment","text":f"Legacy payment grid updated — {len(diffs)} change(s)","detail":diffs}
-                if commit(gsheet,_m): flash("Legacy grid saved")
-                st.rerun()
-            else: flash("No changes to save","info"); st.rerun()
-
     with st.expander("🔑  Change Passcode"):
-        html(f'<p style="font-size:13px;color:{T["sub_color"]};margin-bottom:8px">Enter the current passcode to confirm, then set a new one. Passcodes are stored as salted scrypt hashes.</p>')
+        html(f'<p style="font-size:13px;color:{T["sub_color"]};margin-bottom:8px">Enter the current passcode to confirm, '
+             f'then set a new one. Passcodes are stored as salted scrypt hashes.</p>')
         cp1,cp2,cp3 = st.columns(3)
         with cp1: old_pw  = st.text_input("Current Passcode", type="password", key="old_pw")
         with cp2: new_pw1 = st.text_input("New Passcode", type="password", key="new_pw1")
@@ -1236,7 +1297,7 @@ with tab_tools:
             stored_pw = st.session_state.get("admin_passcode", "")
             if not check_pw(old_pw, stored_pw): st.error("Current passcode is incorrect.")
             elif len(new_pw1) < 8: st.error("New passcode must be at least 8 characters.")
-            elif new_pw1!=new_pw2: st.error("New passcodes do not match.")
+            elif new_pw1 != new_pw2: st.error("New passcodes do not match.")
             else:
                 def _m(b):
                     b["passcode"] = hash_pw(new_pw1)
@@ -1244,36 +1305,94 @@ with tab_tools:
                 if commit(gsheet,_m): flash("Passcode updated")
                 st.rerun()
 
+with tab_tools:
     with st.expander("👤  Member Profile"):
-        profile_member=st.selectbox("Member",members,key="profile_member")
-        profile_txs=txs_for(profile_member)
-        total_member_paid=money(sum(float(x.get("amount",0) or 0) for x in profile_txs))
-        current_owing=next((r["owing"] for r in contrib_rows if r["member"]==profile_member),0.0)
-        pc1,pc2,pc3=st.columns(3)
-        pc1.metric("Weekly target",f"GHS {fmt_num(weekly(profile_member))}")
-        pc2.metric("Recorded payments",f"GHS {fmt_num(total_member_paid)}")
-        pc3.metric("Outstanding",f"GHS {fmt_num(current_owing)}")
+        profile_member = st.selectbox("Member", members, key="profile_member")
+        prow  = next(r for r in contrib_rows if r["member"]==profile_member)
+        banked_total = money(sum(paid_amount(profile_member,w) for w in range(1,total_weeks+1)))
+        mp1,mp2,mp3 = st.columns(3)
+        mp1.metric("Weekly target", f"GHS {fmt_num(weekly(profile_member))}")
+        mp2.metric("Banked to date", f"GHS {fmt_num(banked_total)}")
+        mp3.metric("Outstanding", f"GHS {fmt_num(prow['owing'])}")
+        profile_txs = txs_for(profile_member)
         if profile_txs:
             for tx in profile_txs[:20]:
-                st.markdown(f"**Week {int(tx.get('week',0)):02d} · GHS {fmt_num(tx.get('amount',0))}** · {tx.get('method','—')} · {tx.get('date','')} · `{tx.get('reference') or 'no reference'}`")
-        else: st.info("No transaction records for this member yet.")
+                st.markdown(f"**Week {int(tx.get('week',0)):02d} · GHS {fmt_num(tx.get('amount',0))}** · "
+                            f"{tx.get('method','—')} · {tx.get('date','')} · {tx.get('reference') or 'no reference'}")
+        else:
+            st.info("No itemised transactions for this member yet — any amounts above come from the legacy week grid.")
 
     with st.expander("🧮  Cash Reconciliation"):
-        expected_cash=money(total_cash_collected-total_payouts_dist)
-        html(f'<div style="font-size:14px;color:{T["td_color"]};line-height:1.8">System cash held: <strong style="color:{T["sec_title"]}">GHS {fmt_num(expected_cash)}</strong><br>Enter the physical cash + verified mobile/bank balance actually held by the group.</div>')
-        actual_cash=st.number_input("Actual cash / account balance (GHS)",min_value=0.0,value=float(expected_cash),step=10.0,key="recon_actual")
-        recon_diff=money(actual_cash-expected_cash)
-        if abs(recon_diff)<0.005: st.success("Reconciled — actual balance matches the system.")
-        elif recon_diff>0: st.warning(f"GHS {fmt_num(recon_diff)} more than the system balance.")
-        else: st.error(f"GHS {fmt_num(abs(recon_diff))} less than the system balance.")
-        recon_note=st.text_input("Reconciliation note",key="recon_note",placeholder="e.g. Cash counted + MoMo balance checked")
-        if st.button("Save Reconciliation",key="save_recon"):
+        html(f'<div style="font-size:14px;color:{T["td_color"]};line-height:1.8">System cash held: '
+             f'<strong style="color:{T["sec_title"]}">GHS {fmt_num(total_cash_held)}</strong><br>'
+             f'Enter the physical cash plus verified mobile/bank balance actually held by the group.</div>')
+        actual_cash = st.number_input("Actual cash / account balance (GHS)", min_value=0.0,
+                                      value=float(total_cash_held), step=10.0, key="recon_actual")
+        recon_diff = money(actual_cash - total_cash_held)
+        if abs(recon_diff) < 0.005: st.success("Reconciled — actual balance matches the system.")
+        elif recon_diff > 0:        st.warning(f"GHS {fmt_num(recon_diff)} more than the system balance.")
+        else:                       st.error(f"GHS {fmt_num(abs(recon_diff))} less than the system balance.")
+        recon_note = st.text_input("Reconciliation note", key="recon_note", placeholder="e.g. Cash counted + MoMo balance checked")
+        if st.button("Save Reconciliation", key="save_recon"):
             def _m(b):
-                rec={"date":now_str(),"actual":money(actual_cash),"system":money(expected_cash),"difference":money(recon_diff),"note":recon_note.strip(),"who":st.session_state.get("admin_name",ADMIN_NAME)}
-                b.setdefault("reconciliations",[]).insert(0,rec); b["reconciliations"]=b["reconciliations"][:100]
-                return {"type":"setting","text":f"Cash reconciled — actual GHS {fmt_num(actual_cash)} vs system GHS {fmt_num(expected_cash)}","detail":[f"difference: GHS {fmt_num(recon_diff)}",f"note: {recon_note.strip() or '—'}"]}
+                rec = {"date":now_str(),"actual":money(actual_cash),"system":money(total_cash_held),
+                       "difference":money(recon_diff),"note":recon_note.strip(),
+                       "who":st.session_state.get("admin_name",ADMIN_NAME)}
+                b.setdefault("reconciliations",[]).insert(0, rec)
+                b["reconciliations"] = b["reconciliations"][:100]
+                return {"type":"setting",
+                        "text":f"Cash reconciled — actual GHS {fmt_num(actual_cash)} vs system GHS {fmt_num(total_cash_held)}",
+                        "detail":[f"difference: GHS {fmt_num(recon_diff)}", f"note: {recon_note.strip() or '—'}"]}
             if commit(gsheet,_m): flash("Reconciliation recorded")
             st.rerun()
+        recs = st.session_state.get("reconciliations",[])[:5]
+        if recs:
+            rec_html = ""
+            for rec in recs:
+                diff = money(rec.get("difference",0))
+                col  = "#34d399" if abs(diff)<0.005 else ("#fbbf24" if diff>0 else "#f87171")
+                rec_html += (f'<div class="log-entry"><div class="log-dot log-dot-setting"></div>'
+                             f'<div class="log-text"><strong>Actual GHS {fmt_num(rec.get("actual",0))} vs system '
+                             f'GHS {fmt_num(rec.get("system",0))}</strong>'
+                             f'<div class="diff-line" style="color:{col}">difference GHS {fmt_num(diff)}'
+                             f'{" · " + rec.get("note","") if rec.get("note") else ""}</div></div>'
+                             f'<div class="log-time">{rec.get("date","")}</div></div>')
+            html(rec_html)
+
+    with st.expander("🛠️  Legacy Week Grid / Corrections"):
+        st.caption("For historical checkbox records only. New payments should go through Record Payment so each one "
+                   "gets a receipt. Ticking a box here counts as the full weekly target for that week.")
+        show_all   = st.toggle("Show all weeks", value=False, key="show_all_weeks")
+        week_range = list(range(1,total_weeks+1)) if show_all else ([current_elapsed_week] if current_elapsed_week>0 else [])
+        entered = {}
+        if not week_range:
+            st.info("The cycle has not started yet.")
+        else:
+            for member in members:
+                html(f'<div style="font-size:14px;font-weight:600;color:{T["td_color"]};margin:10px 0 6px">{member}</div>')
+                vals = {}
+                cols = st.columns(8)
+                for w in week_range:
+                    with cols[(w-1)%8]:
+                        vals[str(w)] = st.checkbox(f"W{w}", value=paid(member,w), key=f"legacy_{member}_{w}")
+                entered[member] = vals
+            if st.button("Save Legacy Grid", key="legacy_grid_save"):
+                diffs = [f"{mbr} Wk {int(wk):02d}: {'paid' if ticked else 'unpaid'}"
+                         for mbr,vals in entered.items() for wk,ticked in vals.items() if ticked != paid(mbr,int(wk))]
+                blocked = [f"{mbr} Wk {int(wk):02d}" for mbr,vals in entered.items() for wk,ticked in vals.items()
+                           if ticked != paid(mbr,int(wk)) and txs_for(mbr,int(wk))]
+                if blocked:
+                    st.error("These weeks have itemised transactions and cannot be changed here — reverse the payment "
+                             "instead: " + ", ".join(blocked))
+                elif diffs:
+                    def _m(b):
+                        for mbr,vals in entered.items():
+                            b.setdefault("payments",{}).setdefault(mbr,{}).update(vals)
+                        return {"type":"payment","text":f"Legacy payment grid updated — {len(diffs)} change(s)","detail":diffs}
+                    if commit(gsheet,_m): flash("Legacy grid saved")
+                    st.rerun()
+                else:
+                    flash("No changes to save","info"); st.rerun()
 
     with st.expander("🧾  Payment Audit"):
         ledger = st.session_state.get("payment_ledger", [])
@@ -1284,33 +1403,34 @@ with tab_tools:
             for entry in ledger[:30]:
                 action = "PAID" if entry.get("action") == "paid" else "REVERSED"
                 dot    = "log-dot" if entry.get("action") == "paid" else "log-dot log-dot-payout"
+                extra  = " · ".join(x for x in [entry.get("method",""), entry.get("reference","")] if x)
                 led_html += (f'<div class="log-entry"><div class="{dot}"></div>'
-                             f'<div class="log-text"><strong>{entry.get("member","—")} · Week {int(entry.get("week",0)):02d} · GHS {fmt_num(entry.get("amount",0))}</strong>'
-                             f'<div class="diff-line">{action} · by {entry.get("who","")}</div></div>'
+                             f'<div class="log-text"><strong>{entry.get("member","—")} · Week {int(entry.get("week",0)):02d} · '
+                             f'GHS {fmt_num(entry.get("amount",0))}</strong>'
+                             f'<div class="diff-line">{action} · by {entry.get("who","")}{" · " + extra if extra else ""}</div></div>'
                              f'<div class="log-time">{entry.get("time","")}</div></div>')
             html(led_html)
 
-
-if st.session_state.history:
-    with st.expander("🕒  Activity Log"):
-        dot_map = {"payment":"log-dot","payout":"log-dot log-dot-payout","setting":"log-dot log-dot-setting"}
-        log_html = ""
-        for entry in st.session_state.history[:25]:
-            dot_class = dot_map.get(entry.get("type","payment"),"log-dot")
-            who       = entry.get("who","")
-            detail    = entry.get("detail") or []
-            det_html  = "".join(f'<div class="diff-line">• {d}</div>' for d in detail[:12])
-            if len(detail)>12: det_html += f'<div class="diff-line">• …and {len(detail)-12} more</div>'
-            who_html  = f'<div class="diff-line">by {who}</div>' if who else ""
-            log_html += (f'<div class="log-entry"><div class="{dot_class}"></div>'
-                         f'<div class="log-text"><strong>{entry.get("text","—")}</strong>'
-                         f'{who_html}{det_html}</div>'
-                         f'<div class="log-time">{entry.get("time","")}</div></div>')
-        html(log_html)
+    if st.session_state.history:
+        with st.expander("🕒  Activity Log"):
+            dot_map = {"payment":"log-dot","payout":"log-dot log-dot-payout","setting":"log-dot log-dot-setting"}
+            log_html = ""
+            for entry in st.session_state.history[:25]:
+                dot_class = dot_map.get(entry.get("type","payment"),"log-dot")
+                who       = entry.get("who","")
+                detail    = entry.get("detail") or []
+                det_html  = "".join(f'<div class="diff-line">• {d}</div>' for d in detail[:12])
+                if len(detail)>12: det_html += f'<div class="diff-line">• …and {len(detail)-12} more</div>'
+                who_html  = f'<div class="diff-line">by {who}</div>' if who else ""
+                log_html += (f'<div class="log-entry"><div class="{dot_class}"></div>'
+                             f'<div class="log-text"><strong>{entry.get("text","—")}</strong>'
+                             f'{who_html}{det_html}</div>'
+                             f'<div class="log-time">{entry.get("time","")}</div></div>')
+            html(log_html)
 
 html('<div class="gdivider"></div>')
 if st.button("🔒  Lock Dashboard", key="logout", type="secondary"):
     st.session_state.authenticated=False; st.session_state.admin_name=ADMIN_NAME
     st.session_state.last_activity=now_dt(); st.rerun()
 
-html('<div class="foot">Susu Savings V4 · Backed by Google Sheets · Secured with passcode</div>')
+html('<div class="foot">Susu Savings · Backed by Google Sheets · Secured with passcode</div>')
