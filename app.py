@@ -113,14 +113,18 @@ st.markdown(f"""
     .v3-progress.tall{{height:8px;border-radius:6px;margin-top:6px;}}
 
     .v3-command-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;align-items:start;}}
-    .v3-alert{{display:flex;align-items:center;gap:14px;background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);
-        border-radius:16px;padding:16px 18px;}}
-    .v3-alert-icon{{width:34px;height:34px;flex-shrink:0;border-radius:50%;background:rgba(251,191,36,0.2);color:#fbbf24;
-        display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;}}
-    .v3-alert-body{{display:flex;flex-direction:column;gap:3px;min-width:0;}}
-    .v3-alert-body strong{{font-size:15px;color:#fbbf24;font-weight:700;}}
-    .v3-alert-body span{{font-size:13px;color:{T['td_color']};line-height:1.45;}}
-    .v3-alert a{{margin-left:auto;font-size:13px;font-weight:700;color:#fbbf24!important;text-decoration:none!important;white-space:nowrap;}}
+    .v3-kpis-2{{grid-template-columns:repeat(2,1fr);}}
+    .v3-alert{{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:16px;padding:18px 20px;}}
+    .v3-alert-top{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}}
+    .v3-alert-top .v3-kicker{{margin-bottom:0;color:#fbbf24;}}
+    .v3-alert-amount{{font-size:27px;font-weight:800;color:#fbbf24;line-height:1.1;letter-spacing:-0.5px;}}
+    .v3-alert-names{{font-size:13px;color:{T['td_color']};line-height:1.5;margin-top:6px;}}
+    .v3-alert-foot{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;
+        font-size:12px;color:{T['sub_color']};}}
+    .v3-alert-foot a{{font-weight:700;color:#fbbf24!important;text-decoration:none!important;white-space:nowrap;}}
+    .v3-alert-clear{{background:rgba(52,211,153,0.08);border-color:rgba(52,211,153,0.28);}}
+    .v3-alert-clear .v3-kicker,.v3-alert-clear .v3-alert-amount,.v3-alert-clear .v3-alert-foot a{{color:#34d399!important;}}
+    .v3-days.v3-clear{{color:#34d399;background:rgba(52,211,153,0.14);border-color:rgba(52,211,153,0.3);}}
 
     .v3-next-card{{background:{T['card_bg']};border:1px solid {T['card_border']};border-radius:16px;padding:18px 20px;box-shadow:{T['card_shadow']};}}
     .v3-next-top{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}}
@@ -245,8 +249,9 @@ st.markdown(f"""
         .v3-kpi-value{{font-size:21px;}}
         .v3-kpi-primary{{grid-column:1 / -1;}}
         .v3-command-grid{{grid-template-columns:1fr;}}
-        .v3-alert{{flex-wrap:wrap;padding:13px 14px;gap:10px;}}
-        .v3-alert a{{margin-left:0;width:100%;}}
+        .v3-alert{{padding:14px 15px;}}
+        .v3-alert-amount{{font-size:23px;}}
+        .v3-kpis-2{{grid-template-columns:1fr;}}
         .v3-next-main{{flex-direction:column;align-items:flex-start;gap:6px;}}
         .glass-card,.v3-section-card{{padding:14px 12px!important;border-radius:12px!important;}}
         .v3-section-head{{gap:6px;}}
@@ -775,7 +780,7 @@ with rfc:
 
 # ── primary KPIs ──────────────────────────────────────────────────────────────
 html(f"""
-<div class="v3-kpis">
+<div class="v3-kpis v3-kpis-2">
   <div class="v3-kpi v3-kpi-primary">
     <div class="v3-kpi-label">CASH HELD</div>
     <div class="v3-kpi-value">GHS {fmt_num(total_cash_held)}</div>
@@ -786,36 +791,51 @@ html(f"""
     <div class="v3-kpi-label">THIS WEEK</div>
     <div class="v3-kpi-value">{current_elapsed_week} <span>/ {total_weeks}</span></div>
     <div class="v3-progress"><span style="width:{program_pct}%"></span></div>
-    <div class="v3-kpi-meta">{program_pct}% of rotation completed</div>
-  </div>
-  <div class="v3-kpi">
-    <div class="v3-kpi-label">OUTSTANDING</div>
-    <div class="v3-kpi-value {gap_class}">GHS {fmt_num(collection_gap)}</div>
-    <div class="v3-kpi-meta">{len(owing_rows)} member{'s' if len(owing_rows) != 1 else ''} behind this week{ahead_note}</div>
-  </div>
-  <div class="v3-kpi">
-    <div class="v3-kpi-label">NEXT PAYOUT</div>
-    <div class="v3-kpi-value v3-kpi-name">{next_turn['recipient'] if next_turn else '—'}</div>
-    <div class="v3-kpi-meta">{(next_turn['date'] + ' · GHS ' + next_turn['pool']) if next_turn else 'Cycle complete'}</div>
+    <div class="v3-kpi-meta">{program_pct}% of rotation completed · ends {format_date(end_date)}</div>
   </div>
 </div>
 """)
 
 # ── alert + next payout ───────────────────────────────────────────────────────
-alert_html = ""
+# collections card — the outstanding figure lives here now, with the names
 if owing_rows:
-    who_owes = ", ".join(f"{r['member']} · GHS {fmt_num(r['owing'])}" for r in owing_rows[:3])
-    if len(owing_rows) > 3:
-        who_owes += f" +{len(owing_rows)-3} more"
+    who_owes = ", ".join(f"{r['member']} · GHS {fmt_num(r['owing'])}" for r in owing_rows[:4])
+    if len(owing_rows) > 4:
+        who_owes += f" +{len(owing_rows)-4} more"
     alert_html = f"""
     <div class="v3-alert">
-      <div class="v3-alert-icon">!</div>
-      <div class="v3-alert-body"><strong>{len(owing_rows)} member{'s' if len(owing_rows) != 1 else ''} need attention</strong><span>{who_owes}</span></div>
-      <a href="#section-exports">Send reminder →</a>
+      <div class="v3-alert-top">
+        <span class="v3-kicker">OUTSTANDING</span>
+        <span class="v3-days v3-urgent">{len(owing_rows)} behind</span>
+      </div>
+      <div class="v3-alert-amount">GHS {fmt_num(collection_gap)}</div>
+      <div class="v3-alert-names">{who_owes}</div>
+      <div class="v3-alert-foot">
+        <span>{('GHS ' + fmt_num(paid_ahead) + ' paid ahead') if paid_ahead > 0 else 'Due to week ' + str(current_elapsed_week)}</span>
+        <a href="#section-exports">Send reminder →</a>
+      </div>
+    </div>
+    """
+else:
+    alert_html = f"""
+    <div class="v3-alert v3-alert-clear">
+      <div class="v3-alert-top">
+        <span class="v3-kicker">COLLECTIONS</span>
+        <span class="v3-days v3-clear">all paid</span>
+      </div>
+      <div class="v3-alert-amount">GHS 0</div>
+      <div class="v3-alert-names">Every member is up to date for week {current_elapsed_week}.</div>
+      <div class="v3-alert-foot">
+        <span>{('GHS ' + fmt_num(paid_ahead) + ' paid ahead') if paid_ahead > 0 else 'Nothing outstanding'}</span>
+        <a href="#section-exports">Share update →</a>
+      </div>
     </div>
     """
 
+# next payout card — the only place the rotation's next turn is stated
 if next_turn:
+    gap_to_fund    = money(max(0.0, next_turn["net_pool_amt"] - next_turn["funded"]))
+    shortfall_note = f" · GHS {fmt_num(gap_to_fund)} short" if gap_to_fund > 0 else " · fully funded"
     if next_turn["days_away"] is None:
         days_label, urgency = "past due", "v3-urgent"
     else:
@@ -830,11 +850,13 @@ if next_turn:
       </div>
       <div class="v3-funding-row"><span>Turn funding</span><strong>{funded_pct}%</strong></div>
       <div class="v3-progress tall"><span style="width:{funded_pct}%"></span></div>
-      <div class="v3-funding-meta">GHS {next_turn['funded_s']} banked of GHS {next_turn['pool']} required</div>
+      <div class="v3-funding-meta">GHS {next_turn['funded_s']} banked of GHS {next_turn['pool']} required{shortfall_note}</div>
     </div>
     """
 else:
-    next_card = '<div class="v3-next-card"><div class="v3-kicker">ROTATION</div><div class="v3-recipient">Cycle complete 🎉</div></div>'
+    next_card = ('<div class="v3-next-card"><div class="v3-kicker">ROTATION</div>'
+                 '<div class="v3-recipient">Cycle complete 🎉</div>'
+                 '<div class="v3-next-date">Every turn has been collected.</div></div>')
 
 html(f"""<div class="v3-command-grid">{alert_html}{next_card}</div>""")
 
