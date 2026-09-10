@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import io
 import json
 import re
@@ -241,8 +242,14 @@ def format_date(dt):
     sfx = 'th' if 11<=d<=13 else {1:'st',2:'nd',3:'rd'}.get(d%10,'th')
     return f"{d}{sfx} {dt.strftime('%b %Y')}"
 
+GH_TZ = ZoneInfo("Africa/Accra")
+SESSION_TIMEOUT_MINUTES = 30
+
+def now_dt():
+    return datetime.now(GH_TZ)
+
 def now_str():
-    return datetime.now().strftime("%d %b %Y %H:%M")
+    return now_dt().strftime("%d %b %Y %H:%M")
 
 def completion_ring(pct, size=72):
     r    = (size-8)//2
@@ -257,14 +264,33 @@ def completion_ring(pct, size=72):
             f'<text x="{size//2}" y="{size//2+4}" text-anchor="middle" font-size="13" font-weight="700" fill="{c}">{pct}%</text>'
             f'</svg>')
 
+# Passwords are stored as salted scrypt hashes. The old SHA-256 format is still
+# recognised so existing groups can be upgraded automatically on successful login.
 def hash_pw(pw):
-    return hashlib.sha256(pw.encode("utf-8")).hexdigest()
+    if not isinstance(pw, str) or not pw:
+        return ""
+    salt = pysecrets.token_bytes(16)
+    digest = hashlib.scrypt(pw.encode("utf-8"), salt=salt, n=2**14, r=8, p=1, dklen=32)
+    return "scrypt$16384$8$1$" + salt.hex() + "$" + digest.hex()
 
-def is_hashed(val):
+def is_scrypt_hash(val):
+    return isinstance(val, str) and val.startswith("scrypt$16384$8$1$") and len(val.split("$")) == 6
+
+def is_legacy_sha256(val):
     return isinstance(val,str) and len(val)==64 and all(c in "0123456789abcdef" for c in val)
 
 def check_pw(entered, stored):
-    return hash_pw(entered)==stored if is_hashed(stored) else entered==stored
+    if is_scrypt_hash(stored):
+        try:
+            _, n, r, p, salt_hex, digest_hex = stored.split("$")
+            digest = hashlib.scrypt(entered.encode("utf-8"), salt=bytes.fromhex(salt_hex),
+                                    n=int(n), r=int(r), p=int(p), dklen=len(bytes.fromhex(digest_hex)))
+            return pysecrets.compare_digest(digest.hex(), digest_hex)
+        except Exception:
+            return False
+    if is_legacy_sha256(stored):
+        return pysecrets.compare_digest(hashlib.sha256(entered.encode("utf-8")).hexdigest(), stored)
+    return pysecrets.compare_digest(entered, stored) if isinstance(stored, str) else False
 
 def flash(msg, kind="success"):
     st.session_state.flash = (msg, kind)
@@ -286,8 +312,15 @@ def wa_block(text, fname, key):
 # ══════════════════════════════════════════════════════════════════════════════
 SCOPES    = ["https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/drive"]
 DATA_WS   = "susu_data"
-ADMIN_PW  = "Susu2026"
-ADMIN_NAME = "Abre"          # default name shown on the unlock screen / activity log
+ADMIN_NAME = "Abre"
+
+def bootstrap_admin_password():
+    try:
+        return str(st.secrets["app"]["admin_passcode"])
+    except Exception:
+        return ""
+
+BOOTSTRAP_ADMIN_PW = bootstrap_admin_password()
 LEGACY_WS = ["settings","tiers","payments","payout_status","history","snapshots","passcode"]
 
 DEFAULT_SETTINGS = {"start_date":"2026-08-17","base_monthly":1000,"admin_fee_percentage":0.0,
@@ -295,7 +328,7 @@ DEFAULT_SETTINGS = {"start_date":"2026-08-17","base_monthly":1000,"admin_fee_per
 
 def blank_blob():
     return {"rev":0,"settings":dict(DEFAULT_SETTINGS),"tiers":{},"payments":{},
-            "payout_status":{},"history":[],"snapshots":{},"member_status":{},"passcode":ADMIN_PW}
+            "payout_status":{},"history":[],"snapshots":{},"member_status":{},"payment_ledger":[],"passcode":hash_pw(BOOTSTRAP_ADMIN_PW) if BOOTSTRAP_ADMIN_PW else ""}
 
 @st.cache_resource
 def get_sheet():
@@ -323,9 +356,11 @@ def migrate_legacy(sheet):
     b["tiers"]         = _read_ws_json(sheet,"tiers",{})         if "tiers" in existing else {}
     b["payments"]      = _read_ws_json(sheet,"payments",{})      if "payments" in existing else {}
     b["payout_status"] = _read_ws_json(sheet,"payout_status",{}) if "payout_status" in existing else {}
+    b["payout_status"] = {((f"Turn {k.split(' ', 1)[1]}") if str(k).startswith("Month ") else str(k)): v
+                            for k,v in b["payout_status"].items()}
     b["history"]       = _read_ws_json(sheet,"history",[])       if "history" in existing else []
     b["snapshots"]     = _read_ws_json(sheet,"snapshots",{})     if "snapshots" in existing else {}
-    b["passcode"]      = _read_ws_json(sheet,"passcode",ADMIN_PW) if "passcode" in existing else ADMIN_PW
+    b["passcode"]      = _read_ws_json(sheet,"passcode","") if "passcode" in existing else (hash_pw(BOOTSTRAP_ADMIN_PW) if BOOTSTRAP_ADMIN_PW else "")
     b["history"].insert(0,{"type":"setting","text":"Data migrated to single-blob storage","who":"system","time":now_str()})
     return b
 
@@ -336,6 +371,14 @@ def read_blob_fresh(sheet):
         try:
             b = json.loads(raw)
             for k,v in blank_blob().items(): b.setdefault(k,v)
+            # Backward compatibility: older releases named payout keys Month 1, Month 2, ...
+            # Keep their balances when the UI terminology is upgraded to Turn 1, Turn 2, ...
+            ps = b.get("payout_status", {})
+            for i in range(1, 100):
+                old_key, new_key = f"Month {i}", f"Turn {i}"
+                if old_key in ps and new_key not in ps:
+                    ps[new_key] = ps[old_key]
+            b["payout_status"] = ps
             return b
         except Exception: pass
     b = migrate_legacy(sheet)
@@ -363,8 +406,9 @@ def apply_blob(b):
     st.session_state.history              = b.get("history",[])
     st.session_state.snapshots            = b.get("snapshots",{})
     st.session_state.member_status        = b.get("member_status",{})
-    st.session_state.admin_passcode       = b.get("passcode",ADMIN_PW)
-    st.session_state.last_sync            = datetime.now()
+    st.session_state.payment_ledger      = b.get("payment_ledger",[])
+    st.session_state.admin_passcode       = b.get("passcode","")
+    st.session_state.last_sync            = now_dt()
 
 def reload_state(sheet, fresh=False):
     apply_blob(read_blob_fresh(sheet) if fresh else read_blob_cached(sheet))
@@ -404,12 +448,23 @@ if "initialized" not in st.session_state:
     st.session_state.initialized    = True
     st.session_state.confirm_payout = False
     st.session_state.admin_name     = ADMIN_NAME
+    st.session_state.last_activity  = now_dt()
+    st.session_state.confirm_settings = False
 
 STALE_MINUTES = 5
-if (datetime.now()-st.session_state.last_sync).total_seconds() > STALE_MINUTES*60:
+if (now_dt()-st.session_state.last_sync).total_seconds() > STALE_MINUTES*60:
     reload_state(gsheet)
 
 show_flash()
+
+# ── session timeout ────────────────────────────────────────────────────────────
+if st.session_state.get("authenticated"):
+    if (now_dt() - st.session_state.get("last_activity", now_dt())).total_seconds() > SESSION_TIMEOUT_MINUTES * 60:
+        st.session_state.authenticated = False
+        st.session_state.admin_name = ADMIN_NAME
+        flash("Session timed out — please unlock again.", "warning")
+    else:
+        st.session_state.last_activity = now_dt()
 
 # ── auth ──────────────────────────────────────────────────────────────────────
 if not st.session_state.authenticated:
@@ -425,13 +480,20 @@ if not st.session_state.authenticated:
         who = st.text_input("n", value=ADMIN_NAME, label_visibility="collapsed", placeholder="Your name (for the activity log)")
         pw  = st.text_input("p", type="password", label_visibility="collapsed", placeholder="Passcode…")
         if st.button("Unlock →"):
-            stored = st.session_state.get("admin_passcode", ADMIN_PW)
+            stored = st.session_state.get("admin_passcode", "")
+            if not stored and not BOOTSTRAP_ADMIN_PW:
+                st.error("No admin passcode is configured. Add app.admin_passcode to Streamlit secrets first.")
+                st.stop()
+            if not stored and BOOTSTRAP_ADMIN_PW:
+                stored = BOOTSTRAP_ADMIN_PW
             if not who.strip():
                 st.error("Please enter your name — every change is recorded against it.")
             elif check_pw(pw, stored):
                 st.session_state.admin_name    = who.strip()[:40]
                 st.session_state.authenticated = True
-                if not is_hashed(stored):
+                st.session_state.last_activity = now_dt()
+                # Upgrade plaintext or legacy SHA-256 storage to salted scrypt.
+                if not is_scrypt_hash(st.session_state.get("admin_passcode", "")):
                     commit(gsheet, lambda b: (b.__setitem__("passcode", hash_pw(pw)), None)[1])
                 st.rerun()
             else: st.error("Incorrect passcode.")
@@ -448,7 +510,7 @@ for m in members:
 
 total_weeks = num_members * 4      # rotation is fixed; exiting a member never shifts dates (#7)
 
-try: start_dt = datetime.strptime(st.session_state.start_date, "%Y-%m-%d")
+try: start_dt = datetime.strptime(st.session_state.start_date, "%Y-%m-%d").replace(tzinfo=GH_TZ)
 except ValueError: st.error("Date format must be YYYY-MM-DD."); st.stop()
 
 end_date = start_dt + timedelta(weeks=total_weeks)
@@ -458,9 +520,9 @@ for m in members:
     for w in range(1,total_weeks+1):
         st.session_state.payments[m].setdefault(str(w), False)
 for i in range(num_members):
-    st.session_state.payout_status.setdefault(f"Month {i+1}", {})
+    st.session_state.payout_status.setdefault(f"Turn {i+1}", {})
 
-today                = datetime.today()
+today                = now_dt()
 days_passed          = (today-start_dt).days
 current_elapsed_week = min(max(0,days_passed//7)+1 if today>=start_dt else 0, total_weeks)
 program_pct          = int(current_elapsed_week/total_weeks*100) if total_weeks else 0
@@ -492,7 +554,7 @@ def collected_amount(month_lbl):
     ps = st.session_state.payout_status.get(month_lbl,{})
     return money(ps.get("collected", ps.get("disbursed_amount", ps.get("amount_collected",0.0))))
 
-total_payouts_dist    = money(sum(collected_amount(f"Month {i+1}") for i in range(num_members)))
+total_payouts_dist    = money(sum(collected_amount(f"Turn {i+1}") for i in range(num_members)))
 total_cash_held       = money(total_cash_collected - total_payouts_dist)
 total_expected_so_far = money(sum(weekly(m)*sum(1 for w in range(1,current_elapsed_week+1) if liable(m,w)) for m in members))
 # money due-but-unpaid up to this week — matches the owing banner exactly
@@ -549,7 +611,7 @@ for member in members:
 schedule_rows, wa_payout_rows = [], []
 cur_d = start_dt
 for i in range(num_members):
-    month_lbl    = f"Month {i+1}"
+    month_lbl    = f"Turn {i+1}"
     recipient    = members[i]
     payout_date  = cur_d+timedelta(weeks=4)
     gross_pool   = money(tier(recipient)*num_members)
@@ -577,7 +639,7 @@ for i in range(num_members):
 # ══════════════════════════════════════════════════════════════════════════════
 # DASHBOARD
 # ══════════════════════════════════════════════════════════════════════════════
-sync_ago = int((datetime.now()-st.session_state.last_sync).total_seconds()/60)
+sync_ago = int((now_dt()-st.session_state.last_sync).total_seconds()/60)
 sync_txt = "just now" if sync_ago<1 else f"{sync_ago}m ago"
 html(f"""<div class="status-bar"><span><span class="status-dot"></span><span class="status-live">Live</span></span><span class="status-sync">Synced {sync_txt} &nbsp;·&nbsp; rev {st.session_state.rev}</span></div>""")
 rf_col,_sp = st.columns([1,3])
@@ -814,10 +876,25 @@ with st.expander("⚙️  Group Settings"):
         try: datetime.strptime(new_start,"%Y-%m-%d")
         except ValueError: st.error("Date format must be YYYY-MM-DD."); st.stop()
         changes = []
-        if new_start != st.session_state.start_date: changes.append(f"start date {st.session_state.start_date} → {new_start}")
+        structural = []
+        if new_start != st.session_state.start_date:
+            changes.append(f"start date {st.session_state.start_date} → {new_start}")
+            structural.append("start date")
         if float(new_base) != float(st.session_state.base_monthly): changes.append(f"base monthly {fmt_num(st.session_state.base_monthly)} → {fmt_num(new_base)}")
         if float(new_fee) != float(st.session_state.admin_fee_percentage): changes.append(f"admin fee {st.session_state.admin_fee_percentage}% → {new_fee}%")
-        if new_names.strip() != st.session_state.names_input.strip(): changes.append("member list edited")
+        if new_names.strip() != st.session_state.names_input.strip():
+            changes.append("member list edited")
+            structural.append("member list")
+        if not changes:
+            flash("No setting changes", "info"); st.rerun()
+        if structural and not st.session_state.get("confirm_settings", False):
+            st.session_state.pending_settings = {"start":new_start,"base":float(new_base),"fee":float(new_fee),"names":new_names,"changes":changes}
+            st.session_state.confirm_settings = True
+            st.rerun()
+        pending = st.session_state.pop("pending_settings", None)
+        st.session_state.confirm_settings = False
+        if pending:
+            new_start, new_base, new_fee, new_names, changes = pending["start"], pending["base"], pending["fee"], pending["names"], pending["changes"]
         st.session_state.start_date=new_start; st.session_state.base_monthly=new_base
         st.session_state.admin_fee_percentage=new_fee; st.session_state.names_input=new_names
         def _m(b):
@@ -825,6 +902,31 @@ with st.expander("⚙️  Group Settings"):
             return {"type":"setting","text":"Group settings updated","detail":changes}
         if commit(gsheet,_m): flash("Settings saved")
         st.rerun()
+
+    if st.session_state.get("confirm_settings"):
+        pending = st.session_state.get("pending_settings", {})
+        st.warning("⚠️ This change affects the cycle structure: " + ", ".join(pending.get("changes", [])) + ". Existing payment history is preserved, but payout dates or member rotation can change. Confirm only if that is intentional.")
+        sc1,sc2 = st.columns(2)
+        with sc1:
+            if st.button("✓ Confirm structural change", key="confirm_settings_yes"):
+                # Re-run the same save path with the pending values.
+                st.session_state.confirm_settings = True
+                st.session_state.force_settings_save = True
+                st.rerun()
+        with sc2:
+            if st.button("✗ Cancel", key="confirm_settings_no", type="secondary"):
+                st.session_state.pop("pending_settings", None); st.session_state.confirm_settings=False; st.rerun()
+
+    if st.session_state.pop("force_settings_save", False):
+        pending = st.session_state.pop("pending_settings", None)
+        if pending:
+            st.session_state.confirm_settings = False
+            st.session_state.start_date=pending["start"]; st.session_state.base_monthly=pending["base"]
+            st.session_state.admin_fee_percentage=pending["fee"]; st.session_state.names_input=pending["names"]
+            def _save_confirmed(b, changes=pending["changes"]):
+                put_settings(b); return {"type":"setting","text":"Group settings updated","detail":changes}
+            if commit(gsheet,_save_confirmed): flash("Settings saved")
+            st.rerun()
 
 with st.expander("💰  Custom Member Tiers"):
     tier_cols = st.columns(min(num_members,4))
@@ -910,6 +1012,17 @@ with st.expander("📝  Bulk Payment Entry"):
                 def _m(b):
                     for mbr,vals in entered.items():
                         b.setdefault("payments",{}).setdefault(mbr,{}).update(vals)
+                    ledger = b.setdefault("payment_ledger",[])
+                    for mbr,vals in entered.items():
+                        for wk,ticked in vals.items():
+                            was = paid(mbr,int(wk))
+                            if ticked != was:
+                                ledger.insert(0, {
+                                    "member": mbr, "week": int(wk), "amount": weekly(mbr),
+                                    "action": "paid" if ticked else "reversed",
+                                    "time": now_str(), "who": st.session_state.get("admin_name", ADMIN_NAME)
+                                })
+                    b["payment_ledger"] = ledger[:500]
                     held = money(sum(money(b["tiers"].get(m,b["settings"]["base_monthly"])/4.0)
                                      for m in members for w in range(1,total_weeks+1)
                                      if b["payments"].get(m,{}).get(str(w),False)) - total_payouts_dist)
@@ -953,7 +1066,7 @@ with st.expander("🎁  Record Payout"):
         if st.button("Save Payout", key="save_payout_btn", disabled=overdraw):
             st.session_state.confirm_payout=True; st.rerun()
     else:
-        st.warning(f"⚠️ Confirm: {rec_name} ({mkey.replace('Month','Turn')}) has collected GHS {fmt_num(new_amt)} of GHS {sr['pool']} as at {format_date(datetime.combine(coll_date, datetime.min.time()))}?")
+        st.warning(f"⚠️ Confirm: {rec_name} ({mkey.replace('Month','Turn')}) has collected GHS {fmt_num(new_amt)} of GHS {sr['pool']} as at {format_date(datetime.combine(coll_date, datetime.min.time(), tzinfo=GH_TZ))}?")
         cc1,cc2 = st.columns(2)
         with cc1:
             if st.button("✓ Yes, confirm", key="confirm_yes"):
@@ -966,7 +1079,7 @@ with st.expander("🎁  Record Payout"):
                     full = money(new_amt) >= sr["net_pool_amt"]-0.005 and new_amt>0
                     ps["collected"]      = money(new_amt)
                     ps["disbursed"]      = full
-                    ps["disbursed_date"] = format_date(datetime.combine(coll_date, datetime.min.time())) if new_amt>0 else ""
+                    ps["disbursed_date"] = format_date(datetime.combine(coll_date, datetime.min.time(), tzinfo=GH_TZ)) if new_amt>0 else ""
                     detail = [f"{mkey} collected: GHS {fmt_num(before)} → GHS {fmt_num(new_amt)}",
                               f"balance owed to {rec_name}: GHS {fmt_num(money(sr['net_pool_amt']-new_amt))}",
                               f"date: {ps['disbursed_date'] or '—'}"]
@@ -985,15 +1098,15 @@ with st.expander("🎁  Record Payout"):
                 st.session_state.confirm_payout=False; st.rerun()
 
 with st.expander("🔑  Change Passcode"):
-    html(f'<p style="font-size:13px;color:{T["sub_color"]};margin-bottom:8px">Enter the current passcode to confirm, then set a new one. Passcodes are stored hashed.</p>')
+    html(f'<p style="font-size:13px;color:{T["sub_color"]};margin-bottom:8px">Enter the current passcode to confirm, then set a new one. Passcodes are stored as salted scrypt hashes.</p>')
     cp1,cp2,cp3 = st.columns(3)
     with cp1: old_pw  = st.text_input("Current Passcode", type="password", key="old_pw")
     with cp2: new_pw1 = st.text_input("New Passcode", type="password", key="new_pw1")
     with cp3: new_pw2 = st.text_input("Confirm New Passcode", type="password", key="new_pw2")
     if st.button("Update Passcode", key="update_pw"):
-        stored_pw = st.session_state.get("admin_passcode",ADMIN_PW)
+        stored_pw = st.session_state.get("admin_passcode", "")
         if not check_pw(old_pw, stored_pw): st.error("Current passcode is incorrect.")
-        elif len(new_pw1) < 6: st.error("New passcode must be at least 6 characters.")
+        elif len(new_pw1) < 8: st.error("New passcode must be at least 8 characters.")
         elif new_pw1!=new_pw2: st.error("New passcodes do not match.")
         else:
             def _m(b):
@@ -1001,6 +1114,15 @@ with st.expander("🔑  Change Passcode"):
                 return {"type":"setting","text":"Passcode changed"}
             if commit(gsheet,_m): flash("Passcode updated")
             st.rerun()
+
+with st.expander("🧾  Payment Audit"):
+    ledger = st.session_state.get("payment_ledger", [])
+    if not ledger:
+        st.info("No payment audit entries yet.")
+    else:
+        for entry in ledger[:30]:
+            action = "PAID" if entry.get("action") == "paid" else "REVERSED"
+            st.write(f"**{entry.get('member','—')} · Week {int(entry.get('week',0)):02d} · GHS {fmt_num(entry.get('amount',0))}** — {action} · {entry.get('who','')} · {entry.get('time','')}")
 
 if st.session_state.history:
     with st.expander("🕒  Activity Log"):
@@ -1020,6 +1142,6 @@ if st.session_state.history:
 
 html('<div class="gdivider"></div>')
 if st.button("🔒  Lock Dashboard", key="logout", type="secondary"):
-    st.session_state.authenticated=False; st.session_state.admin_name=ADMIN_NAME; st.rerun()
+    st.session_state.authenticated=False; st.session_state.admin_name=ADMIN_NAME; st.session_state.last_activity=now_dt(); st.rerun()
 
 html('<div class="foot">Backed by Google Sheets · Secured with passcode</div>')
