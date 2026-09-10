@@ -637,158 +637,205 @@ for i in range(num_members):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# DASHBOARD
+# V3 DASHBOARD — command center layout
 # ══════════════════════════════════════════════════════════════════════════════
 sync_ago = int((now_dt()-st.session_state.last_sync).total_seconds()/60)
-sync_txt = "just now" if sync_ago<1 else f"{sync_ago}m ago"
-html(f"""<div class="status-bar"><span><span class="status-dot"></span><span class="status-live">Live</span></span><span class="status-sync">Synced {sync_txt} &nbsp;·&nbsp; rev {st.session_state.rev}</span></div>""")
-rf_col,_sp = st.columns([1,3])
-with rf_col:
-    if st.button("↻ Refresh", key="refresh_btn", type="secondary"):
-        reload_state(gsheet, fresh=True); flash("Refreshed from Google Sheets"); st.rerun()
+sync_txt = "just now" if sync_ago < 1 else f"{sync_ago}m ago"
 
-gap_class  = "chip-value-red" if collection_gap>0 else "chip-value-green"
-gap_label  = f"−GHS {fmt_num(collection_gap)}" if collection_gap>0 else "On track"
+# ── derived dashboard presentation ────────────────────────────────────────────
+gap_class = "chip-value-red" if collection_gap > 0 else "chip-value-green"
+gap_label = f"GHS {fmt_num(collection_gap)} outstanding" if collection_gap > 0 else "All caught up"
 
-# fourth chip: funding progress on the turn that pays out next
+o_wing = [r for r in contrib_rows if r["owing"] > 0]
+total_owed = money(sum(r["owing"] for r in o_wing))
+
 next_turn = next((r for r in schedule_rows if not r["disbursed"]), None)
 if next_turn:
-    funded_pct  = int(min(next_turn["funded"]/next_turn["net_pool_amt"],1)*100) if next_turn["net_pool_amt"] else 0
-    fund_class  = "chip-value-green" if funded_pct>=100 else "chip-value"
-    fund_main   = f'<div class="{fund_class}">{funded_pct}% funded</div>'
-    fund_sub    = (f'<div class="chip-calc"><span>{next_turn["turn"].replace("Month","Turn")} pool</span>'
-                   f'<span>{next_turn["funded_s"]} / {next_turn["pool"]}</span></div>'
-                   f'<div class="pbar-wrap" style="margin-top:5px"><div class="pbar-fill" style="width:{min(funded_pct,100)}%"></div></div>')
+    funded_pct = int(min(next_turn["funded"] / next_turn["net_pool_amt"], 1) * 100) if next_turn["net_pool_amt"] else 0
+    payout_progress = int(min(next_turn["collected_v"] / next_turn["net_pool_amt"], 1) * 100) if next_turn["net_pool_amt"] else 0
 else:
-    fund_main, fund_sub = '<div class="chip-value-green">All paid out</div>', '<div class="chip-sub">Cycle complete</div>'
+    funded_pct = 100
+    payout_progress = 100
 
-# (2) don't show a negative zero before any payout has been taken
-payouts_line = (f'<div class="chip-calc"><span>Payouts collected</span><span>−{fmt_num(total_payouts_dist)}</span></div>'
-                if total_payouts_dist>0 else
-                '<div class="chip-calc"><span>Payouts collected</span><span>None yet</span></div>')
-ahead_line   = (f'<div class="chip-sub" style="color:#34d399">+GHS {fmt_num(paid_ahead)} paid ahead</div>'
-                if paid_ahead>0 else "")
-prev_snap  = st.session_state.get("snapshots",{}).get(str(current_elapsed_week-1))
-if prev_snap is not None and current_elapsed_week>1:
-    snap_delta = money(total_cash_held-float(prev_snap))
-    d_arrow    = "\u2191" if snap_delta>=0 else "\u2193"
-    d_color    = "#34d399" if snap_delta>=0 else "#f87171"
-    delta_html = f'<div class="chip-sub" style="color:{d_color};font-weight:600">{d_arrow} GHS {fmt_num(abs(snap_delta))} vs last week</div>'
+prev_snap = st.session_state.get("snapshots", {}).get(str(current_elapsed_week-1))
+if prev_snap is not None and current_elapsed_week > 1:
+    snap_delta = money(total_cash_held - float(prev_snap))
+    delta_arrow = "↑" if snap_delta >= 0 else "↓"
+    delta_color = "#34d399" if snap_delta >= 0 else "#f87171"
+    delta_html = f'<span style="color:{delta_color};font-weight:700">{delta_arrow} GHS {fmt_num(abs(snap_delta))}</span> vs last week'
 else:
-    delta_html = '<div class="chip-sub">No prior snapshot yet</div>'
+    delta_html = "First weekly snapshot"
 
-# next payout chip names the recipient
-if next_recipient:
-    urgent_cls  = "chip-value-amber" if days_to_payout<=7 else "chip-value"
-    payout_main = f'<div class="{urgent_cls}">{next_recipient}</div>'
-    payout_sub  = f'<div class="chip-sub">{format_date(next_payout_date)} \u00b7 in {days_to_payout}d \u00b7 GHS {fmt_num(next_net_pool)}</div>'
-else:
-    payout_main, payout_sub = '<div class="chip-value">\u2014</div>', '<div class="chip-sub">Cycle complete</div>'
-
-# cycle progress lives inside the Week chip
-week_bar = f'<div class="pbar-wrap" style="margin-top:7px"><div class="pbar-fill" style="width:{program_pct}%"></div></div><div class="chip-sub">{program_pct}% of cycle</div>'
-
+# ── live header ───────────────────────────────────────────────────────────────
 html(f"""
-    <div class="topline">
-        <div class="topline-title">💸 Susu Savings</div>
-        <div class="topline-sub">{num_members} members &nbsp;·&nbsp; {format_date(start_dt)} → {format_date(end_date)} &nbsp;·&nbsp; 🔓 {st.session_state.admin_name}</div>
-    </div>
+<div class="v3-status">
+  <div><span class="status-dot"></span><strong>Live</strong><span class="v3-status-muted"> · Synced {sync_txt}</span></div>
+  <div class="v3-status-muted">Revision {st.session_state.rev} · {st.session_state.admin_name}</div>
+</div>
+<div class="v3-header">
+  <div>
+    <div class="v3-kicker">SUSU SAVINGS</div>
+    <div class="v3-title">Good morning, {st.session_state.admin_name} 👋</div>
+    <div class="v3-subtitle">Turn {current_elapsed_week} of {total_weeks} · {num_members} members · {format_date(start_dt)} → {format_date(end_date)}</div>
+  </div>
+  <div class="v3-header-actions">
+    <a class="v3-action secondary" href="#section-payments">💳 Record payments</a>
+    <a class="v3-action secondary" href="#section-payouts">🎁 Record payout</a>
+    <a class="v3-action primary" href="#section-exports">📤 Share update</a>
+  </div>
+</div>
 """)
 
+# ── primary KPIs ──────────────────────────────────────────────────────────────
 html(f"""
-    <div class="chip-row">
-        <div class="chip"><div class="chip-label">Cash Held</div><div class="chip-value">GHS {fmt_num(total_cash_held)}</div>
-            <div class="chip-calc"><span>Contributions in</span><span>{fmt_num(total_cash_collected)}</span></div>
-            {payouts_line}
-            {delta_html}</div>
-        <div class="chip"><div class="chip-label">Week</div><div class="chip-value">{current_elapsed_week} / {total_weeks}</div>{week_bar}</div>
-        <div class="chip"><div class="chip-label">Next Payout</div>{payout_main}{payout_sub}</div>
-        <div class="chip"><div class="chip-label">Due this week</div><div class="{gap_class}">{gap_label}</div><div class="chip-calc"><span>Expected to date</span><span>{fmt_num(total_expected_so_far)}</span></div>{ahead_line}</div>
-        <div class="chip"><div class="chip-label">Next Pool</div>{fund_main}{fund_sub}</div>
-    </div>
+<div class="v3-kpis">
+  <div class="v3-kpi v3-kpi-primary">
+    <div class="v3-kpi-label">CASH HELD</div>
+    <div class="v3-kpi-value">GHS {fmt_num(total_cash_held)}</div>
+    <div class="v3-kpi-meta">{fmt_num(total_cash_collected)} collected · {fmt_num(total_payouts_dist)} paid out</div>
+    <div class="v3-kpi-delta">{delta_html}</div>
+  </div>
+  <div class="v3-kpi">
+    <div class="v3-kpi-label">THIS WEEK</div>
+    <div class="v3-kpi-value">{current_elapsed_week} <span>/ {total_weeks}</span></div>
+    <div class="v3-progress"><span style="width:{program_pct}%"></span></div>
+    <div class="v3-kpi-meta">{program_pct}% of rotation completed</div>
+  </div>
+  <div class="v3-kpi">
+    <div class="v3-kpi-label">OUTSTANDING</div>
+    <div class="{gap_class} v3-kpi-value">{fmt_num(collection_gap)}</div>
+    <div class="v3-kpi-meta">{len(o_wing)} member{'s' if len(o_wing) != 1 else ''} behind this week</div>
+  </div>
+  <div class="v3-kpi">
+    <div class="v3-kpi-label">NEXT PAYOUT</div>
+    <div class="v3-kpi-value v3-kpi-name">{next_turn['recipient'] if next_turn else '—'}</div>
+    <div class="v3-kpi-meta">{next_turn['date'] if next_turn else 'Cycle complete'} · GHS {next_turn['pool'] if next_turn else '0'}</div>
+  </div>
+</div>
 """)
 
-# (4) owing banner — only when someone is behind
-owing_now = [r for r in contrib_rows if r["owing"]>0]
-if owing_now:
-    total_owed = money(sum(r["owing"] for r in owing_now))
-    who_owes   = ", ".join(f'{r["member"]} (GHS {fmt_num(r["owing"])})' for r in owing_now[:4])
-    if len(owing_now)>4: who_owes += f' +{len(owing_now)-4} more'
-    html(f"""<div class="alert-bar">
-        <div><div class="alert-title">⚠️ {len(owing_now)} member{"s" if len(owing_now)>1 else ""} owing GHS {fmt_num(total_owed)}</div>
-        <div class="alert-sub">{who_owes}</div></div>
-        <div class="alert-cta">Send the Reminder ↓</div></div>""")
+# ── alert / next payout command center ────────────────────────────────────────
+alert_html = ""
+if o_wing:
+    who_owes = ", ".join(f"{r['member']} · GHS {fmt_num(r['owing'])}" for r in o_wing[:3])
+    if len(o_wing) > 3:
+        who_owes += f" +{len(o_wing)-3} more"
+    alert_html = f"""
+    <div class="v3-alert">
+      <div class="v3-alert-icon">!</div>
+      <div class="v3-alert-body"><strong>{len(o_wing)} member{'s' if len(o_wing) != 1 else ''} need attention</strong><span>{who_owes}</span></div>
+      <a href="#section-exports">Send reminder →</a>
+    </div>
+    """
 
+if next_turn:
+    days_label = f"in {next_turn['days_away']} days" if next_turn["days_away"] is not None and next_turn["days_away"] >= 0 else "past due"
+    urgency = "v3-urgent" if next_turn["days_away"] is not None and next_turn["days_away"] <= 7 else ""
+    next_card = f"""
+    <div class="v3-next-card">
+      <div class="v3-next-top"><span class="v3-kicker">NEXT PAYOUT</span><span class="v3-days {urgency}">{days_label}</span></div>
+      <div class="v3-next-main">
+        <div><div class="v3-recipient">{next_turn['recipient']}</div><div class="v3-next-date">{next_turn['date']} · {next_turn['turn']}</div></div>
+        <div class="v3-next-amount">GHS {next_turn['pool']}</div>
+      </div>
+      <div class="v3-funding-row"><span>Turn funding</span><strong>{funded_pct}%</strong></div>
+      <div class="v3-progress tall"><span style="width:{funded_pct}%"></span></div>
+      <div class="v3-funding-meta">GHS {next_turn['funded_s']} banked of GHS {next_turn['pool']} required</div>
+    </div>
+    """
+else:
+    next_card = '<div class="v3-next-card"><div class="v3-kicker">ROTATION</div><div class="v3-recipient">Cycle complete 🎉</div></div>'
+
+html(f"""<div class="v3-command-grid">{alert_html}{next_card}</div>""")
+
+# ── member standing ───────────────────────────────────────────────────────────
 def ahead_cell(r):
-    """Only worth a second line when the member has paid beyond this week."""
     n = r["total_paid"] - r["paid_due"]
-    return f'<div class="cell-sub" style="color:#34d399">+{n} wk ahead</div>' if n>0 else ""
+    return f'<div class="cell-sub v3-ahead">+{n} wk ahead</div>' if n > 0 else ""
 
 rows_html = ""
 for r in contrib_rows:
-    is_owing  = r["owing"]>0
+    is_owing = r["owing"] > 0
     row_class = "owing" if is_owing else ("plain" if r["exited"] else "ok")
-    if is_owing:      badge = f'<span class="badge-owe">Owing GHS {fmt_num(r["owing"])}</span>'
-    elif r["exited"]: badge = '<span class="badge-exempt">Exited</span>'
-    else:             badge = '<span class="badge-ok">Up to date</span>'
-    streak_html = f'<span class="streak-badge">🔴 {r["streak"]}wk streak</span>' if r["streak"]>=2 else ""
-    exit_tag    = f'<span class="exit-tag">left wk {r["exit_week"]}</span>' if r["exited"] and r["exit_week"] else ""
-    rows_html += (f'<tr class="{row_class}">'
-                  f'<td><span class="cell-name">{r["member"]}</span>{exit_tag}</td>'
-                  f'<td>GHS {fmt_num(r["m_monthly"])}</td><td>GHS {fmt_num(r["m_weekly"])}</td>'
-                  f'<td>{r["paid_due"]} / {r["due_so_far"]}{ahead_cell(r)}</td>'
-                  f'<td>{badge}{streak_html}</td></tr>')
+    if is_owing:
+        badge = f'<span class="badge-owe">GHS {fmt_num(r["owing"])}</span>'
+    elif r["exited"]:
+        badge = '<span class="badge-exempt">Exited</span>'
+    else:
+        badge = '<span class="badge-ok">Paid</span>'
+    streak_html = f'<span class="streak-badge">🔴 {r["streak"]}wk</span>' if r["streak"] >= 2 else ""
+    exit_tag = f'<span class="exit-tag">left wk {r["exit_week"]}</span>' if r["exited"] and r["exit_week"] else ""
+    rows_html += (
+        f'<tr class="{row_class}">'
+        f'<td><span class="member-avatar">{r["member"][0].upper()}</span><span class="cell-name">{r["member"]}</span>{exit_tag}</td>'
+        f'<td>GHS {fmt_num(r["m_weekly"])}</td>'
+        f'<td>{r["paid_due"]} / {r["due_so_far"]}{ahead_cell(r)}</td>'
+        f'<td>{badge}{streak_html}</td></tr>'
+    )
 
-html(f"""<div class="glass-card">
-    <div id="section-payments"></div><p class="sec-label">Members</p>
-    <p class="sec-title">Contributions</p>
-    <p class="sec-sub">Week {current_elapsed_week} standing</p>
-    <table class="data-table tbl-contrib">
-        <thead><tr><th>Member</th><th>Monthly</th><th>Weekly</th><th>Paid / Due</th><th>Status</th></tr></thead>
-        <tbody>{rows_html}</tbody>
-    </table><p class="swipe-hint">Swipe the table sideways for monthly tiers.</p></div>""")
+timeline_html = "".join(f'<span class="{("done" if r["disbursed"] else ("current" if r is next_turn else ""))}"></span>' for r in schedule_rows)
 
-show_fee      = fee_frac > 0
-fee_col_head  = "<th>Admin Fee</th>" if show_fee else ""
-fee_cls       = "has-fee" if show_fee else "no-fee"
+html(f"""
+<div class="glass-card v3-section-card">
+  <div class="v3-section-head">
+    <div><div class="sec-label">PAYMENT STATUS</div><div class="sec-title">Members this week</div><div class="sec-sub">Who is paid, who is behind, and who is ahead.</div></div>
+    <a class="v3-inline-link" href="#section-payments">Manage payments →</a>
+  </div>
+  <table class="data-table tbl-contrib v3-member-table">
+    <thead><tr><th>Member</th><th>Weekly target</th><th>Paid / Due</th><th>Status</th></tr></thead>
+    <tbody>{rows_html}</tbody>
+  </table>
+  <p class="swipe-hint">Swipe sideways for the full table.</p>
+</div>
+""")
+
+# ── payout rotation ───────────────────────────────────────────────────────────
+show_fee = fee_frac > 0
+fee_col_head = "<th>Admin Fee</th>" if show_fee else ""
+fee_cls = "has-fee" if show_fee else "no-fee"
 def fee_cell(r): return f'<td>GHS {r["fee"]}</td>' if show_fee else ""
 
 pay_rows_html = ""
 for r in schedule_rows:
-    bar_pct = min(r['pct'],100)
-    if r['disbursed']:
-        status_badge = '<span class="badge-ok">✅ Fully collected</span>'
-        if r['disb_date']: status_badge += f'<div style="font-size:13px;color:{T["sub_color"]};margin-top:3px">{r["disb_date"]}</div>'
-    elif r['collected_v'] > 0:
-        status_badge = f'<span class="badge-owe">◐ Part collected</span>'
+    bar_pct = min(r["pct"], 100)
+    if r["disbursed"]:
+        status_badge = '<span class="badge-ok">Collected</span>'
+        if r["disb_date"]:
+            status_badge += f'<div class="cell-sub">{r["disb_date"]}</div>'
+    elif r["collected_v"] > 0:
+        status_badge = '<span class="badge-owe">Part collected</span>'
     else:
-        status_badge = '<span class="badge-pending">⏳ Not collected</span>'
-    if r['days_away'] is not None:
-        urg = "urgent" if r['days_away']<=7 else ""
-        days_cell = f'<div style="margin-top:4px"><span class="days-badge {urg}">{r["days_away"]}d away</span></div>'
+        status_badge = '<span class="badge-pending">Upcoming</span>'
+    if r["days_away"] is not None:
+        urg = "urgent" if r["days_away"] <= 7 else ""
+        days_cell = f'<div><span class="days-badge {urg}">{r["days_away"]}d away</span></div>'
     else:
-        days_cell = f'<div style="margin-top:4px;font-size:12px;color:{T["sub_color"]}">Past</div>'
-    early_note = '<div class="early-eligible">⚡ Fully funded — ready to pay out</div>' if r['early_ok'] else ""
-    exit_tag   = '<span class="exit-tag">exited</span>' if r['exited'] else ""
-    pay_rows_html += (f'<tr class="plain">'
-                      f'<td><span class="cell-name">{r["turn"].replace("Month","Turn")}</span></td>'
-                      f'<td>{r["recipient"]}{exit_tag}</td>'
-                      f'<td>{r["date"]}{days_cell}</td>'
-                      + fee_cell(r) +
-                      f'<td>GHS {r["pool"]}{early_note}'
-                      f'<div class="pbar-wrap"><div class="pbar-fill" style="width:{bar_pct}%"></div></div></td>'
-                      f'<td>GHS {r["collected"]}</td>'
-                      f'<td>GHS {r["remaining"]}</td>'
-                      f'<td>{status_badge}</td></tr>')
+        days_cell = '<div class="cell-sub">Past</div>'
+    early_note = '<div class="early-eligible">Fully funded</div>' if r["early_ok"] else ""
+    exit_tag = '<span class="exit-tag">exited</span>' if r["exited"] else ""
+    pay_rows_html += (
+        f'<tr class="plain">'
+        f'<td><span class="cell-name">{r["turn"]}</span></td>'
+        f'<td>{r["recipient"]}{exit_tag}</td>'
+        f'<td>{r["date"]}{days_cell}</td>' + fee_cell(r) +
+        f'<td>GHS {r["pool"]}{early_note}<div class="pbar-wrap"><div class="pbar-fill" style="width:{bar_pct}%"></div></div></td>'
+        f'<td>GHS {r["collected"]}</td><td>GHS {r["remaining"]}</td><td>{status_badge}</td></tr>'
+    )
 
-html(f"""<div class="glass-card">
-    <div id="section-payouts"></div><p class="sec-label">Rotation</p>
-    <p class="sec-title">Payout Schedule</p>
-    <p class="sec-sub">Collected = amount the recipient has taken · Remaining = still owed to them</p>
-    <table class="data-table tbl-payout {fee_cls}">
-        <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th>{fee_col_head}<th>Net Pool</th><th>Collected</th><th>Remaining</th><th>Status</th></tr></thead>
-        <tbody>{pay_rows_html}</tbody>
-    </table><p class="swipe-hint">Swipe the table sideways for the full breakdown.</p></div>""")
+html(f"""
+<div class="glass-card v3-section-card">
+  <div class="v3-section-head">
+    <div><div class="sec-label">ROTATION</div><div class="sec-title">Payout schedule</div><div class="sec-sub">Four-week turns with funding progress for each recipient.</div></div>
+    <a class="v3-inline-link" href="#section-payouts">Manage payouts →</a>
+  </div>
+  <div class="v3-timeline">{timeline_html}</div>
+  <table class="data-table tbl-payout {fee_cls}">
+    <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th>{fee_col_head}<th>Net Pool</th><th>Collected</th><th>Remaining</th><th>Status</th></tr></thead>
+    <tbody>{pay_rows_html}</tbody>
+  </table>
+  <p class="swipe-hint">Swipe sideways for the full payout breakdown.</p>
+</div>
+""")
 
 # ── exports ───────────────────────────────────────────────────────────────────
 buf = io.StringIO()
