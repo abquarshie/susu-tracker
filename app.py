@@ -681,6 +681,11 @@ for member in members:
                          "exited":is_out,"exit_week":mstat(member).get("exit_week")})
     wa_contrib_rows.append({"member":member,"standing":standing,"streak":streak,"exited":is_out})
 
+# Members with an outstanding balance, used by WhatsApp reminders.
+# Keep this separate from the contribution-row loop so the reminder export
+# always has a defined list, including when nobody owes anything.
+owing_members = [r for r in wa_contrib_rows if r["standing"].startswith("Owing ")]
+
 # ── payout schedule ───────────────────────────────────────────────────────────
 schedule_rows, wa_payout_rows = [], []
 cur_d = start_dt
