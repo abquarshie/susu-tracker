@@ -92,7 +92,10 @@ st.markdown(f"""
 
     .v3-kpis{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}}
     .v3-kpi{{background:{T['chip_bg']};border:1px solid {T['chip_border']};border-radius:16px;padding:18px 20px;
-        box-shadow:0 2px 12px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.05);min-width:0;}}
+        box-shadow:0 2px 12px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.05);min-width:0;
+        display:flex;flex-direction:column;}}
+    .v3-kpi > *:last-child{{margin-bottom:0;}}
+    .v3-kpi-foot{{margin-top:auto;padding-top:10px;}}
     .v3-kpi-primary{{background:linear-gradient(150deg,rgba(56,189,248,0.14),rgba(255,255,255,0.05));border-color:rgba(86,200,245,0.3);}}
     .v3-kpi-label{{font-size:11px;font-weight:700;color:{T['label_color']};letter-spacing:1.1px;margin-bottom:8px;}}
     .v3-kpi-value{{font-size:27px;font-weight:800;color:{T['title_color']};line-height:1.1;letter-spacing:-0.5px;
@@ -111,31 +114,33 @@ st.markdown(f"""
     .v3-progress span{{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#34d399,#56c8f5);transition:width 0.4s ease;}}
     .v3-progress.tall{{height:8px;border-radius:6px;margin-top:6px;}}
 
-    .v3-command-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;align-items:start;}}
+    .v3-command-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;align-items:stretch;}}
     .v3-kpis-2{{grid-template-columns:repeat(2,1fr);}}
-    .v3-alert{{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:16px;padding:18px 20px;}}
+    .v3-alert{{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:16px;padding:18px 20px;
+        display:flex;flex-direction:column;}}
     .v3-alert-top{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}}
     .v3-alert-top .v3-kicker{{margin-bottom:0;color:#fbbf24;}}
     .v3-alert-amount{{font-size:27px;font-weight:800;color:#fbbf24;line-height:1.1;letter-spacing:-0.5px;}}
     .v3-alert-names{{font-size:13px;color:{T['td_color']};line-height:1.5;margin-top:6px;}}
-    .v3-alert-foot{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;
+    .v3-alert-foot{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:12px;
         font-size:12px;color:{T['sub_color']};}}
     .v3-alert-foot a{{font-weight:700;color:#fbbf24!important;text-decoration:none!important;white-space:nowrap;}}
     .v3-alert-clear{{background:rgba(52,211,153,0.08);border-color:rgba(52,211,153,0.28);}}
     .v3-alert-clear .v3-kicker,.v3-alert-clear .v3-alert-amount,.v3-alert-clear .v3-alert-foot a{{color:#34d399!important;}}
     .v3-days.v3-clear{{color:#34d399;background:rgba(52,211,153,0.14);border-color:rgba(52,211,153,0.3);}}
 
-    .v3-next-card{{background:{T['card_bg']};border:1px solid {T['card_border']};border-radius:16px;padding:18px 20px;box-shadow:{T['card_shadow']};}}
+    .v3-next-card{{background:{T['card_bg']};border:1px solid {T['card_border']};border-radius:16px;padding:18px 20px;
+        box-shadow:{T['card_shadow']};display:flex;flex-direction:column;}}
     .v3-next-top{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}}
     .v3-next-top .v3-kicker{{margin-bottom:0;}}
     .v3-days{{font-size:12px;font-weight:700;color:#818cf8;background:rgba(129,140,248,0.14);border:1px solid rgba(129,140,248,0.28);
         border-radius:20px;padding:3px 11px;white-space:nowrap;}}
     .v3-days.v3-urgent{{color:#fbbf24;background:rgba(251,191,36,0.14);border-color:rgba(251,191,36,0.32);}}
-    .v3-next-main{{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px;}}
+    .v3-next-main{{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;}}
     .v3-recipient{{font-size:23px;font-weight:800;color:{T['title_color']};letter-spacing:-0.4px;}}
     .v3-next-date{{font-size:13px;color:{T['sub_color']};margin-top:2px;}}
     .v3-next-amount{{font-size:21px;font-weight:800;color:#56c8f5;white-space:nowrap;}}
-    .v3-funding-row{{display:flex;justify-content:space-between;font-size:12px;color:{T['sub_color']};}}
+    .v3-funding-row{{display:flex;justify-content:space-between;font-size:12px;color:{T['sub_color']};margin-top:auto;padding-top:4px;}}
     .v3-funding-row strong{{color:{T['td_color']};font-weight:700;}}
     .v3-funding-meta{{font-size:12px;color:{T['sub_color']};margin-top:7px;}}
 
@@ -246,6 +251,7 @@ st.markdown(f"""
         .v3-kpi-value span{{font-size:13px;}}
         .v3-kpi-meta,.v3-kpi-delta{{font-size:11px;margin-top:5px;line-height:1.35;}}
         .v3-progress{{margin-top:7px;height:4px;}}
+        .v3-kpi-foot{{padding-top:8px;}}
         .v3-spark{{height:24px;margin-top:7px;}}
         .v3-spark-cap{{font-size:10px;}}
         .v3-command-grid{{grid-template-columns:1fr;}}
@@ -859,15 +865,19 @@ html(f"""
     <div class="v3-kpi-label">CASH HELD</div>
     <div class="v3-kpi-value">GHS {fmt_num(total_cash_held)}</div>
     <div class="v3-kpi-meta">GHS {fmt_num(total_cash_collected)} collected · GHS {fmt_num(total_payouts_dist)} paid out</div>
-    <div class="v3-kpi-delta">{delta_html}</div>
-    {recon_line}
-    {spark_html}
+    <div class="v3-kpi-foot">
+      <div class="v3-kpi-delta">{delta_html}</div>
+      {recon_line}
+      {spark_html}
+    </div>
   </div>
   <div class="v3-kpi">
     <div class="v3-kpi-label">THIS WEEK</div>
     <div class="v3-kpi-value">{current_elapsed_week} <span>/ {total_weeks}</span></div>
-    <div class="v3-progress"><span style="width:{program_pct}%"></span></div>
-    <div class="v3-kpi-meta">{program_pct}% of rotation completed · ends {format_date(end_date)}</div>
+    <div class="v3-kpi-foot">
+      <div class="v3-progress"><span style="width:{program_pct}%"></span></div>
+      <div class="v3-kpi-meta">{program_pct}% of rotation completed · ends {format_date(end_date)}</div>
+    </div>
   </div>
 </div>
 """)
