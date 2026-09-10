@@ -103,6 +103,10 @@ st.markdown(f"""
     .v3-kpi-meta{{font-size:12px;color:{T['sub_color']};margin-top:7px;line-height:1.45;}}
     .v3-kpi-delta{{font-size:12px;color:{T['sub_color']};margin-top:4px;}}
 
+    .v3-recon-ok{{color:#34d399;}}
+    .v3-recon-off{{color:#fbbf24;}}
+    .v3-spark{{width:100%;height:30px;margin-top:9px;display:block;overflow:visible;}}
+    .v3-spark-cap{{font-size:11px;color:{T['sub_color']};margin-top:2px;}}
     .v3-progress{{background:{T['bar_bg']};border-radius:5px;height:5px;overflow:hidden;margin-top:10px;}}
     .v3-progress span{{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#34d399,#56c8f5);transition:width 0.4s ease;}}
     .v3-progress.tall{{height:8px;border-radius:6px;margin-top:6px;}}
@@ -242,6 +246,8 @@ st.markdown(f"""
         .v3-kpi-value span{{font-size:13px;}}
         .v3-kpi-meta,.v3-kpi-delta{{font-size:11px;margin-top:5px;line-height:1.35;}}
         .v3-progress{{margin-top:7px;height:4px;}}
+        .v3-spark{{height:24px;margin-top:7px;}}
+        .v3-spark-cap{{font-size:10px;}}
         .v3-command-grid{{grid-template-columns:1fr;}}
         .v3-alert,.v3-next-card{{padding:13px 14px;}}
         .v3-alert-amount{{font-size:21px;}}
@@ -442,9 +448,41 @@ def read_blob_fresh(sheet):
 def read_blob_cached(_sheet, _bust=0):
     return read_blob_fresh(_sheet)
 
+BACKUP_WS    = "susu_backups"
+BACKUP_KEEP  = 30
+
+def write_backup(sheet, blob):
+    """Append a timestamped copy of the blob and keep the last BACKUP_KEEP rows.
+    Best-effort: a backup failure must never block the actual save."""
+    try:
+        ws = ensure_ws(sheet, BACKUP_WS)
+        ws.append_row([now_str(), blob.get("rev",0), json.dumps(blob)], value_input_option="RAW")
+        rows = len(ws.col_values(1))
+        if rows > BACKUP_KEEP:
+            ws.delete_rows(1, rows-BACKUP_KEEP)
+    except Exception:
+        pass
+
 def write_blob(sheet, blob):
     ensure_ws(sheet, DATA_WS).update("A1", [[json.dumps(blob)]])
+    write_backup(sheet, blob)
     read_blob_cached.clear()
+
+def list_backups(sheet):
+    """[(row_number, when, rev)] newest first — content is fetched on demand."""
+    try:
+        ws   = ensure_ws(sheet, BACKUP_WS)
+        vals = ws.get_all_values()
+        return [(i+1, r[0], r[1]) for i,r in enumerate(vals) if len(r) >= 3][::-1]
+    except Exception:
+        return []
+
+def read_backup(sheet, row_no):
+    try:
+        raw = ensure_ws(sheet, BACKUP_WS).cell(row_no, 3).value
+        return json.loads(raw) if raw else None
+    except Exception:
+        return None
 
 def apply_blob(b):
     s = b.get("settings",DEFAULT_SETTINGS)
@@ -746,6 +784,20 @@ owing_rows = [r for r in contrib_rows if r["owing"] > 0]
 next_turn  = next((r for r in schedule_rows if not r["disbursed"]), None)
 funded_pct = int(min(next_turn["funded"]/next_turn["net_pool_amt"], 1)*100) if next_turn and next_turn["net_pool_amt"] else 100
 
+last_recon  = (st.session_state.get("reconciliations") or [None])[0]
+if last_recon:
+    _rd        = parse_display_date(last_recon.get("date","")[:12])
+    _days      = (today.date()-_rd).days if _rd else None
+    _when      = ("today" if _days == 0 else f"{_days}d ago") if _days is not None else last_recon.get("date","")
+    _diff      = money(last_recon.get("difference",0))
+    if abs(_diff) < 0.005:
+        recon_line = f'<div class="v3-kpi-delta v3-recon-ok">✔ Reconciled {_when}</div>'
+    else:
+        _word = "over" if _diff > 0 else "short"
+        recon_line = f'<div class="v3-kpi-delta v3-recon-off">⚠ Last count GHS {fmt_num(abs(_diff))} {_word} · {_when}</div>'
+else:
+    recon_line = '<div class="v3-kpi-delta v3-recon-off">⚠ Never reconciled — count the cash and record it</div>'
+
 prev_snap = st.session_state.get("snapshots", {}).get(str(current_elapsed_week-1))
 if prev_snap is not None and current_elapsed_week > 1:
     snap_delta  = money(total_cash_held - float(prev_snap))
@@ -756,6 +808,29 @@ else:
     delta_html = "First weekly snapshot"
 
 ahead_note = f" · GHS {fmt_num(paid_ahead)} paid ahead" if paid_ahead > 0 else ""
+
+# cash-held trend — last 8 weekly snapshots, current week included
+snaps_all = dict(st.session_state.get("snapshots", {}) or {})
+snaps_all[str(current_elapsed_week)] = total_cash_held
+hist = [(int(w), money(v)) for w, v in snaps_all.items() if str(w).isdigit() and int(w) <= current_elapsed_week]
+hist.sort()
+hist = hist[-8:]
+if len(hist) >= 2:
+    vals   = [v for _, v in hist]
+    lo, hi = min(vals), max(vals)
+    span   = (hi-lo) or 1
+    w_px, h_px = 150, 30
+    step   = w_px/(len(vals)-1)
+    pts    = " ".join(f"{i*step:.1f},{h_px-2-((v-lo)/span)*(h_px-6):.1f}" for i, v in enumerate(vals))
+    last_x = (len(vals)-1)*step
+    last_y = h_px-2-((vals[-1]-lo)/span)*(h_px-6)
+    spark_html = (f'<svg class="v3-spark" viewBox="0 0 {w_px} {h_px}" preserveAspectRatio="none">'
+                  f'<polyline points="{pts}" fill="none" stroke="#56c8f5" stroke-width="2" '
+                  f'stroke-linecap="round" stroke-linejoin="round"/>'
+                  f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="2.6" fill="#34d399"/></svg>'
+                  f'<div class="v3-spark-cap">Weeks {hist[0][0]}–{hist[-1][0]} · low GHS {fmt_num(lo)} · high GHS {fmt_num(hi)}</div>')
+else:
+    spark_html = ""
 
 # ── live header ───────────────────────────────────────────────────────────────
 html(f"""
@@ -785,6 +860,8 @@ html(f"""
     <div class="v3-kpi-value">GHS {fmt_num(total_cash_held)}</div>
     <div class="v3-kpi-meta">GHS {fmt_num(total_cash_collected)} collected · GHS {fmt_num(total_payouts_dist)} paid out</div>
     <div class="v3-kpi-delta">{delta_html}</div>
+    {recon_line}
+    {spark_html}
   </div>
   <div class="v3-kpi">
     <div class="v3-kpi-label">THIS WEEK</div>
@@ -1557,6 +1634,83 @@ with tab_tools:
                              f'{" · " + rec.get("note","") if rec.get("note") else ""}</div></div>'
                              f'<div class="log-time">{rec.get("date","")}</div></div>')
             html(rec_html)
+
+    with st.expander("🔄  Convert Legacy Weeks"):
+        st.caption("Weeks recorded as a plain tick (before receipts existed) count towards the totals but have no "
+                   "transaction behind them. Converting writes one transaction per week so every cedi has a record.")
+        legacy_pairs = []
+        for m in members:
+            for w in range(1, total_weeks+1):
+                if st.session_state.payments.get(m,{}).get(str(w), False) and not [
+                        t for t in st.session_state.get("payment_transactions",[])
+                        if t.get("member")==m and int(t.get("week",0))==w]:
+                    legacy_pairs.append((m, w, weekly(m)))
+        if not legacy_pairs:
+            st.success("Nothing to convert — every paid week already has a transaction.")
+        else:
+            total_legacy = money(sum(a for _,_,a in legacy_pairs))
+            by_member = {}
+            for m,w,a in legacy_pairs: by_member.setdefault(m,[]).append(w)
+            html(f'<div style="font-size:14px;color:{T["td_color"]};line-height:1.7">'
+                 f'<strong style="color:{T["sec_title"]}">{len(legacy_pairs)} week(s)</strong> · '
+                 f'GHS {fmt_num(total_legacy)} across '
+                 + ", ".join(f"{m} ({len(ws)})" for m,ws in by_member.items()) + '</div>')
+            conv_method = st.selectbox("Record these as", ["Cash","MoMo","Bank transfer","Other"], key="convert_method")
+            st.caption("Totals do not change — each week is already counted. This only attaches a transaction to it.")
+            if st.button("Convert to transactions", key="convert_legacy"):
+                who_now = st.session_state.get("admin_name", ADMIN_NAME)
+                def _m(b, pairs=legacy_pairs, method=conv_method, who_now=who_now):
+                    for m, w, amt in pairs:
+                        tx = {"id":new_id("PAY"),"member":m,"week":int(w),"amount":money(amt),
+                              "date":"","time":now_str(),"method":method,
+                              "reference":"Converted from week grid","status":"completed","who":who_now}
+                        b.setdefault("payment_transactions",[]).insert(0, tx)
+                    detail = [f"{m} Wk {int(w):02d}: GHS {fmt_num(a)}" for m,w,a in pairs[:12]]
+                    if len(pairs) > 12: detail.append(f"…and {len(pairs)-12} more")
+                    return {"type":"payment",
+                            "text":f"Converted {len(pairs)} legacy week(s) to transactions",
+                            "detail":detail}
+                if commit(gsheet,_m): flash(f"{len(legacy_pairs)} week(s) converted")
+                st.rerun()
+
+    with st.expander("💾  Backups"):
+        st.caption(f"A copy of the whole group record is saved to the {BACKUP_WS} worksheet on every change. "
+                   f"The last {BACKUP_KEEP} are kept.")
+        if st.button("↻ Load backup list", key="load_backups"):
+            st.session_state.backup_list = list_backups(gsheet)
+            st.rerun()
+        blist = st.session_state.get("backup_list")
+        if blist is None:
+            st.info("Press the button above to read the backup list from Google Sheets.")
+        elif not blist:
+            st.warning("No backups yet — the next save will create the first one.")
+        else:
+            labels = [f"{when}  ·  rev {rev}" for _, when, rev in blist]
+            bidx = st.selectbox("Restore point", range(len(blist)), format_func=lambda n: labels[n], key="backup_pick")
+            row_no, when, rev = blist[bidx]
+            st.warning(f"Restoring replaces the current record (rev {st.session_state.rev}) with the one saved at "
+                       f"{when}. Anything recorded since will be lost. The current state is itself backed up first.")
+            confirm_txt = st.text_input('Type RESTORE to confirm', key="restore_confirm")
+            if st.button("Restore this backup", key="do_restore"):
+                if confirm_txt.strip().upper() != "RESTORE":
+                    st.error("Type RESTORE in the box to confirm.")
+                else:
+                    old = read_blob_fresh(gsheet)
+                    snap = read_backup(gsheet, row_no)
+                    if not snap:
+                        st.error("That backup could not be read.")
+                    else:
+                        write_backup(gsheet, old)               # keep what we are replacing
+                        snap["rev"] = old.get("rev",0) + 1
+                        snap.setdefault("history",[]).insert(0, {
+                            "type":"setting","who":st.session_state.get("admin_name",ADMIN_NAME),
+                            "time":now_str(),"text":f"Restored backup from {when} (rev {rev})",
+                            "detail":[f"replaced rev {old.get('rev',0)}"]})
+                        write_blob(gsheet, snap)
+                        apply_blob(snap)
+                        st.session_state.pop("backup_list", None)
+                        flash("Backup restored","warning")
+                        st.rerun()
 
     with st.expander("🧾  Payment Audit"):
         ledger = st.session_state.get("payment_ledger", [])
