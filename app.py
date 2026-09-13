@@ -81,7 +81,8 @@ st.markdown(f"""
 
     /* ── V3 command-centre layout ─────────────────────────────────────────── */
     .v3-status{{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;color:{T['td_color']};
-        background:{T['status_bg']};border:1px solid {T['status_border']};border-radius:12px;padding:9px 16px;margin-bottom:14px;}}
+        background:{T['status_bg']};border:1px solid {T['status_border']};border-radius:12px;padding:10px 16px;margin-bottom:0;}}
+    .block-container div[data-testid="stHorizontalBlock"]:first-of-type{{align-items:center;gap:8px;}}
     .v3-status strong{{color:#34d399;font-weight:700;}}
     .v3-status-muted{{color:{T['sync_color']};}}
 
@@ -98,12 +99,12 @@ st.markdown(f"""
     .v3-kpi-foot{{margin-top:auto;padding-top:10px;}}
     .v3-kpi-primary{{background:linear-gradient(150deg,rgba(56,189,248,0.14),rgba(255,255,255,0.05));border-color:rgba(86,200,245,0.3);}}
     .v3-kpi-label{{font-size:11px;font-weight:700;color:{T['label_color']};letter-spacing:1.1px;margin-bottom:8px;}}
-    .v3-kpi-value{{font-size:27px;font-weight:800;color:{T['title_color']};line-height:1.1;letter-spacing:-0.5px;
+    .v3-kpi-value{{font-size:27px;font-weight:800;color:{T['title_color']};line-height:1.1;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;
         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
     .v3-kpi-value span{{font-size:16px;font-weight:600;color:{T['sub_color']};}}
     .v3-kpi-name{{color:#56c8f5;}}
     .v3-kpi-good{{color:#34d399;}} .v3-kpi-bad{{color:#f87171;}}
-    .v3-kpi-meta{{font-size:12px;color:{T['sub_color']};margin-top:7px;line-height:1.45;}}
+    .v3-kpi-meta{{font-size:12px;color:{T['sub_color']};margin-top:7px;line-height:1.45;font-variant-numeric:tabular-nums;}}
     .v3-kpi-delta{{font-size:12px;color:{T['sub_color']};margin-top:4px;}}
 
     .v3-recon-ok{{color:#34d399;}}
@@ -120,7 +121,7 @@ st.markdown(f"""
         display:flex;flex-direction:column;}}
     .v3-alert-top{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}}
     .v3-alert-top .v3-kicker{{margin-bottom:0;color:#fbbf24;}}
-    .v3-alert-amount{{font-size:27px;font-weight:800;color:#fbbf24;line-height:1.1;letter-spacing:-0.5px;}}
+    .v3-alert-amount{{font-size:27px;font-weight:800;color:#fbbf24;line-height:1.1;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;}}
     .v3-alert-names{{font-size:13px;color:{T['td_color']};line-height:1.5;margin-top:6px;}}
     .v3-alert-foot{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:12px;
         font-size:12px;color:{T['sub_color']};}}
@@ -139,12 +140,14 @@ st.markdown(f"""
     .v3-next-main{{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;}}
     .v3-recipient{{font-size:23px;font-weight:800;color:{T['title_color']};letter-spacing:-0.4px;}}
     .v3-next-date{{font-size:13px;color:{T['sub_color']};margin-top:2px;}}
-    .v3-next-amount{{font-size:21px;font-weight:800;color:#56c8f5;white-space:nowrap;}}
+    .v3-next-amount{{font-size:21px;font-weight:800;color:#56c8f5;white-space:nowrap;font-variant-numeric:tabular-nums;}}
     .v3-funding-row{{display:flex;justify-content:space-between;font-size:12px;color:{T['sub_color']};margin-top:auto;padding-top:4px;}}
     .v3-funding-row strong{{color:{T['td_color']};font-weight:700;}}
     .v3-funding-meta{{font-size:12px;color:{T['sub_color']};margin-top:7px;}}
 
-    .v3-section-card{{padding:22px 24px;}}
+    .v3-section-card{{padding:4px 2px 8px;background:none!important;border:none!important;
+        box-shadow:none!important;backdrop-filter:none!important;border-radius:0!important;margin-bottom:22px;}}
+    .v3-section-head{{border-bottom:1px solid {T['th_border']};padding-bottom:10px;}}
     .v3-section-head{{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px;flex-wrap:wrap;}}
     .v3-inline-link{{font-size:13px;font-weight:600;color:{dl_color}!important;text-decoration:none!important;white-space:nowrap;}}
     .v3-timeline{{display:flex;gap:6px;margin:2px 0 14px;}}
@@ -160,11 +163,14 @@ st.markdown(f"""
     .sec-title{{font-size:18px;font-weight:700;color:{T['sec_title']};margin:0 0 2px 0;}}
     .sec-sub{{font-size:13px;color:{T['sub_color']};margin:0 0 14px 0;}}
     .cell-sub{{font-size:12px;color:{T['sub_color']};margin-top:2px;}}
+    .num .cell-sub{{text-align:right;}}
 
     .data-table{{width:100%;border-collapse:collapse;}}
     .data-table th{{font-size:12px;font-weight:600;color:{T['th_color']};text-transform:uppercase;letter-spacing:0.6px;padding:9px 12px;border-bottom:1px solid {T['th_border']};text-align:left;}}
-    .data-table td{{font-size:15px;color:{T['td_color']};padding:11px 12px;border-bottom:1px solid {T['td_border']};vertical-align:middle;}}
+    .data-table td{{font-size:15px;color:{T['td_color']};padding:11px 12px;border-bottom:1px solid {T['td_border']};vertical-align:middle;font-variant-numeric:tabular-nums;}}
     .data-table tr:last-child td{{border-bottom:none;}}
+    .data-table .num{{text-align:right;}}
+    .data-table th.num{{text-align:right;}}
     .data-table tr.owing td:first-child{{border-left:2px solid #fbbf24;padding-left:10px;}}
     .data-table tr.ok td:first-child{{border-left:2px solid #34d399;padding-left:10px;}}
     .data-table tr.plain td:first-child{{border-left:2px solid transparent;padding-left:10px;}}
@@ -180,7 +186,7 @@ st.markdown(f"""
     .diff-line{{font-size:12px;color:{T['td_color']};font-family:ui-monospace,Menlo,monospace;}}
     .pbar-wrap{{margin-top:6px;background:{T['bar_bg']};border-radius:4px;height:4px;overflow:hidden;}}
     .pbar-fill{{height:4px;border-radius:4px;background:linear-gradient(90deg,#34d399,#38bdf8);transition:width 0.4s ease;}}
-    .early-eligible{{font-size:12px;color:#34d399;margin-top:3px;font-weight:600;}}
+    .early-eligible{{font-size:12px;color:#34d399;margin-top:3px;font-weight:600;text-align:right;}}
 
     .log-entry{{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid {T['log_border']};}}
     .log-entry:last-child{{border-bottom:none;}}
@@ -195,6 +201,7 @@ st.markdown(f"""
     .stTextInput label,.stNumberInput label,.stTextArea label,.stSelectbox label,.stCheckbox label{{color:{T['label_color']}!important;font-size:12px!important;font-weight:600!important;text-transform:uppercase;letter-spacing:0.5px;}}
     .stSelectbox > div > div{{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;color:{T['input_color']}!important;border-radius:10px!important;}}
     div[data-testid="stButton"]{{width:100%!important;}}
+    .block-container div[data-testid="stHorizontalBlock"]:first-of-type button{{padding:10px 0!important;font-size:16px!important;}}
     .stButton > button{{background:{T['btn_bg']}!important;backdrop-filter:blur(8px)!important;color:white!important;border:1px solid {T['btn_border']}!important;border-radius:10px!important;font-weight:600!important;font-size:15px!important;padding:10px 20px!important;width:100%;box-shadow:0 2px 8px rgba(29,78,216,0.25)!important;transition:all 0.2s!important;}}
     .stButton > button:hover{{background:rgba(37,99,235,0.95)!important;box-shadow:0 4px 16px rgba(29,78,216,0.4)!important;}}
     .stButton > button[kind="secondary"]{{background:{T['btn2_bg']}!important;color:{T['btn2_color']}!important;border:1px solid {T['btn2_border']}!important;box-shadow:none!important;}}
@@ -839,24 +846,23 @@ else:
     spark_html = ""
 
 # ── live header ───────────────────────────────────────────────────────────────
+sb1, sb2 = st.columns([5,1])
+with sb1:
+    html(f"""<div class="v3-status">
+      <div><span class="status-dot"></span><strong>Live</strong><span class="v3-status-muted"> · Synced {sync_txt}</span></div>
+      <div class="v3-status-muted">Revision {st.session_state.rev} · {st.session_state.admin_name}</div>
+    </div>""")
+with sb2:
+    if st.button("↻", key="refresh_btn", type="secondary", help="Reload from Google Sheets"):
+        reload_state(gsheet, fresh=True); flash("Refreshed from Google Sheets"); st.rerun()
+
 html(f"""
-<div class="v3-status">
-  <div><span class="status-dot"></span><strong>Live</strong><span class="v3-status-muted"> · Synced {sync_txt}</span></div>
-  <div class="v3-status-muted">Revision {st.session_state.rev} · {st.session_state.admin_name}</div>
-</div>
 <div class="v3-header">
-  <div>
-    <div class="v3-kicker">SUSU SAVINGS</div>
-    <div class="v3-title">{greeting()}, {st.session_state.admin_name} 👋</div>
-    <div class="v3-subtitle">Week {current_elapsed_week} of {total_weeks} · {num_members} members · {format_date(start_dt)} → {format_date(end_date)}</div>
-  </div>
+  <div class="v3-kicker">SUSU SAVINGS</div>
+  <div class="v3-title">{greeting()}, {st.session_state.admin_name} 👋</div>
+  <div class="v3-subtitle">Week {current_elapsed_week} of {total_weeks} · {num_members} members · {format_date(start_dt)} → {format_date(end_date)}</div>
 </div>
 """)
-
-rfc, _sp = st.columns([1,4])
-with rfc:
-    if st.button("↻ Refresh", key="refresh_btn", type="secondary"):
-        reload_state(gsheet, fresh=True); flash("Refreshed from Google Sheets"); st.rerun()
 
 # ── primary KPIs ──────────────────────────────────────────────────────────────
 html(f"""
@@ -982,7 +988,7 @@ html(f"""
     <a class="v3-inline-link" href="#section-payments">Manage payments →</a>
   </div>
   <table class="data-table tbl-contrib">
-    <thead><tr><th>Member</th><th>Weekly target</th><th>Paid / Due</th><th>Status</th></tr></thead>
+    <thead><tr><th>Member</th><th class="num">Weekly target</th><th class="num">Paid / Due</th><th>Status</th></tr></thead>
     <tbody>{rows_html}</tbody>
   </table>
 </div>
@@ -990,9 +996,9 @@ html(f"""
 
 # ── payout rotation ───────────────────────────────────────────────────────────
 show_fee     = fee_frac > 0
-fee_col_head = "<th>Admin Fee</th>" if show_fee else ""
+fee_col_head = '<th class="num">Admin Fee</th>' if show_fee else ""
 fee_cls      = "has-fee" if show_fee else "no-fee"
-def fee_cell(r): return f'<td>GHS {r["fee"]}</td>' if show_fee else ""
+def fee_cell(r): return f'<td class="num">GHS {r["fee"]}</td>' if show_fee else ""
 
 pay_rows_html = ""
 for r in schedule_rows:
@@ -1029,7 +1035,7 @@ html(f"""
   </div>
   <div class="v3-timeline">{timeline_html}</div>
   <table class="data-table tbl-payout {fee_cls}">
-    <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th>{fee_col_head}<th>Net Pool</th><th>Collected</th><th>Remaining</th><th>Status</th></tr></thead>
+    <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th>{fee_col_head}<th class="num">Net Pool</th><th class="num">Collected</th><th class="num">Remaining</th><th>Status</th></tr></thead>
     <tbody>{pay_rows_html}</tbody>
   </table>
   <p class="swipe-hint">Swipe sideways for the full payout breakdown.</p>
