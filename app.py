@@ -32,263 +32,313 @@ st.markdown("""
 def html(s):
     st.markdown(re.sub(r"\n[ \t]+", "\n", s).strip(), unsafe_allow_html=True)
 
-# ── theme (single dark palette — softened so text stays legible) ─────────────
+# ── design tokens ─────────────────────────────────────────────────────────────
+# Petrol-ink canvas, brass accent (money), green for settled, clay for behind.
+# Keys are kept stable because inline styles elsewhere in the file read from T.
 T = {
-    "bg":"linear-gradient(135deg,#161f2f 0%,#1b2536 50%,#172131 100%)",
-    "card_bg":"rgba(255,255,255,0.05)","card_border":"rgba(255,255,255,0.09)",
-    "card_shadow":"0 4px 20px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.05)",
-    "chip_bg":"rgba(255,255,255,0.06)","chip_border":"rgba(255,255,255,0.10)",
-    "status_bg":"rgba(255,255,255,0.03)","status_border":"rgba(255,255,255,0.08)",
-    "sync_color":"#94a5bd","title_color":"#f4f7fb","sub_color":"#9db0c7",
-    "label_color":"#8cc6ec","sec_title":"#e9eff7","th_color":"#8cc6ec",
-    "td_color":"#d2dcea","td_border":"rgba(255,255,255,0.055)","th_border":"rgba(255,255,255,0.09)",
-    "member_name":"#f4f7fb","input_bg":"rgba(255,255,255,0.08)","input_border":"rgba(255,255,255,0.14)",
-    "input_color":"#eef3f9","lock_bg":"rgba(255,255,255,0.07)","lock_border":"rgba(255,255,255,0.13)",
-    "lock_title":"#f4f7fb","lock_sub":"#9db0c7","exp_bg":"rgba(255,255,255,0.05)",
-    "exp_border":"rgba(255,255,255,0.10)","exp_color":"#dbe4ef","exp_content":"rgba(255,255,255,0.03)",
-    "gdiv":"rgba(86,200,245,0.18)","foot_color":"#7386a0","foot_border":"rgba(255,255,255,0.07)",
-    "btn_bg":"rgba(37,99,235,0.85)","btn_border":"rgba(96,165,250,0.45)",
-    "btn2_bg":"rgba(255,255,255,0.08)","btn2_color":"#dbe4ef","btn2_border":"rgba(255,255,255,0.14)",
-    "dl_bg":"rgba(255,255,255,0.06)","dl_border":"rgba(86,200,245,0.32)",
-    "log_border":"rgba(255,255,255,0.06)","log_color":"#b7c4d6","log_strong":"#eef3f9","log_time":"#94a5bd",
-    "ring_track":"rgba(255,255,255,0.10)","bar_bg":"rgba(255,255,255,0.12)",
-    "streak_bg":"rgba(239,68,68,0.14)","streak_color":"#fca5a5","streak_border":"rgba(239,68,68,0.3)",
+    "bg":"#0F1B1E",
+    "card_bg":"#15262A","card_border":"rgba(160,205,205,0.14)",
+    "card_shadow":"none",
+    "chip_bg":"#15262A","chip_border":"rgba(160,205,205,0.14)",
+    "status_bg":"transparent","status_border":"rgba(160,205,205,0.14)",
+    "sync_color":"#6E8A8C","title_color":"#EFF6F3","sub_color":"#9BB4B5",
+    "label_color":"#9BB4B5","sec_title":"#EFF6F3","th_color":"#6E8A8C",
+    "td_color":"#CFE0DE","td_border":"rgba(160,205,205,0.10)","th_border":"rgba(160,205,205,0.16)",
+    "member_name":"#EFF6F3","input_bg":"#1A2F34","input_border":"rgba(160,205,205,0.18)",
+    "input_color":"#EFF6F3","lock_bg":"#15262A","lock_border":"rgba(160,205,205,0.16)",
+    "lock_title":"#EFF6F3","lock_sub":"#9BB4B5","exp_bg":"#15262A",
+    "exp_border":"rgba(160,205,205,0.14)","exp_color":"#CFE0DE","exp_content":"#122125",
+    "gdiv":"rgba(160,205,205,0.20)","foot_color":"#6E8A8C","foot_border":"rgba(160,205,205,0.12)",
+    "btn_bg":"#E8B15C","btn_border":"#E8B15C",
+    "btn2_bg":"transparent","btn2_color":"#CFE0DE","btn2_border":"rgba(160,205,205,0.20)",
+    "dl_bg":"transparent","dl_border":"rgba(232,177,92,0.40)",
+    "log_border":"rgba(160,205,205,0.10)","log_color":"#9BB4B5","log_strong":"#EFF6F3","log_time":"#6E8A8C",
+    "ring_track":"rgba(160,205,205,0.14)","bar_bg":"rgba(160,205,205,0.14)",
+    "streak_bg":"rgba(232,121,90,0.14)","streak_color":"#E8795A","streak_border":"rgba(232,121,90,0.32)",
 }
 
-dl_color = "#56c8f5"
+dl_color = "#E8B15C"
 
 st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif&display=swap');
+
+    :root{{
+      --canvas:#0F1B1E; --panel:#15262A; --panel-2:#1A2F34;
+      --line:rgba(160,205,205,0.14); --line-soft:rgba(160,205,205,0.09);
+      --ink:#EFF6F3; --ink-2:#9BB4B5; --ink-3:#6E8A8C;
+      --brass:#E8B15C; --paid:#5BC490; --short:#E8795A;
+      --exp-content:#122125;
+      --r-sm:8px; --r-md:12px; --r-lg:18px;
+    }}
+
     header{{visibility:hidden!important;height:0!important;}} #MainMenu{{visibility:hidden!important;}}
     .stDeployButton{{display:none!important;}} footer{{visibility:hidden!important;}}
     section[data-testid="stSidebar"]{{display:none!important;width:0!important;}}
     [data-testid="collapsedControl"]{{display:none!important;width:0!important;}}
     [data-testid="stSidebarNav"]{{display:none!important;}} button[kind="header"]{{display:none!important;}}
-    .block-container{{padding-top:0!important;padding-bottom:3rem!important;max-width:min(1180px,96vw)!important;padding-left:clamp(12px,2vw,40px)!important;padding-right:clamp(12px,2vw,40px)!important;}}
-    html,body,[class*="css"]{{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;}}
-    .main,.stApp{{background:{T['bg']}!important;min-height:100vh;}}
+    .block-container{{padding-top:0!important;padding-bottom:3rem!important;max-width:min(1160px,96vw)!important;
+        padding-left:clamp(12px,2vw,36px)!important;padding-right:clamp(12px,2vw,36px)!important;}}
+    html,body,[class*="css"]{{font-family:'Instrument Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+        -webkit-font-smoothing:antialiased;}}
+    .main,.stApp{{background:var(--canvas)!important;min-height:100vh;}}
     html{{scroll-behavior:smooth;}}
+    *:focus-visible{{outline:2px solid var(--brass);outline-offset:2px;border-radius:4px;}}
+    @media (prefers-reduced-motion:reduce){{*{{animation:none!important;transition:none!important;}}}}
 
-    .status-dot{{width:7px;height:7px;background:#34d399;border-radius:50%;display:inline-block;margin-right:7px;animation:pulse 2s infinite;}}
-    @keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:0.4}}}}
+    .num-serif{{font-family:'Instrument Serif',Georgia,serif;font-weight:400;letter-spacing:-0.01em;}}
+    .status-dot{{width:6px;height:6px;background:var(--paid);border-radius:50%;display:inline-block;margin-right:8px;
+        animation:pulse 2.4s infinite;}}
+    @keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:0.35}}}}
 
-    .lock-outer{{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;margin-top:-2rem;}}
-    .lock-card{{background:{T['lock_bg']};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid {T['lock_border']};border-radius:24px;padding:48px 40px;text-align:center;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,0.15),inset 0 1px 0 rgba(255,255,255,0.4);}}
-    .lock-icon{{font-size:44px;margin-bottom:16px;display:block;}}
-    .lock-title{{font-size:22px;font-weight:700;color:{T['lock_title']};margin-bottom:6px;}}
-    .lock-sub{{font-size:14px;color:{T['lock_sub']};margin-bottom:0;}}
+    /* ── lock screen ──────────────────────────────────────────────────────── */
+    .lock-outer{{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+        padding:40px 20px;margin-top:-2rem;}}
+    .lock-card{{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
+        padding:44px 38px;text-align:left;width:100%;max-width:380px;}}
+    .lock-icon{{font-size:34px;margin-bottom:18px;display:block;}}
+    .lock-title{{font-family:'Instrument Serif',Georgia,serif;font-size:32px;color:var(--ink);
+        margin-bottom:8px;line-height:1.1;}}
+    .lock-sub{{font-size:14px;color:var(--ink-2);margin:0;line-height:1.5;}}
 
-    /* ── V3 command-centre layout ─────────────────────────────────────────── */
-    .v3-status{{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;color:{T['td_color']};
-        background:{T['status_bg']};border:1px solid {T['status_border']};border-radius:12px;padding:10px 16px;margin-bottom:0;}}
+    /* ── top bar ──────────────────────────────────────────────────────────── */
+    .topbar{{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13px;
+        color:var(--ink-2);border-bottom:1px solid var(--line-soft);padding:14px 2px 12px;}}
+    .topbar b{{color:var(--ink);font-weight:600;}}
+    .topbar-right{{color:var(--ink-3);}}
     .block-container div[data-testid="stHorizontalBlock"]:first-of-type{{align-items:center;gap:8px;}}
-    .v3-status strong{{color:#34d399;font-weight:700;}}
-    .v3-status-muted{{color:{T['sync_color']};}}
 
-    .v3-header{{margin-bottom:16px;}}
-    .v3-kicker{{font-size:11px;font-weight:700;color:{T['label_color']};letter-spacing:1.4px;text-transform:uppercase;margin-bottom:6px;}}
-    .v3-title{{font-size:28px;font-weight:800;color:{T['title_color']};letter-spacing:-0.5px;line-height:1.15;margin:0 0 6px;}}
-    .v3-subtitle{{font-size:14px;color:{T['sub_color']};margin:0;}}
+    /* ── page head ────────────────────────────────────────────────────────── */
+    .pagehead{{padding:26px 2px 20px;}}
+    .pagehead h1{{font-family:'Instrument Serif',Georgia,serif;font-size:38px;font-weight:400;color:var(--ink);
+        margin:0 0 8px;line-height:1.08;letter-spacing:-0.015em;}}
+    .pagehead p{{font-size:14px;color:var(--ink-2);margin:0;line-height:1.55;}}
+    .pagehead p b{{color:var(--ink);font-weight:600;}}
 
-    .v3-kpis{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px;}}
-    .v3-kpi{{background:{T['chip_bg']};border:1px solid {T['chip_border']};border-radius:16px;padding:18px 20px;
-        box-shadow:0 2px 12px rgba(0,0,0,0.12),inset 0 1px 0 rgba(255,255,255,0.05);min-width:0;
-        display:flex;flex-direction:column;}}
-    .v3-kpi > *:last-child{{margin-bottom:0;}}
-    .v3-kpi-foot{{margin-top:auto;padding-top:10px;}}
-    .v3-kpi-primary{{background:linear-gradient(150deg,rgba(56,189,248,0.14),rgba(255,255,255,0.05));border-color:rgba(86,200,245,0.3);}}
-    .v3-kpi-label{{font-size:11px;font-weight:700;color:{T['label_color']};letter-spacing:1.1px;margin-bottom:8px;}}
-    .v3-kpi-value{{font-size:27px;font-weight:800;color:{T['title_color']};line-height:1.1;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;
-        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-    .v3-kpi-value span{{font-size:16px;font-weight:600;color:{T['sub_color']};}}
-    .v3-kpi-name{{color:#56c8f5;}}
-    .v3-kpi-good{{color:#34d399;}} .v3-kpi-bad{{color:#f87171;}}
-    .v3-kpi-meta{{font-size:12px;color:{T['sub_color']};margin-top:7px;line-height:1.45;font-variant-numeric:tabular-nums;}}
-    .v3-kpi-delta{{font-size:12px;color:{T['sub_color']};margin-top:4px;}}
+    /* ── hero: cash + next payout ─────────────────────────────────────────── */
+    .hero{{display:grid;grid-template-columns:1.45fr 1fr;gap:14px;margin-bottom:14px;align-items:stretch;}}
+    .panel{{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px 24px;
+        display:flex;flex-direction:column;min-width:0;}}
+    .panel-label{{font-size:13px;color:var(--ink-2);margin:0 0 10px;}}
+    .cash-figure{{font-family:'Instrument Serif',Georgia,serif;font-size:52px;line-height:1;color:var(--ink);
+        letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+    .cash-figure small{{font-size:22px;color:var(--ink-2);margin-right:8px;letter-spacing:0;}}
+    .cash-note{{font-size:13px;color:var(--ink-2);margin-top:10px;line-height:1.5;}}
+    .cash-note b{{color:var(--ink);font-weight:600;}}
 
-    .v3-recon-ok{{color:#34d399;}}
-    .v3-recon-off{{color:#fbbf24;}}
-    .v3-spark{{width:100%;height:30px;margin-top:9px;display:block;overflow:visible;}}
-    .v3-spark-cap{{font-size:11px;color:{T['sub_color']};margin-top:2px;}}
-    .v3-progress{{background:{T['bar_bg']};border-radius:5px;height:5px;overflow:hidden;margin-top:10px;}}
-    .v3-progress span{{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#34d399,#56c8f5);transition:width 0.4s ease;}}
-    .v3-progress.tall{{height:8px;border-radius:6px;margin-top:6px;}}
+    .split{{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--line-soft);margin:16px 0 10px;}}
+    .split i{{display:block;height:100%;}}
+    .split .seg-held{{background:var(--paid);}}
+    .split .seg-out{{background:rgba(232,177,92,0.55);}}
+    .legend{{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--ink-2);}}
+    .legend span{{display:inline-flex;align-items:center;gap:7px;}}
+    .legend i{{width:8px;height:8px;border-radius:2px;display:inline-block;}}
+    .cash-foot{{margin-top:auto;padding-top:16px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;
+        font-size:12.5px;color:var(--ink-2);}}
+    .recon-ok{{color:var(--paid);}} .recon-off{{color:var(--brass);}}
+    .spark{{width:140px;height:26px;display:block;overflow:visible;margin-left:auto;}}
 
-    .v3-command-grid{{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;align-items:stretch;}}
-    .v3-kpis-2{{grid-template-columns:repeat(2,1fr);}}
-    .v3-alert{{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:16px;padding:18px 20px;
-        display:flex;flex-direction:column;}}
-    .v3-alert-top{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}}
-    .v3-alert-top .v3-kicker{{margin-bottom:0;color:#fbbf24;}}
-    .v3-alert-amount{{font-size:27px;font-weight:800;color:#fbbf24;line-height:1.1;letter-spacing:-0.5px;font-variant-numeric:tabular-nums;}}
-    .v3-alert-names{{font-size:13px;color:{T['td_color']};line-height:1.5;margin-top:6px;}}
-    .v3-alert-foot{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:12px;
-        font-size:12px;color:{T['sub_color']};}}
-    .v3-alert-foot a{{font-weight:700;color:#fbbf24!important;text-decoration:none!important;white-space:nowrap;}}
-    .v3-alert-clear{{background:rgba(52,211,153,0.08);border-color:rgba(52,211,153,0.28);}}
-    .v3-alert-clear .v3-kicker,.v3-alert-clear .v3-alert-amount,.v3-alert-clear .v3-alert-foot a{{color:#34d399!important;}}
-    .v3-days.v3-clear{{color:#34d399;background:rgba(52,211,153,0.14);border-color:rgba(52,211,153,0.3);}}
+    .next-name{{font-family:'Instrument Serif',Georgia,serif;font-size:34px;color:var(--ink);line-height:1.1;
+        letter-spacing:-0.015em;margin-bottom:4px;}}
+    .next-when{{font-size:13.5px;color:var(--ink-2);margin-bottom:18px;}}
+    .next-amount{{font-size:22px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;}}
+    .chip{{font-size:12px;font-weight:600;color:var(--ink-2);border:1px solid var(--line);border-radius:99px;
+        padding:3px 11px;white-space:nowrap;}}
+    .chip-soon{{color:var(--brass);border-color:rgba(232,177,92,0.40);background:rgba(232,177,92,0.10);}}
+    .chip-clear{{color:var(--paid);border-color:rgba(91,196,144,0.35);background:rgba(91,196,144,0.10);}}
+    .panel-top{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;}}
+    .fund-row{{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink-2);
+        margin-top:auto;padding-top:16px;}}
+    .meter{{height:6px;border-radius:99px;background:var(--line-soft);overflow:hidden;margin-top:8px;}}
+    .meter i{{display:block;height:100%;background:var(--brass);border-radius:99px;}}
+    .meter.green i{{background:var(--paid);}}
+    .fund-note{{font-size:12.5px;color:var(--ink-3);margin-top:8px;line-height:1.45;}}
 
-    .v3-next-card{{background:{T['card_bg']};border:1px solid {T['card_border']};border-radius:16px;padding:18px 20px;
-        box-shadow:{T['card_shadow']};display:flex;flex-direction:column;}}
-    .v3-next-top{{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}}
-    .v3-next-top .v3-kicker{{margin-bottom:0;}}
-    .v3-days{{font-size:12px;font-weight:700;color:#818cf8;background:rgba(129,140,248,0.14);border:1px solid rgba(129,140,248,0.28);
-        border-radius:20px;padding:3px 11px;white-space:nowrap;}}
-    .v3-days.v3-urgent{{color:#fbbf24;background:rgba(251,191,36,0.14);border-color:rgba(251,191,36,0.32);}}
-    .v3-next-main{{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;}}
-    .v3-recipient{{font-size:23px;font-weight:800;color:{T['title_color']};letter-spacing:-0.4px;}}
-    .v3-next-date{{font-size:13px;color:{T['sub_color']};margin-top:2px;}}
-    .v3-next-amount{{font-size:21px;font-weight:800;color:#56c8f5;white-space:nowrap;font-variant-numeric:tabular-nums;}}
-    .v3-funding-row{{display:flex;justify-content:space-between;font-size:12px;color:{T['sub_color']};margin-top:auto;padding-top:4px;}}
-    .v3-funding-row strong{{color:{T['td_color']};font-weight:700;}}
-    .v3-funding-meta{{font-size:12px;color:{T['sub_color']};margin-top:7px;}}
+    /* ── rotation rail ────────────────────────────────────────────────────── */
+    .rail-wrap{{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
+        padding:20px 24px 22px;margin-bottom:26px;}}
+    .rail{{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}}
+    .turn{{flex:1 0 132px;min-width:132px;border-top:2px solid var(--line);padding-top:12px;}}
+    .turn.done{{border-top-color:var(--paid);}}
+    .turn.now{{border-top-color:var(--brass);}}
+    .turn-no{{font-size:12px;color:var(--ink-3);margin-bottom:5px;}}
+    .turn-name{{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:3px;}}
+    .turn.upcoming .turn-name{{color:var(--ink-2);font-weight:500;}}
+    .turn-date{{font-size:12.5px;color:var(--ink-3);}}
+    .turn-state{{font-size:12.5px;margin-top:6px;}}
+    .turn.done .turn-state{{color:var(--paid);}}
+    .turn.now .turn-state{{color:var(--brass);}}
+    .turn.upcoming .turn-state{{color:var(--ink-3);}}
 
-    .v3-section-card{{padding:4px 2px 8px;background:none!important;border:none!important;
-        box-shadow:none!important;backdrop-filter:none!important;border-radius:0!important;margin-bottom:22px;}}
-    .v3-section-head{{border-bottom:1px solid {T['th_border']};padding-bottom:10px;}}
-    .v3-section-head{{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px;flex-wrap:wrap;}}
-    .v3-inline-link{{font-size:13px;font-weight:600;color:{dl_color}!important;text-decoration:none!important;white-space:nowrap;}}
-    .v3-timeline{{display:flex;gap:6px;margin:2px 0 14px;}}
-    .v3-timeline span{{flex:1;height:6px;border-radius:4px;background:{T['bar_bg']};}}
-    .v3-timeline span.done{{background:linear-gradient(90deg,#34d399,#56c8f5);}}
-    .v3-timeline span.current{{background:#fbbf24;box-shadow:0 0 10px rgba(251,191,36,0.45);}}
-    .member-avatar{{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;
-        background:rgba(86,200,245,0.16);color:#56c8f5;font-size:13px;font-weight:700;margin-right:9px;vertical-align:middle;}}
-    .v3-ahead{{color:#34d399;}}
+    /* ── section frame ────────────────────────────────────────────────────── */
+    .section{{margin-bottom:28px;}}
+    .section-head{{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;
+        padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:4px;}}
+    .section-head h2{{font-size:19px;font-weight:600;color:var(--ink);margin:0 0 4px;letter-spacing:-0.01em;}}
+    .section-head p{{font-size:13px;color:var(--ink-2);margin:0;line-height:1.5;}}
+    .section-head p b{{color:var(--ink);font-weight:600;}}
+    .quiet-link{{font-size:13px;font-weight:600;color:var(--brass)!important;text-decoration:none!important;
+        white-space:nowrap;border-bottom:1px solid rgba(232,177,92,0.35);padding-bottom:1px;}}
 
-    .glass-card{{background:{T['card_bg']};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid {T['card_border']};border-radius:16px;padding:20px 22px;margin-bottom:14px;box-shadow:{T['card_shadow']};}}
-    .sec-label{{font-size:11px;font-weight:700;color:{T['label_color']};text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}}
-    .sec-title{{font-size:18px;font-weight:700;color:{T['sec_title']};margin:0 0 2px 0;}}
-    .sec-sub{{font-size:13px;color:{T['sub_color']};margin:0 0 14px 0;}}
-    .cell-sub{{font-size:12px;color:{T['sub_color']};margin-top:2px;}}
-    .num .cell-sub{{text-align:right;}}
+    /* ── member rows with contribution cards ──────────────────────────────── */
+    .mrow{{display:grid;grid-template-columns:minmax(140px,0.9fr) minmax(200px,1.7fr) minmax(96px,auto);gap:20px;
+        align-items:center;padding:14px 2px;border-bottom:1px solid var(--line-soft);}}
+    .mrow:last-child{{border-bottom:none;}}
+    .mname{{font-size:15px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:9px;}}
+    .mmeta{{font-size:12.5px;color:var(--ink-3);margin-top:3px;}}
+    .member-avatar{{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
+        border-radius:50%;background:rgba(232,177,92,0.14);color:var(--brass);font-size:12px;font-weight:600;
+        flex-shrink:0;}}
+    .strip{{display:grid;gap:3px;min-width:0;}}
+    .wk{{height:17px;border-radius:3px;background:rgba(160,205,205,0.07);}}
+    .wk-paid{{background:var(--paid);}}
+    .wk-part{{background:rgba(91,196,144,0.42);}}
+    .wk-owed{{background:rgba(232,121,90,0.10);box-shadow:inset 0 0 0 1px rgba(232,121,90,0.55);}}
+    .wk-exempt{{background:transparent;box-shadow:inset 0 0 0 1px var(--line-soft);}}
+    .wk-turnend{{margin-right:6px;}}
+    .wk-now{{outline:1.5px solid var(--brass);outline-offset:1.5px;}}
+    .strip-key{{font-size:12px;color:var(--ink-3);margin-top:8px;}}
+    .mstat{{display:flex;flex-direction:column;align-items:flex-end;gap:6px;text-align:right;}}
+    .exit-tag{{font-size:11.5px;color:var(--ink-3);font-weight:500;margin-left:7px;}}
 
+    .badge-ok{{color:var(--paid);font-size:13px;font-weight:600;white-space:nowrap;}}
+    .badge-owe{{color:var(--short);font-size:13px;font-weight:600;white-space:nowrap;
+        font-variant-numeric:tabular-nums;}}
+    .badge-pending{{color:var(--ink-3);font-size:13px;font-weight:500;white-space:nowrap;}}
+    .badge-exempt{{color:var(--ink-3);font-size:13px;font-weight:500;white-space:nowrap;}}
+    .streak-badge{{background:{T['streak_bg']};color:{T['streak_color']};border:1px solid {T['streak_border']};
+        border-radius:99px;padding:1px 8px;font-size:11.5px;font-weight:600;white-space:nowrap;}}
+
+    .owing-strip{{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;padding:12px 0 2px;
+        font-size:13px;color:var(--ink-2);}}
+    .owing-strip b{{color:var(--short);font-weight:600;font-size:15px;font-variant-numeric:tabular-nums;}}
+
+    /* ── tables ───────────────────────────────────────────────────────────── */
     .data-table{{width:100%;border-collapse:collapse;}}
-    .data-table th{{font-size:12px;font-weight:600;color:{T['th_color']};text-transform:uppercase;letter-spacing:0.6px;padding:9px 12px;border-bottom:1px solid {T['th_border']};text-align:left;}}
-    .data-table td{{font-size:15px;color:{T['td_color']};padding:11px 12px;border-bottom:1px solid {T['td_border']};vertical-align:middle;font-variant-numeric:tabular-nums;}}
+    .data-table th{{font-size:12.5px;font-weight:500;color:var(--ink-3);padding:12px 12px 10px;
+        border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;}}
+    .data-table td{{font-size:14.5px;color:{T['td_color']};padding:13px 12px;border-bottom:1px solid var(--line-soft);
+        vertical-align:middle;font-variant-numeric:tabular-nums;}}
     .data-table tr:last-child td{{border-bottom:none;}}
-    .data-table .num{{text-align:right;}}
-    .data-table th.num{{text-align:right;}}
-    .data-table tr.owing td:first-child{{border-left:2px solid #fbbf24;padding-left:10px;}}
-    .data-table tr.ok td:first-child{{border-left:2px solid #34d399;padding-left:10px;}}
-    .data-table tr.plain td:first-child{{border-left:2px solid transparent;padding-left:10px;}}
-    .cell-name{{font-weight:600;color:{T['member_name']};}}
-    .badge-ok{{background:rgba(52,211,153,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.25);border-radius:20px;padding:3px 11px;font-size:13px;font-weight:600;white-space:nowrap;}}
-    .badge-owe{{background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.25);border-radius:20px;padding:3px 11px;font-size:13px;font-weight:600;white-space:nowrap;}}
-    .badge-pending{{background:rgba(148,163,184,0.12);color:{T['sub_color']};border:1px solid rgba(148,163,184,0.22);border-radius:20px;padding:3px 11px;font-size:13px;font-weight:600;white-space:nowrap;}}
-    .badge-exempt{{background:rgba(148,163,184,0.1);color:{T['sub_color']};border:1px dashed {T['card_border']};border-radius:20px;padding:3px 11px;font-size:13px;font-weight:600;white-space:nowrap;}}
-    .streak-badge{{background:{T['streak_bg']};color:{T['streak_color']};border:1px solid {T['streak_border']};border-radius:20px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap;margin-left:6px;}}
-    .exit-tag{{font-size:11px;color:{T['sub_color']};font-weight:600;margin-left:6px;text-transform:uppercase;letter-spacing:0.4px;}}
-    .days-badge{{display:inline-block;background:rgba(129,140,248,0.12);color:#818cf8;border:1px solid rgba(129,140,248,0.25);border-radius:10px;padding:2px 8px;font-size:12px;font-weight:600;white-space:nowrap;margin-top:4px;}}
-    .days-badge.urgent{{background:rgba(251,191,36,0.12);color:#fbbf24;border-color:rgba(251,191,36,0.3);}}
-    .diff-line{{font-size:12px;color:{T['td_color']};font-family:ui-monospace,Menlo,monospace;}}
-    .pbar-wrap{{margin-top:6px;background:{T['bar_bg']};border-radius:4px;height:4px;overflow:hidden;}}
-    .pbar-fill{{height:4px;border-radius:4px;background:linear-gradient(90deg,#34d399,#38bdf8);transition:width 0.4s ease;}}
-    .early-eligible{{font-size:12px;color:#34d399;margin-top:3px;font-weight:600;text-align:right;}}
+    .data-table .num,.data-table th.num{{text-align:right;}}
+    .cell-name{{font-weight:600;color:var(--ink);}}
+    .cell-sub{{font-size:12px;color:var(--ink-3);margin-top:3px;}}
+    .num .cell-sub{{text-align:right;}}
+    .days-badge{{display:inline-block;color:var(--ink-3);font-size:12px;margin-top:3px;}}
+    .days-badge.urgent{{color:var(--brass);}}
+    .diff-line{{font-size:12.5px;color:var(--ink-2);}}
+    .pbar-wrap{{margin-top:7px;background:var(--line-soft);border-radius:99px;height:4px;overflow:hidden;}}
+    .pbar-fill{{height:4px;border-radius:99px;background:var(--paid);}}
+    .early-eligible{{font-size:12px;color:var(--paid);margin-top:4px;text-align:right;}}
 
-    .log-entry{{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid {T['log_border']};}}
+    /* ── activity log ─────────────────────────────────────────────────────── */
+    .log-entry{{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft);}}
     .log-entry:last-child{{border-bottom:none;}}
-    .log-dot{{width:8px;height:8px;border-radius:50%;background:#38bdf8;margin-top:6px;flex-shrink:0;}}
-    .log-dot-payout{{background:#818cf8;}} .log-dot-setting{{background:#34d399;}}
-    .log-text{{font-size:14px;color:{T['log_color']};line-height:1.45;}}
-    .log-text strong{{color:{T['log_strong']};font-weight:600;}}
-    .log-time{{font-size:12px;color:{T['log_time']};margin-left:auto;white-space:nowrap;padding-left:12px;}}
+    .log-dot{{width:6px;height:6px;border-radius:50%;background:var(--brass);margin-top:7px;flex-shrink:0;}}
+    .log-dot-payout{{background:var(--ink-2);}} .log-dot-setting{{background:var(--paid);}}
+    .log-text{{font-size:14px;color:{T['log_color']};line-height:1.5;}}
+    .log-text strong{{color:var(--ink);font-weight:600;}}
+    .log-time{{font-size:12px;color:var(--ink-3);margin-left:auto;white-space:nowrap;padding-left:12px;}}
 
-    .stTextInput input,.stNumberInput input,.stTextArea textarea{{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;color:{T['input_color']}!important;border-radius:10px!important;font-size:15px!important;}}
-    .stTextInput input:focus,.stNumberInput input:focus{{border-color:rgba(56,189,248,0.4)!important;box-shadow:0 0 0 2px rgba(56,189,248,0.08)!important;}}
-    .stTextInput label,.stNumberInput label,.stTextArea label,.stSelectbox label,.stCheckbox label{{color:{T['label_color']}!important;font-size:12px!important;font-weight:600!important;text-transform:uppercase;letter-spacing:0.5px;}}
-    .stSelectbox > div > div{{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;color:{T['input_color']}!important;border-radius:10px!important;}}
+    .sec-label{{font-size:13px;color:var(--ink-2);margin-bottom:4px;}}
+    .sec-title{{font-size:19px;font-weight:600;color:var(--ink);margin:0 0 4px;letter-spacing:-0.01em;}}
+    .sec-sub{{font-size:13px;color:var(--ink-2);margin:0 0 12px;line-height:1.5;}}
+
+    /* ── Streamlit controls ───────────────────────────────────────────────── */
+    .stTextInput input,.stNumberInput input,.stTextArea textarea{{background:var(--panel-2)!important;
+        border:1px solid var(--line)!important;color:var(--ink)!important;border-radius:var(--r-sm)!important;
+        font-size:15px!important;}}
+    .stTextInput input:focus,.stNumberInput input:focus,.stTextArea textarea:focus{{
+        border-color:rgba(232,177,92,0.55)!important;box-shadow:0 0 0 3px rgba(232,177,92,0.12)!important;}}
+    .stTextInput label,.stNumberInput label,.stTextArea label,.stSelectbox label,.stDateInput label,
+    .stCheckbox label{{color:var(--ink-2)!important;font-size:13px!important;font-weight:500!important;
+        text-transform:none!important;letter-spacing:0!important;}}
+    .stSelectbox > div > div,.stDateInput > div > div{{background:var(--panel-2)!important;
+        border:1px solid var(--line)!important;color:var(--ink)!important;border-radius:var(--r-sm)!important;}}
     div[data-testid="stButton"]{{width:100%!important;}}
-    .block-container div[data-testid="stHorizontalBlock"]:first-of-type button{{padding:10px 0!important;font-size:16px!important;}}
-    .stButton > button{{background:{T['btn_bg']}!important;backdrop-filter:blur(8px)!important;color:white!important;border:1px solid {T['btn_border']}!important;border-radius:10px!important;font-weight:600!important;font-size:15px!important;padding:10px 20px!important;width:100%;box-shadow:0 2px 8px rgba(29,78,216,0.25)!important;transition:all 0.2s!important;}}
-    .stButton > button:hover{{background:rgba(37,99,235,0.95)!important;box-shadow:0 4px 16px rgba(29,78,216,0.4)!important;}}
-    .stButton > button[kind="secondary"]{{background:{T['btn2_bg']}!important;color:{T['btn2_color']}!important;border:1px solid {T['btn2_border']}!important;box-shadow:none!important;}}
+    .block-container div[data-testid="stHorizontalBlock"]:first-of-type button{{padding:9px 0!important;
+        font-size:16px!important;}}
+    .stButton > button{{background:var(--brass)!important;color:#12201F!important;border:1px solid var(--brass)!important;
+        border-radius:var(--r-sm)!important;font-weight:600!important;font-size:15px!important;padding:10px 20px!important;
+        width:100%;box-shadow:none!important;transition:filter 0.15s ease!important;}}
+    .stButton > button:hover{{filter:brightness(1.08);}}
+    .stButton > button[kind="secondary"]{{background:transparent!important;color:var(--ink-2)!important;
+        border:1px solid var(--line)!important;}}
+    .stButton > button[kind="secondary"]:hover{{color:var(--ink)!important;border-color:var(--ink-3)!important;
+        filter:none;}}
     div[data-testid="stDownloadButton"],.stDownloadButton{{width:100%!important;}}
-    div[data-testid="stDownloadButton"] > button,.stDownloadButton > button{{background:{T['dl_bg']}!important;backdrop-filter:blur(8px)!important;color:{dl_color}!important;border:1px solid {T['dl_border']}!important;border-radius:10px!important;font-size:15px!important;font-weight:600!important;padding:10px 20px!important;width:100%!important;transition:all 0.2s!important;}}
-    details[data-testid="stExpander"]{{background:{T['exp_bg']}!important;backdrop-filter:blur(12px)!important;border:1px solid {T['exp_border']}!important;border-radius:12px!important;margin-bottom:8px!important;overflow:hidden;}}
-    details[data-testid="stExpander"] summary{{background:transparent!important;padding:13px 16px!important;}}
-    details[data-testid="stExpander"] summary,details[data-testid="stExpander"] summary *{{color:{T['sec_title']}!important;font-size:15px!important;font-weight:600!important;}}
+    div[data-testid="stDownloadButton"] > button,.stDownloadButton > button{{background:transparent!important;
+        color:{dl_color}!important;border:1px solid {T['dl_border']}!important;border-radius:var(--r-sm)!important;
+        font-size:15px!important;font-weight:600!important;padding:10px 20px!important;width:100%!important;}}
+    div[data-testid="stDownloadButton"] > button:hover{{background:rgba(232,177,92,0.08)!important;}}
+    details[data-testid="stExpander"]{{background:var(--panel)!important;border:1px solid var(--line)!important;
+        border-radius:var(--r-md)!important;margin-bottom:10px!important;overflow:hidden;}}
+    details[data-testid="stExpander"] summary{{background:transparent!important;padding:14px 18px!important;}}
+    details[data-testid="stExpander"] summary,details[data-testid="stExpander"] summary *{{color:var(--ink)!important;
+        font-size:15px!important;font-weight:600!important;}}
     details[data-testid="stExpander"] summary:hover{{color:{dl_color}!important;}}
-    details[data-testid="stExpander"] summary svg{{fill:{T['sec_title']}!important;color:{T['sec_title']}!important;}}
-    details[data-testid="stExpander"] > div:not(summary){{background:{T['exp_content']}!important;border-top:1px solid {T['exp_border']}!important;padding:18px!important;}}
-    details[data-testid="stExpander"] p,details[data-testid="stExpander"] label,details[data-testid="stExpander"] .stCheckbox span{{color:{T['td_color']};}}
-    div[data-testid="stSuccess"]{{background:rgba(16,185,129,0.07)!important;border:1px solid rgba(16,185,129,0.2)!important;border-radius:10px!important;color:#34d399!important;font-size:14px!important;}}
-    div[data-testid="stError"]{{background:rgba(239,68,68,0.07)!important;border:1px solid rgba(239,68,68,0.2)!important;border-radius:10px!important;color:#f87171!important;font-size:14px!important;}}
-    div[data-testid="stWarning"]{{background:rgba(251,191,36,0.07)!important;border:1px solid rgba(251,191,36,0.2)!important;border-radius:10px!important;color:#fbbf24!important;font-size:14px!important;}}
-    .stTabs [data-baseweb="tab-list"]{{gap:6px;background:transparent;}}
-    .stTabs [data-baseweb="tab"]{{background:{T['btn2_bg']};border:1px solid {T['btn2_border']};border-radius:10px;padding:7px 15px;color:{T['btn2_color']};font-size:13px;font-weight:600;}}
-    .stTabs [aria-selected="true"]{{background:{T['dl_bg']}!important;color:{dl_color}!important;border-color:{T['dl_border']}!important;}}
+    details[data-testid="stExpander"] summary svg{{fill:var(--ink-2)!important;color:var(--ink-2)!important;}}
+    details[data-testid="stExpander"] > div:not(summary){{background:var(--exp-content,#122125)!important;
+        border-top:1px solid var(--line)!important;padding:20px 18px!important;}}
+    details[data-testid="stExpander"] p,details[data-testid="stExpander"] label,
+    details[data-testid="stExpander"] .stCheckbox span{{color:{T['td_color']};}}
+    div[data-testid="stSuccess"]{{background:rgba(91,196,144,0.08)!important;border:1px solid rgba(91,196,144,0.28)!important;
+        border-radius:var(--r-sm)!important;color:var(--paid)!important;font-size:14px!important;}}
+    div[data-testid="stError"]{{background:rgba(232,121,90,0.08)!important;border:1px solid rgba(232,121,90,0.28)!important;
+        border-radius:var(--r-sm)!important;color:var(--short)!important;font-size:14px!important;}}
+    div[data-testid="stWarning"]{{background:rgba(232,177,92,0.08)!important;border:1px solid rgba(232,177,92,0.30)!important;
+        border-radius:var(--r-sm)!important;color:var(--brass)!important;font-size:14px!important;}}
+    div[data-testid="stInfo"]{{background:rgba(160,205,205,0.06)!important;border:1px solid var(--line)!important;
+        border-radius:var(--r-sm)!important;color:var(--ink-2)!important;font-size:14px!important;}}
+    div[data-testid="stMetricValue"]{{color:var(--ink)!important;font-size:24px!important;}}
+    div[data-testid="stMetricLabel"] p{{color:var(--ink-2)!important;font-size:13px!important;}}
+    .stTabs [data-baseweb="tab-list"]{{gap:4px;background:transparent;border-bottom:1px solid var(--line);}}
+    .stTabs [data-baseweb="tab"]{{background:transparent;border:none;border-radius:0;padding:10px 4px;margin-right:18px;
+        color:var(--ink-2);font-size:14px;font-weight:500;}}
+    .stTabs [aria-selected="true"]{{color:var(--ink)!important;box-shadow:inset 0 -2px 0 var(--brass);font-weight:600;}}
     .stTabs [data-baseweb="tab-highlight"],.stTabs [data-baseweb="tab-border"]{{display:none;}}
-    div[data-testid="stCode"] pre,div[data-testid="stCodeBlock"] pre{{background:{T['input_bg']}!important;border:1px solid {T['input_border']}!important;border-radius:12px!important;font-size:14px!important;line-height:1.55!important;}}
-    div[data-testid="stCode"] code,div[data-testid="stCodeBlock"] code{{color:{T['td_color']}!important;white-space:pre-wrap!important;}}
-    .copy-hint{{font-size:13px;color:{T['sub_color']};margin:-6px 0 8px;}}
-    .gdivider{{height:1px;background:linear-gradient(90deg,transparent,{T['gdiv']},transparent);margin:22px 0;}}
-    .foot{{text-align:center;font-size:12px;color:{T['foot_color']};margin-top:32px;padding-top:20px;border-top:1px solid {T['foot_border']};}}
+    div[data-testid="stCode"] pre,div[data-testid="stCodeBlock"] pre{{background:var(--panel-2)!important;
+        border:1px solid var(--line)!important;border-radius:var(--r-md)!important;font-size:13.5px!important;
+        line-height:1.6!important;}}
+    div[data-testid="stCode"] code,div[data-testid="stCodeBlock"] code{{color:{T['td_color']}!important;
+        white-space:pre-wrap!important;}}
+    hr{{border-color:var(--line-soft)!important;}}
+    .copy-hint{{font-size:13px;color:var(--ink-2);margin:-4px 0 8px;}}
+    .gdivider{{height:1px;background:var(--line-soft);margin:30px 0 20px;}}
+    .foot{{text-align:center;font-size:12.5px;color:var(--ink-3);margin-top:28px;padding-top:20px;
+        border-top:1px solid var(--line-soft);}}
     .anchor{{position:relative;top:-70px;display:block;height:0;}}
+    .swipe-hint{{display:none;font-size:12.5px;color:var(--ink-3);margin:8px 0 0;}}
 
-    /* tablets / small laptops */
-    @media (min-width:601px) and (max-width:1280px){{
-        .v3-title{{font-size:30px;}} .v3-subtitle{{font-size:15px;}}
-        .v3-kpis{{grid-template-columns:repeat(2,1fr);}}
-        .v3-kpi-value{{font-size:29px;}}
-        .v3-kpi-label,.v3-kicker{{font-size:12px;}}
-        .v3-kpi-meta,.v3-kpi-delta{{font-size:13px;}}
-        .sec-title{{font-size:19px;}} .sec-sub{{font-size:14px;}}
-        .data-table th{{font-size:12px;padding:11px 15px;}}
-        .data-table td{{font-size:16px;padding:13px 15px;}}
-        .v3-recipient{{font-size:25px;}} .v3-next-amount{{font-size:23px;}}
-        }}
-    /* landscape tablets: reclaim vertical space */
-    @media (min-width:601px) and (max-height:820px) and (orientation:landscape){{
-        .glass-card,.v3-section-card{{padding:16px 20px;margin-bottom:12px;}}
-        .v3-kpi{{padding:14px 16px;}}
-        .data-table td{{padding:10px 15px;}}
+    /* ── responsive ───────────────────────────────────────────────────────── */
+    @media (max-width:900px){{
+        .hero{{grid-template-columns:1fr;}}
+    }}
+    @media (max-width:700px){{
+        .mrow{{grid-template-columns:1fr auto;gap:12px;padding:16px 2px;}}
+        .mstat{{grid-row:1;grid-column:2;}}
+        .strip{{grid-row:2;grid-column:1 / -1;}}
     }}
     @media (max-width:600px){{
-        .block-container{{padding-bottom:3rem!important;padding-left:10px!important;padding-right:10px!important;}}
-        .v3-status{{font-size:12px;padding:8px 12px;flex-wrap:wrap;gap:4px;}}
-        .v3-header{{margin-bottom:12px;}}
-        .v3-title{{font-size:22px;}} .v3-subtitle{{font-size:12px;line-height:1.45;}}
-            .v3-kpis,.v3-kpis-2{{grid-template-columns:1fr 1fr!important;gap:8px;}}
-        .v3-kpi{{padding:12px 13px;}}
-        .v3-kpi-label{{font-size:10px;letter-spacing:0.8px;margin-bottom:5px;}}
-        .v3-kpi-value{{font-size:19px;}}
-        .v3-kpi-value span{{font-size:13px;}}
-        .v3-kpi-meta,.v3-kpi-delta{{font-size:11px;margin-top:5px;line-height:1.35;}}
-        .v3-progress{{margin-top:7px;height:4px;}}
-        .v3-kpi-foot{{padding-top:8px;}}
-        .v3-spark{{height:24px;margin-top:7px;}}
-        .v3-spark-cap{{font-size:10px;}}
-        .v3-command-grid{{grid-template-columns:1fr;}}
-        .v3-alert,.v3-next-card{{padding:13px 14px;}}
-        .v3-alert-amount{{font-size:21px;}}
-        .v3-alert-names{{font-size:12px;margin-top:4px;}}
-        .v3-alert-foot{{font-size:11px;margin-top:9px;}}
-        .v3-alert-top,.v3-next-top{{margin-bottom:6px;}}
-        .v3-kicker{{font-size:10px;letter-spacing:1px;}}
-        .v3-days{{font-size:11px;padding:2px 9px;}}
-        .v3-recipient{{font-size:19px;}}
-        .v3-next-amount{{font-size:18px;}}
-        .v3-next-date,.v3-funding-row,.v3-funding-meta{{font-size:11px;}}
-        .v3-funding-meta{{margin-top:5px;line-height:1.35;}}
-        .v3-next-main{{margin-bottom:9px;}}
-        .v3-command-grid{{gap:8px;margin-bottom:12px;}}
-        .v3-next-main{{flex-direction:column;align-items:flex-start;gap:6px;}}
-        .glass-card,.v3-section-card{{padding:14px 12px!important;border-radius:12px!important;}}
-        .v3-section-head{{gap:6px;}}
-        .sec-title{{font-size:16px!important;}} .sec-sub{{font-size:12px!important;line-height:1.4;}}
+        .block-container{{padding-left:12px!important;padding-right:12px!important;}}
+        .topbar{{font-size:12px;flex-wrap:wrap;gap:4px;padding-top:12px;}}
+        .pagehead{{padding:20px 2px 16px;}}
+        .pagehead h1{{font-size:29px;}}
+        .pagehead p{{font-size:13px;}}
+        .panel{{padding:18px 16px;}}
+        .cash-figure{{font-size:40px;}} .cash-figure small{{font-size:18px;}}
+        .next-name{{font-size:27px;}}
+        .rail-wrap{{padding:16px 16px 18px;}}
+        .turn{{flex:0 0 118px;min-width:118px;}}
+        .section-head h2{{font-size:17px;}}
+        .wk{{height:15px;}}
         .data-table{{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}}
-        .data-table th,.data-table td{{padding:9px 10px!important;font-size:13px!important;}}
-        .member-avatar{{width:24px;height:24px;font-size:12px;margin-right:7px;}}
-        /* payout table: hide the columns that can be re-derived */
+        .data-table th,.data-table td{{padding:10px 10px!important;font-size:13.5px!important;}}
         .tbl-payout.has-fee th:nth-child(4),.tbl-payout.has-fee td:nth-child(4),
         .tbl-payout.has-fee th:nth-child(6),.tbl-payout.has-fee td:nth-child(6),
         .tbl-payout.no-fee th:nth-child(5),.tbl-payout.no-fee td:nth-child(5){{display:none;}}
         .swipe-hint{{display:block!important;}}
     }}
-    .swipe-hint{{display:none;font-size:12px;color:{T['sub_color']};margin:6px 0 0;}}
     </style>
 """, unsafe_allow_html=True)
 
@@ -306,6 +356,9 @@ def format_date(dt):
     d = dt.day
     sfx = 'th' if 11<=d<=13 else {1:'st',2:'nd',3:'rd'}.get(d%10,'th')
     return f"{d}{sfx} {dt.strftime('%b %Y')}"
+
+def format_short(dt):
+    return f"{dt.day} {dt.strftime('%b')}"
 
 GH_TZ = ZoneInfo("Africa/Accra")
 SESSION_TIMEOUT_MINUTES = 30
@@ -370,9 +423,10 @@ def show_flash():
         st.toast(msg, icon="✅" if kind=="success" else ("⚠️" if kind=="warning" else "ℹ️"))
 
 def wa_block(text, fname, key):
-    html('<p class="copy-hint">Tap the copy icon (top-right of the box) and paste into WhatsApp.</p>')
+    html('<p class="copy-hint">Tap the copy icon at the top right of the box, then paste into WhatsApp.</p>')
     st.code(text, language=None)
-    st.download_button("⬇️ Download .txt", data=text, file_name=fname, mime="text/plain", key=key, use_container_width=True)
+    st.download_button("Download as .txt", data=text, file_name=fname, mime="text/plain", key=key,
+                       use_container_width=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -579,14 +633,14 @@ if not st.session_state.authenticated:
         <div class="lock-card">
             <span class="lock-icon">💸</span>
             <div class="lock-title">Susu Savings</div>
-            <div class="lock-sub">Enter your name and passcode to continue</div>
+            <div class="lock-sub">Enter your name and the group passcode. Every change you make is signed with your name.</div>
         </div>
     </div>""")
     col_l,col_c,col_r = st.columns([1,2,1])
     with col_c:
-        who = st.text_input("n", value=ADMIN_NAME, label_visibility="collapsed", placeholder="Your name (for the activity log)")
-        pw  = st.text_input("p", type="password", label_visibility="collapsed", placeholder="Passcode…")
-        if st.button("Unlock →"):
+        who = st.text_input("n", value=ADMIN_NAME, label_visibility="collapsed", placeholder="Your name")
+        pw  = st.text_input("p", type="password", label_visibility="collapsed", placeholder="Passcode")
+        if st.button("Unlock"):
             stored = st.session_state.get("admin_passcode", "")
             if not stored and not BOOTSTRAP_ADMIN_PW:
                 st.error("No admin passcode is configured. Add app.admin_passcode to Streamlit secrets first.")
@@ -594,7 +648,7 @@ if not st.session_state.authenticated:
             if not stored and BOOTSTRAP_ADMIN_PW:
                 stored = BOOTSTRAP_ADMIN_PW
             if not who.strip():
-                st.error("Please enter your name — every change is recorded against it.")
+                st.error("Enter your name — every change is recorded against it.")
             elif check_pw(pw, stored):
                 st.session_state.admin_name    = who.strip()[:40]
                 st.session_state.authenticated = True
@@ -604,7 +658,7 @@ if not st.session_state.authenticated:
                     commit(gsheet, lambda b: (b.__setitem__("passcode", hash_pw(pw)), None)[1])
                 st.rerun()
             else:
-                st.error("Incorrect passcode.")
+                st.error("That passcode is not correct.")
     st.stop()
 
 # ── derive ────────────────────────────────────────────────────────────────────
@@ -786,43 +840,42 @@ for i in range(num_members):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# DASHBOARD — command centre
+# DASHBOARD
 # ══════════════════════════════════════════════════════════════════════════════
 sync_ago = int((now_dt()-st.session_state.last_sync).total_seconds()/60)
-sync_txt = "just now" if sync_ago < 1 else f"{sync_ago}m ago"
+sync_txt = "just now" if sync_ago < 1 else f"{sync_ago} min ago"
 
-gap_class  = "v3-kpi-bad" if collection_gap > 0 else "v3-kpi-good"
 owing_rows = [r for r in contrib_rows if r["owing"] > 0]
-
 next_turn  = next((r for r in schedule_rows if not r["disbursed"]), None)
 funded_pct = int(min(next_turn["funded"]/next_turn["net_pool_amt"], 1)*100) if next_turn and next_turn["net_pool_amt"] else 100
 
-last_recon  = (st.session_state.get("reconciliations") or [None])[0]
+# last cash count
+last_recon = (st.session_state.get("reconciliations") or [None])[0]
 if last_recon:
-    _rd        = parse_display_date(last_recon.get("date","")[:12])
-    _days      = (today.date()-_rd).days if _rd else None
-    _when      = ("today" if _days == 0 else f"{_days}d ago") if _days is not None else last_recon.get("date","")
-    _diff      = money(last_recon.get("difference",0))
+    _rd   = parse_display_date(last_recon.get("date","")[:12])
+    _days = (today.date()-_rd).days if _rd else None
+    _when = ("today" if _days == 0 else f"{_days} days ago") if _days is not None else last_recon.get("date","")
+    _diff = money(last_recon.get("difference",0))
     if abs(_diff) < 0.005:
-        recon_line = f'<div class="v3-kpi-delta v3-recon-ok">✔ Reconciled {_when}</div>'
+        recon_line = f'<span class="recon-ok">Counted {_when}, matched exactly</span>'
     else:
         _word = "over" if _diff > 0 else "short"
-        recon_line = f'<div class="v3-kpi-delta v3-recon-off">⚠ Last count GHS {fmt_num(abs(_diff))} {_word} · {_when}</div>'
+        recon_line = f'<span class="recon-off">Last count was GHS {fmt_num(abs(_diff))} {_word}, {_when}</span>'
 else:
-    recon_line = '<div class="v3-kpi-delta v3-recon-off">⚠ Never reconciled — count the cash and record it</div>'
+    recon_line = '<span class="recon-off">Cash has never been counted against this balance</span>'
 
+# week-on-week movement
 prev_snap = st.session_state.get("snapshots", {}).get(str(current_elapsed_week-1))
 if prev_snap is not None and current_elapsed_week > 1:
     snap_delta  = money(total_cash_held - float(prev_snap))
-    delta_arrow = "↑" if snap_delta >= 0 else "↓"
-    delta_color = "#34d399" if snap_delta >= 0 else "#f87171"
-    delta_html  = f'<span style="color:{delta_color};font-weight:700">{delta_arrow} GHS {fmt_num(abs(snap_delta))}</span> vs last week'
+    delta_color = "var(--paid)" if snap_delta >= 0 else "var(--short)"
+    delta_word  = "up" if snap_delta >= 0 else "down"
+    delta_html  = (f'<span style="color:{delta_color};font-weight:600">{delta_word} GHS {fmt_num(abs(snap_delta))}</span>'
+                   f' since last week')
 else:
-    delta_html = "First weekly snapshot"
+    delta_html = "First week on record"
 
-ahead_note = f" · GHS {fmt_num(paid_ahead)} paid ahead" if paid_ahead > 0 else ""
-
-# cash-held trend — last 8 weekly snapshots, current week included
+# cash trend — last 8 weekly snapshots, current week included
 snaps_all = dict(st.session_state.get("snapshots", {}) or {})
 snaps_all[str(current_elapsed_week)] = total_cash_held
 hist = [(int(w), money(v)) for w, v in snaps_all.items() if str(w).isdigit() and int(w) <= current_elapsed_week]
@@ -832,171 +885,192 @@ if len(hist) >= 2:
     vals   = [v for _, v in hist]
     lo, hi = min(vals), max(vals)
     span   = (hi-lo) or 1
-    w_px, h_px = 150, 30
+    w_px, h_px = 140, 26
     step   = w_px/(len(vals)-1)
     pts    = " ".join(f"{i*step:.1f},{h_px-2-((v-lo)/span)*(h_px-6):.1f}" for i, v in enumerate(vals))
     last_x = (len(vals)-1)*step
     last_y = h_px-2-((vals[-1]-lo)/span)*(h_px-6)
-    spark_html = (f'<svg class="v3-spark" viewBox="0 0 {w_px} {h_px}" preserveAspectRatio="none">'
-                  f'<polyline points="{pts}" fill="none" stroke="#56c8f5" stroke-width="2" '
+    spark_html = (f'<svg class="spark" viewBox="0 0 {w_px} {h_px}" preserveAspectRatio="none" aria-hidden="true">'
+                  f'<polyline points="{pts}" fill="none" stroke="rgba(232,177,92,0.85)" stroke-width="1.6" '
                   f'stroke-linecap="round" stroke-linejoin="round"/>'
-                  f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="2.6" fill="#34d399"/></svg>'
-                  f'<div class="v3-spark-cap">Weeks {hist[0][0]}–{hist[-1][0]} · low GHS {fmt_num(lo)} · high GHS {fmt_num(hi)}</div>')
+                  f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="2.4" fill="#5BC490"/></svg>')
 else:
     spark_html = ""
 
-# ── live header ───────────────────────────────────────────────────────────────
-sb1, sb2 = st.columns([5,1])
+# ── top bar ───────────────────────────────────────────────────────────────────
+sb1, sb2 = st.columns([6,1])
 with sb1:
-    html(f"""<div class="v3-status">
-      <div><span class="status-dot"></span><strong>Live</strong><span class="v3-status-muted"> · Synced {sync_txt}</span></div>
-      <div class="v3-status-muted">Revision {st.session_state.rev} · {st.session_state.admin_name}</div>
+    html(f"""<div class="topbar">
+      <div><span class="status-dot"></span><b>Live</b> &nbsp;Synced {sync_txt}</div>
+      <div class="topbar-right">Signed in as {st.session_state.admin_name}, revision {st.session_state.rev}</div>
     </div>""")
 with sb2:
-    if st.button("↻", key="refresh_btn", type="secondary", help="Reload from Google Sheets"):
+    if st.button("Refresh", key="refresh_btn", type="secondary", help="Reload from Google Sheets"):
         reload_state(gsheet, fresh=True); flash("Refreshed from Google Sheets"); st.rerun()
 
 html(f"""
-<div class="v3-header">
-  <div class="v3-kicker">SUSU SAVINGS</div>
-  <div class="v3-title">{greeting()}, {st.session_state.admin_name} 👋</div>
-  <div class="v3-subtitle">Week {current_elapsed_week} of {total_weeks} · {num_members} members · {format_date(start_dt)} → {format_date(end_date)}</div>
+<div class="pagehead">
+  <h1>{greeting()}, {st.session_state.admin_name}</h1>
+  <p>Week <b>{current_elapsed_week}</b> of {total_weeks} with {num_members} members. The cycle runs
+     {format_date(start_dt)} to {format_date(end_date)}.</p>
 </div>
 """)
 
-# ── primary KPIs ──────────────────────────────────────────────────────────────
-html(f"""
-<div class="v3-kpis v3-kpis-2">
-  <div class="v3-kpi v3-kpi-primary">
-    <div class="v3-kpi-label">CASH HELD</div>
-    <div class="v3-kpi-value">GHS {fmt_num(total_cash_held)}</div>
-    <div class="v3-kpi-meta">GHS {fmt_num(total_cash_collected)} collected · GHS {fmt_num(total_payouts_dist)} paid out</div>
-    <div class="v3-kpi-foot">
-      <div class="v3-kpi-delta">{delta_html}</div>
-      {recon_line}
-      {spark_html}
-    </div>
-  </div>
-  <div class="v3-kpi">
-    <div class="v3-kpi-label">THIS WEEK</div>
-    <div class="v3-kpi-value">{current_elapsed_week} <span>/ {total_weeks}</span></div>
-    <div class="v3-kpi-foot">
-      <div class="v3-progress"><span style="width:{program_pct}%"></span></div>
-      <div class="v3-kpi-meta">{program_pct}% of rotation completed · ends {format_date(end_date)}</div>
-    </div>
-  </div>
-</div>
-""")
-
-# ── alert + next payout ───────────────────────────────────────────────────────
-# collections card — the outstanding figure lives here now, with the names
-if owing_rows:
-    who_owes = ", ".join(f"{r['member']} · GHS {fmt_num(r['owing'])}" for r in owing_rows[:4])
-    if len(owing_rows) > 4:
-        who_owes += f" +{len(owing_rows)-4} more"
-    alert_html = f"""
-    <div class="v3-alert">
-      <div class="v3-alert-top">
-        <span class="v3-kicker">OUTSTANDING</span>
-        <span class="v3-days v3-urgent">{len(owing_rows)} behind</span>
-      </div>
-      <div class="v3-alert-amount">GHS {fmt_num(collection_gap)}</div>
-      <div class="v3-alert-names">{who_owes}</div>
-      <div class="v3-alert-foot">
-        <span>{('GHS ' + fmt_num(paid_ahead) + ' paid ahead') if paid_ahead > 0 else 'Due to week ' + str(current_elapsed_week)}</span>
-        <a href="#section-exports">Send reminder →</a>
-      </div>
-    </div>
-    """
+# ── cash in hand + next payout ────────────────────────────────────────────────
+if total_cash_collected > 0:
+    held_pct = max(0, min(100, int(total_cash_held/total_cash_collected*100)))
 else:
-    alert_html = f"""
-    <div class="v3-alert v3-alert-clear">
-      <div class="v3-alert-top">
-        <span class="v3-kicker">COLLECTIONS</span>
-        <span class="v3-days v3-clear">all paid</span>
-      </div>
-      <div class="v3-alert-amount">GHS 0</div>
-      <div class="v3-alert-names">Every member is up to date for week {current_elapsed_week}.</div>
-      <div class="v3-alert-foot">
-        <span>{('GHS ' + fmt_num(paid_ahead) + ' paid ahead') if paid_ahead > 0 else 'Nothing outstanding'}</span>
-        <a href="#section-exports">Share update →</a>
-      </div>
-    </div>
-    """
+    held_pct = 0
+out_pct = 100-held_pct
 
-# next payout card — the only place the rotation's next turn is stated
+cash_panel = f"""
+<div class="panel">
+  <p class="panel-label">Cash in hand</p>
+  <div class="cash-figure"><small>GHS</small>{fmt_num(total_cash_held)}</div>
+  <div class="split">
+    <i class="seg-held" style="width:{held_pct}%"></i><i class="seg-out" style="width:{out_pct}%"></i>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--paid)"></i>Held GHS {fmt_num(total_cash_held)}</span>
+    <span><i style="background:rgba(232,177,92,0.55)"></i>Paid out GHS {fmt_num(total_payouts_dist)}</span>
+    <span>Collected GHS {fmt_num(total_cash_collected)}</span>
+  </div>
+  <div class="cash-foot">
+    <span>{delta_html}</span>
+    <span>{recon_line}</span>{spark_html}
+  </div>
+</div>
+"""
+
 if next_turn:
-    gap_to_fund    = money(max(0.0, next_turn["net_pool_amt"] - next_turn["funded"]))
-    shortfall_note = f" · GHS {fmt_num(gap_to_fund)} short" if gap_to_fund > 0 else " · fully funded"
+    gap_to_fund = money(max(0.0, next_turn["net_pool_amt"] - next_turn["funded"]))
+    fund_note   = (f"GHS {next_turn['funded_s']} banked, GHS {fmt_num(gap_to_fund)} still to come in"
+                   if gap_to_fund > 0 else f"GHS {next_turn['funded_s']} banked — the full pool is ready")
     if next_turn["days_away"] is None:
-        days_label, urgency = "past due", "v3-urgent"
+        days_label, chip_cls = "past due", "chip-soon"
+    elif next_turn["days_away"] == 0:
+        days_label, chip_cls = "today", "chip-soon"
     else:
-        days_label = "today" if next_turn["days_away"] == 0 else f"in {next_turn['days_away']} days"
-        urgency    = "v3-urgent" if next_turn["days_away"] <= 7 else ""
-    next_card = f"""
-    <div class="v3-next-card">
-      <div class="v3-next-top"><span class="v3-kicker">NEXT PAYOUT</span><span class="v3-days {urgency}">{days_label}</span></div>
-      <div class="v3-next-main">
-        <div><div class="v3-recipient">{next_turn['recipient']}</div><div class="v3-next-date">{next_turn['date']} · {next_turn['turn']}</div></div>
-        <div class="v3-next-amount">GHS {next_turn['pool']}</div>
-      </div>
-      <div class="v3-funding-row"><span>Turn funding</span><strong>{funded_pct}%</strong></div>
-      <div class="v3-progress tall"><span style="width:{funded_pct}%"></span></div>
-      <div class="v3-funding-meta">GHS {next_turn['funded_s']} banked of GHS {next_turn['pool']} required{shortfall_note}</div>
+        days_label = f"in {next_turn['days_away']} days"
+        chip_cls   = "chip-soon" if next_turn["days_away"] <= 7 else ""
+    next_panel = f"""
+    <div class="panel">
+      <div class="panel-top"><p class="panel-label" style="margin:0">Next payout</p>
+        <span class="chip {chip_cls}">{days_label}</span></div>
+      <div class="next-name">{next_turn['recipient']}</div>
+      <div class="next-when">{next_turn['date']}, closing {next_turn['turn'].lower()}</div>
+      <div class="next-amount">GHS {next_turn['pool']}</div>
+      <div class="fund-row"><span>Pool funded</span><b style="color:var(--ink)">{funded_pct}%</b></div>
+      <div class="meter{' green' if funded_pct >= 100 else ''}"><i style="width:{funded_pct}%"></i></div>
+      <div class="fund-note">{fund_note}</div>
     </div>
     """
 else:
-    next_card = ('<div class="v3-next-card"><div class="v3-kicker">ROTATION</div>'
-                 '<div class="v3-recipient">Cycle complete 🎉</div>'
-                 '<div class="v3-next-date">Every turn has been collected.</div></div>')
+    next_panel = """
+    <div class="panel">
+      <div class="panel-top"><p class="panel-label" style="margin:0">Rotation</p>
+        <span class="chip chip-clear">complete</span></div>
+      <div class="next-name">Everyone has been paid</div>
+      <div class="next-when">Every turn in this cycle has been collected in full.</div>
+    </div>
+    """
 
-html(f"""<div class="v3-command-grid">{alert_html}{next_card}</div>""")
+html(f'<div class="hero">{cash_panel}{next_panel}</div>')
 
-# ── member standing ───────────────────────────────────────────────────────────
-def ahead_cell(r):
-    n = r["total_paid"] - r["paid_due"]
-    return f'<div class="cell-sub v3-ahead">+{n} wk ahead</div>' if n > 0 else ""
+# ── rotation rail ─────────────────────────────────────────────────────────────
+rail = ""
+for r in schedule_rows:
+    if r["disbursed"]:
+        cls, state = "done", "Collected in full"
+    elif r is next_turn:
+        pct = int(min(r["funded"]/r["net_pool_amt"], 1)*100) if r["net_pool_amt"] else 0
+        cls, state = "now", (f"Part collected, GHS {r['remaining']} left" if r["collected_v"] > 0
+                             else f"{pct}% funded")
+    else:
+        cls, state = "upcoming", f"GHS {r['pool']}"
+    rail += (f'<div class="turn {cls}"><div class="turn-no">{r["turn"]}</div>'
+             f'<div class="turn-name">{r["recipient"]}</div>'
+             f'<div class="turn-date">{format_short(r["payout_date"])}</div>'
+             f'<div class="turn-state">{state}</div></div>')
+
+turns_done = sum(1 for r in schedule_rows if r["disbursed"])
+html(f"""
+<div class="rail-wrap">
+  <div class="section-head" style="border:none;padding-bottom:14px;margin-bottom:0">
+    <div><h2>The rotation</h2>
+      <p>{turns_done} of {num_members} turns collected. Each turn runs four weeks and the order never shifts.</p></div>
+  </div>
+  <div class="rail">{rail}</div>
+</div>
+""")
+
+# ── members and their contribution cards ──────────────────────────────────────
+def week_cell(m, w):
+    amt   = paid_amount(m, w)
+    tgt   = weekly(m)
+    extra = " wk-turnend" if w % 4 == 0 and w != total_weeks else ""
+    extra += " wk-now" if w == current_elapsed_week else ""
+    if not liable(m, w) and amt <= 0:
+        return f'<i class="wk wk-exempt{extra}" title="Week {w}: not owed"></i>'
+    if amt >= tgt-0.005:
+        return f'<i class="wk wk-paid{extra}" title="Week {w}: paid GHS {fmt_num(amt)}"></i>'
+    if amt > 0:
+        return f'<i class="wk wk-part{extra}" title="Week {w}: part paid, GHS {fmt_num(amt)} of {fmt_num(tgt)}"></i>'
+    if w <= current_elapsed_week:
+        return f'<i class="wk wk-owed{extra}" title="Week {w}: not paid"></i>'
+    return f'<i class="wk{extra}" title="Week {w}: not due yet"></i>'
 
 rows_html = ""
 for r in contrib_rows:
-    is_owing  = r["owing"] > 0
-    row_class = "owing" if is_owing else ("plain" if r["exited"] else "ok")
-    if is_owing:
-        badge = f'<span class="badge-owe">GHS {fmt_num(r["owing"])}</span>'
+    m = r["member"]
+    if r["owing"] > 0:
+        status = f'<span class="badge-owe">GHS {fmt_num(r["owing"])}</span>'
     elif r["exited"]:
-        badge = '<span class="badge-exempt">Exited</span>'
+        status = '<span class="badge-exempt">Left the group</span>'
     else:
-        badge = '<span class="badge-ok">Paid</span>'
-    streak_html = f'<span class="streak-badge">🔴 {r["streak"]}wk</span>' if r["streak"] >= 2 else ""
-    exit_tag    = f'<span class="exit-tag">left wk {r["exit_week"]}</span>' if r["exited"] and r["exit_week"] else ""
+        status = '<span class="badge-ok">Up to date</span>'
+    streak_html = f'<span class="streak-badge">{r["streak"]} weeks behind</span>' if r["streak"] >= 2 else ""
+    exit_tag    = f'<span class="exit-tag">left week {r["exit_week"]}</span>' if r["exited"] and r["exit_week"] else ""
+    ahead       = r["total_paid"] - r["paid_due"]
+    meta        = f'GHS {fmt_num(r["m_weekly"])} a week'
+    if ahead > 0: meta += f', {ahead} week{"s" if ahead > 1 else ""} ahead'
+    strip = "".join(week_cell(m, w) for w in range(1, total_weeks+1))
     rows_html += (
-        f'<tr class="{row_class}">'
-        f'<td><span class="member-avatar">{r["member"][0].upper()}</span><span class="cell-name">{r["member"]}</span>{exit_tag}</td>'
-        f'<td>GHS {fmt_num(r["m_weekly"])}</td>'
-        f'<td>{r["paid_due"]} / {r["due_so_far"]}{ahead_cell(r)}</td>'
-        f'<td>{badge}{streak_html}</td></tr>'
+        f'<div class="mrow">'
+        f'<div><div class="mname"><span class="member-avatar">{m[0].upper()}</span>{m}{exit_tag}</div>'
+        f'<div class="mmeta">{meta}</div></div>'
+        f'<div class="strip" style="grid-template-columns:repeat({total_weeks},1fr)">{strip}</div>'
+        f'<div class="mstat">{status}{streak_html}</div>'
+        f'</div>'
     )
 
-timeline_html = "".join(
-    f'<span class="{"done" if r["disbursed"] else ("current" if r is next_turn else "")}"></span>'
-    for r in schedule_rows)
+if owing_rows:
+    names = ", ".join(f"{r['member']} GHS {fmt_num(r['owing'])}" for r in owing_rows[:4])
+    if len(owing_rows) > 4:
+        names += f" and {len(owing_rows)-4} more"
+    owing_strip = (f'<div class="owing-strip"><b>GHS {fmt_num(collection_gap)}</b> outstanding to the end of week '
+                   f'{current_elapsed_week} — {names}.</div>')
+else:
+    owing_strip = (f'<div class="owing-strip">Nothing outstanding. Everyone has paid up to week '
+                   f'{current_elapsed_week}.</div>')
+if paid_ahead > 0:
+    owing_strip = owing_strip[:-6] + f'<span>GHS {fmt_num(paid_ahead)} has been paid ahead.</span></div>'
 
 html(f"""
-<div class="glass-card v3-section-card">
-  <div class="v3-section-head">
-    <div><div class="sec-label">PAYMENT STATUS</div><div class="sec-title">Members this week</div><div class="sec-sub">Who is paid, who is behind, and who is ahead.</div></div>
-    <a class="v3-inline-link" href="#section-payments">Manage payments →</a>
+<div class="section">
+  <div class="section-head">
+    <div><h2>Members</h2>
+      <p>One block per week. Filled means paid, outlined means owed, faint means not due yet.</p></div>
+    <a class="quiet-link" href="#section-payments">Record a payment</a>
   </div>
-  <table class="data-table tbl-contrib">
-    <thead><tr><th>Member</th><th class="num">Weekly target</th><th class="num">Paid / Due</th><th>Status</th></tr></thead>
-    <tbody>{rows_html}</tbody>
-  </table>
+  {owing_strip}
+  {rows_html}
 </div>
 """)
 
-# ── payout rotation ───────────────────────────────────────────────────────────
+# ── payout schedule ───────────────────────────────────────────────────────────
 show_fee     = fee_frac > 0
-fee_col_head = '<th class="num">Admin Fee</th>' if show_fee else ""
+fee_col_head = '<th class="num">Admin fee</th>' if show_fee else ""
 fee_cls      = "has-fee" if show_fee else "no-fee"
 def fee_cell(r): return f'<td class="num">GHS {r["fee"]}</td>' if show_fee else ""
 
@@ -1010,35 +1084,35 @@ for r in schedule_rows:
     elif r["collected_v"] > 0:
         status_badge = '<span class="badge-owe">Part collected</span>'
     else:
-        status_badge = '<span class="badge-pending">Upcoming</span>'
+        status_badge = '<span class="badge-pending">Not yet due</span>'
     if r["days_away"] is not None:
         urg = "urgent" if r["days_away"] <= 7 else ""
-        days_cell = f'<div><span class="days-badge {urg}">{r["days_away"]}d away</span></div>'
+        days_cell = f'<div><span class="days-badge {urg}">{r["days_away"]} days away</span></div>'
     else:
-        days_cell = '<div class="cell-sub">Past</div>'
+        days_cell = '<div class="cell-sub">Passed</div>'
     early_note = '<div class="early-eligible">Fully funded</div>' if r["early_ok"] else ""
-    exit_tag   = '<span class="exit-tag">exited</span>' if r["exited"] else ""
+    exit_tag   = '<span class="exit-tag">left the group</span>' if r["exited"] else ""
     pay_rows_html += (
-        f'<tr class="plain">'
+        f'<tr>'
         f'<td><span class="cell-name">{r["turn"]}</span></td>'
         f'<td>{r["recipient"]}{exit_tag}</td>'
         f'<td>{r["date"]}{days_cell}</td>' + fee_cell(r) +
-        f'<td>GHS {r["pool"]}{early_note}<div class="pbar-wrap"><div class="pbar-fill" style="width:{bar_pct}%"></div></div></td>'
-        f'<td>GHS {r["collected"]}</td><td>GHS {r["remaining"]}</td><td>{status_badge}</td></tr>'
+        f'<td class="num">GHS {r["pool"]}{early_note}<div class="pbar-wrap"><div class="pbar-fill" style="width:{bar_pct}%"></div></div></td>'
+        f'<td class="num">GHS {r["collected"]}</td><td class="num">GHS {r["remaining"]}</td><td>{status_badge}</td></tr>'
     )
 
 html(f"""
-<div class="glass-card v3-section-card">
-  <div class="v3-section-head">
-    <div><div class="sec-label">ROTATION</div><div class="sec-title">Payout schedule</div><div class="sec-sub">Four-week turns · collected is what the recipient has taken, remaining is what they are still owed.</div></div>
-    <a class="v3-inline-link" href="#section-payouts">Manage payouts →</a>
+<div class="section">
+  <div class="section-head">
+    <div><h2>Payout schedule</h2>
+      <p>Collected is what the recipient has taken. Remaining is what the group still owes them.</p></div>
+    <a class="quiet-link" href="#section-payouts">Record a payout</a>
   </div>
-  <div class="v3-timeline">{timeline_html}</div>
   <table class="data-table tbl-payout {fee_cls}">
-    <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th>{fee_col_head}<th class="num">Net Pool</th><th class="num">Collected</th><th class="num">Remaining</th><th>Status</th></tr></thead>
+    <thead><tr><th>Turn</th><th>Recipient</th><th>Date</th>{fee_col_head}<th class="num">Net pool</th><th class="num">Collected</th><th class="num">Remaining</th><th>Status</th></tr></thead>
     <tbody>{pay_rows_html}</tbody>
   </table>
-  <p class="swipe-hint">Swipe sideways for the full payout breakdown.</p>
+  <p class="swipe-hint">Swipe sideways for the full breakdown.</p>
 </div>
 """)
 
@@ -1109,10 +1183,13 @@ for member in members:
     ch.write("\n")
 
 html("""<span class="anchor" id="section-exports"></span>
-<div class="glass-card v3-section-card">
-  <div class="sec-label">EXPORT</div><div class="sec-title">WhatsApp messages</div>
-  <div class="sec-sub">Ready-to-send updates, reminders, onboarding details and contribution history.</div></div>""")
-t1,t2,t3,t4 = st.tabs(["📥 Weekly Update","🔔 Reminder","📋 Onboarding","📊 History"])
+<div class="section">
+  <div class="section-head">
+    <div><h2>Share with the group</h2>
+      <p>Ready-to-send WhatsApp messages, built from the figures above.</p></div>
+  </div>
+</div>""")
+t1,t2,t3,t4 = st.tabs(["Weekly update","Reminder","Onboarding","History"])
 with t1: wa_block(buf.getvalue(), f"Susu_W{current_elapsed_week}.txt", "dl_weekly")
 with t2: wa_block(rem.getvalue(), f"Susu_Reminder_W{current_elapsed_week}.txt", "dl_rem")
 with t3: wa_block(ob.getvalue(),  "Susu_Onboarding.txt", "dl_ob")
@@ -1120,16 +1197,16 @@ with t4: wa_block(ch.getvalue(),  f"Susu_History_W{current_elapsed_week}.txt", "
 
 # ── admin panel ───────────────────────────────────────────────────────────────
 html('<span class="anchor" id="section-admin"></span>'
-     '<div class="sec-label" style="margin-top:24px">ADMIN</div>'
-     '<div class="sec-title">Group controls</div>'
-     '<div class="sec-sub">Record money in and out, then manage settings and tools.</div>')
+     '<div class="section" style="margin-top:30px">'
+     '<div class="section-head"><div><h2>Group controls</h2>'
+     '<p>Record money in and out, then manage settings and tools.</p></div></div></div>')
 
-tab_money, tab_settings, tab_tools = st.tabs(["💰 Money", "⚙️ Settings", "🛠️ Tools"])
+tab_money, tab_settings, tab_tools = st.tabs(["Money", "Settings", "Tools"])
 
 with tab_money:
     html('<span class="anchor" id="section-payments"></span>')
-    with st.expander("💳  Record Payment", expanded=True):
-        st.caption("Record the payment as received. Partial, late, multiple and corrected payments are all supported.")
+    with st.expander("Record a payment", expanded=True):
+        st.caption("Partial, late, multiple and corrected payments are all supported.")
         pm1,pm2 = st.columns(2)
         with pm1: pay_member = st.selectbox("Member", members, key="tx_member")
         with pm2: pay_week   = st.number_input("Week", min_value=1, max_value=total_weeks,
@@ -1142,12 +1219,12 @@ with tab_money:
                                                value=float(default_amt), step=10.0, key="tx_amount")
         with pm4: pay_method = st.selectbox("Payment method", ["Cash","MoMo","Bank transfer","Other"], key="tx_method")
         pm5,pm6 = st.columns(2)
-        with pm5: pay_ref  = st.text_input("Reference / note", key="tx_reference", placeholder="MoMo ref, bank ref, or cash note")
+        with pm5: pay_ref  = st.text_input("Reference or note", key="tx_reference", placeholder="MoMo ref, bank ref, or cash note")
         with pm6: pay_date = st.date_input("Payment date", value=today.date(), key="tx_date")
-        html(f'<div style="font-size:13px;color:{T["sub_color"]};margin:4px 0 10px">Weekly target: '
-             f'<strong style="color:{T["sec_title"]}">GHS {fmt_num(target)}</strong> · Already recorded for Week '
-             f'{int(pay_week):02d}: <strong style="color:{T["sec_title"]}">GHS {fmt_num(already)}</strong></div>')
-        if st.button("Save Payment", key="save_transaction"):
+        html(f'<div style="font-size:13px;color:{T["sub_color"]};margin:4px 0 10px">Weekly target is '
+             f'<strong style="color:{T["sec_title"]}">GHS {fmt_num(target)}</strong>. Already recorded for week '
+             f'{int(pay_week):02d}: <strong style="color:{T["sec_title"]}">GHS {fmt_num(already)}</strong>.</div>')
+        if st.button("Save payment", key="save_transaction"):
             if pay_amount <= 0:
                 st.error("Enter an amount greater than zero.")
             else:
@@ -1173,22 +1250,22 @@ with tab_money:
                 if commit(gsheet,_m): flash(f"Payment saved for {pay_member}")
                 st.rerun()
 
-    with st.expander("🧾  Recent Payment Receipts"):
+    with st.expander("Recent payment receipts"):
         tx_rows = st.session_state.get("payment_transactions",[])[:10]
         if not tx_rows:
-            st.info("No payment receipts yet.")
+            st.info("Receipts appear here once you record a payment.")
         for tx in tx_rows:
-            reversed_tag = " · ↩︎ REVERSED" if tx.get("status") != "completed" else ""
+            reversed_tag = " · reversed" if tx.get("status") != "completed" else ""
             st.markdown(f"**{tx.get('member','—')} · Week {int(tx.get('week',0)):02d} · "
                         f"GHS {fmt_num(tx.get('amount',0))}**{reversed_tag} · {tx.get('method','—')} · {tx.get('date','')}")
             wa_block(receipt_text(tx), f"Receipt_{tx.get('id','payment')}.txt", f"receipt_{tx.get('id','payment')}")
             if tx.get("status","completed") == "completed":
-                st.caption("To reverse or correct this, use Undo / Correct a Record below — a reason is required.")
+                st.caption("To reverse or correct this, use Undo or correct a record below. A reason is required.")
             st.divider()
 
-    with st.expander("⚡  Bulk Payment Entry", expanded=True):
+    with st.expander("Bulk payment entry", expanded=True):
         st.caption("Tick everyone who has paid for a week and save once. Each tick writes a real payment "
-                   "(with a receipt); unticking reverses it. Fastest way to run the weekly collection.")
+                   "with a receipt, and unticking reverses it.")
         bc1,bc2,bc3 = st.columns([1,1,1])
         with bc1: bulk_week   = st.number_input("Week", min_value=1, max_value=total_weeks,
                                                 value=max(1,current_elapsed_week), step=1, key="bulk_week")
@@ -1204,7 +1281,7 @@ with tab_money:
             rows_meta[m] = {"already":already, "target":target, "was":paid(m,bw)}
             with cols[idx % 2]:
                 if not liable(m,bw) and already <= 0:
-                    html(f'<div style="font-size:13px;color:{T["sub_color"]};padding:9px 0">{m} — exempt</div>')
+                    html(f'<div style="font-size:13px;color:{T["sub_color"]};padding:9px 0">{m} — not owed</div>')
                     continue
                 part = f" · GHS {fmt_num(already)} banked" if 0 < already < target else ""
                 ticks[m] = st.checkbox(f"{m} · GHS {fmt_num(target)}{part}",
@@ -1264,17 +1341,17 @@ with tab_money:
             st.rerun()
 
         if st.session_state.get("bulk_confirm") and removes:
-            st.warning("⚠️ These members will be marked unpaid for Week %02d and their payments reversed:\n\n" % bw
+            st.warning("These members will be marked unpaid for week %02d and their payments reversed:\n\n" % bw
                        + "\n".join(f"• {m}" for m in removes))
             uc1,uc2 = st.columns(2)
             with uc1:
-                if st.button("✓ Confirm and save", key="bulk_confirm_yes"):
+                if st.button("Confirm and save", key="bulk_confirm_yes"):
                     save_bulk(adds, removes)
             with uc2:
-                if st.button("✗ Cancel", key="bulk_confirm_no", type="secondary"):
+                if st.button("Cancel", key="bulk_confirm_no", type="secondary"):
                     st.session_state.bulk_confirm = False; st.rerun()
         else:
-            if st.button(f"Save Week {bw:02d} Payments", key="bulk_save"):
+            if st.button(f"Save week {bw:02d} payments", key="bulk_save"):
                 if not adds and not removes:
                     flash("No changes to save","info"); st.rerun()
                 elif removes:
@@ -1283,12 +1360,12 @@ with tab_money:
                     save_bulk(adds, removes)
 
     html('<span class="anchor" id="section-payouts"></span>')
-    with st.expander("🎁  Record Payout"):
+    with st.expander("Record a payout"):
         turn_options = [f"{r['turn']} — {r['recipient']}" for r in schedule_rows]
-        sel_turn_lbl = st.selectbox("Payout Turn", turn_options, key="payout_turn")
+        sel_turn_lbl = st.selectbox("Payout turn", turn_options, key="payout_turn")
         sr           = schedule_rows[turn_options.index(sel_turn_lbl)]
         tkey         = sr["turn"]; rec_name = sr["recipient"]
-        html(f"""<div style="font-size:14px;color:{T['td_color']};line-height:1.7;margin-bottom:8px">
+        html(f"""<div style="font-size:14px;color:{T['td_color']};line-height:1.8;margin-bottom:8px">
             Net pool due to {rec_name}: <strong style="color:{T['sec_title']}">GHS {sr['pool']}</strong> &nbsp;·&nbsp;
             Collected so far: <strong style="color:{T['sec_title']}">GHS {sr['collected']}</strong> &nbsp;·&nbsp;
             Still owed: <strong style="color:{T['sec_title']}">GHS {sr['remaining']}</strong><br>
@@ -1306,29 +1383,29 @@ with tab_money:
                                       key="payout_date_in")
         po3,po4 = st.columns(2)
         with po3: payout_method = st.selectbox("Payout method", ["Cash","MoMo","Bank transfer","Other"], key="payout_method")
-        with po4: payout_ref    = st.text_input("Payout reference / note", key="payout_reference",
+        with po4: payout_ref    = st.text_input("Payout reference or note", key="payout_reference",
                                                 placeholder="MoMo ref, bank ref, or cash note")
         coll_dt    = datetime.combine(coll_date, datetime.min.time(), tzinfo=GH_TZ)
         delta_out  = money(new_amt - sr["collected_v"])          # only the change leaves the box
         cash_after = money(total_cash_held - delta_out)
         st.caption(f"Balance still owed to {rec_name} after this entry: GHS {fmt_num(money(sr['net_pool_amt']-new_amt))}"
-                   + (" — fully collected ✅" if new_amt >= sr["net_pool_amt"]-0.005 else "")
+                   + (" — fully collected" if new_amt >= sr["net_pool_amt"]-0.005 else "")
                    + f" · Group cash after: GHS {fmt_num(cash_after)}")
         overdraw = cash_after < -0.005
         if overdraw:
-            st.error(f"❌ The group only holds GHS {fmt_num(total_cash_held)}. Paying out GHS {fmt_num(delta_out)} now "
+            st.error(f"The group only holds GHS {fmt_num(total_cash_held)}. Paying out GHS {fmt_num(delta_out)} now "
                      f"would leave it GHS {fmt_num(abs(cash_after))} short. Record the outstanding weekly payments first, "
                      f"or enter a smaller amount.")
             st.session_state.confirm_payout = False
         if not st.session_state.get("confirm_payout",False):
-            if st.button("Save Payout", key="save_payout_btn", disabled=overdraw):
+            if st.button("Save payout", key="save_payout_btn", disabled=overdraw):
                 st.session_state.confirm_payout=True; st.rerun()
         else:
-            st.warning(f"⚠️ Confirm: {rec_name} ({tkey}) has collected GHS {fmt_num(new_amt)} of GHS {sr['pool']} "
+            st.warning(f"Confirm: {rec_name} ({tkey}) has collected GHS {fmt_num(new_amt)} of GHS {sr['pool']} "
                        f"as at {format_date(coll_dt)}?")
             cc1,cc2 = st.columns(2)
             with cc1:
-                if st.button("✓ Yes, confirm", key="confirm_yes"):
+                if st.button("Yes, save it", key="confirm_yes"):
                     def _m(b):
                         ps = b.setdefault("payout_status",{}).setdefault(tkey,{})
                         before = money(ps.get("collected", ps.get("disbursed_amount", ps.get("amount_collected",0.0))))
@@ -1363,21 +1440,21 @@ with tab_money:
                         flash(f"Payout for {rec_name} saved")
                     st.rerun()
             with cc2:
-                if st.button("✗ Cancel", key="confirm_no", type="secondary"):
+                if st.button("Cancel", key="confirm_no", type="secondary"):
                     st.session_state.confirm_payout=False; st.rerun()
 
-    with st.expander("🧾  Recent Payout Receipts"):
+    with st.expander("Recent payout receipts"):
         pl = st.session_state.get("payout_ledger",[])[:6]
         if not pl:
             st.info("Record a payout to generate its receipt.")
         for p in pl:
-            rev = " · ↩︎ REVERSED" if p.get("status","active") == "reversed" else ""
+            rev = " · reversed" if p.get("status","active") == "reversed" else ""
             st.markdown(f"**{p.get('recipient','—')} · {p.get('turn','—')} · GHS {fmt_num(p.get('amount',0))}**{rev} · "
                         f"{p.get('method','—')} · {p.get('date','')}")
             wa_block(payout_receipt_text(p), f"Payout_{p.get('id','receipt')}.txt", f"payoutrcpt_{p.get('id','receipt')}")
             st.divider()
 
-    with st.expander("↩️  Undo / Correct a Record"):
+    with st.expander("Undo or correct a record"):
         st.caption("The original record is kept and marked, never deleted. A reason is required and goes into the audit trail.")
         kind = st.selectbox("Record type", ["Payment","Payout"], key="correction_kind")
 
@@ -1397,9 +1474,9 @@ with tab_money:
                                               value=float(sel.get("amount",0) or 0), step=10.0, key="correct_amount")
                               if action == "Correct amount" else None)
                 reason = st.text_input("Reason", key="correction_reason", placeholder="Why is this being corrected?")
-                if st.button("Confirm correction", key="confirm_payment_correction"):
+                if st.button("Save correction", key="confirm_payment_correction"):
                     if not reason.strip():
-                        st.error("Please enter a reason.")
+                        st.error("Enter a reason.")
                     else:
                         who_now = st.session_state.get("admin_name", ADMIN_NAME)
                         def _m(b, rid=rid, action=action, new_amount=new_amount, reason=reason.strip(), who_now=who_now):
@@ -1451,11 +1528,11 @@ with tab_money:
                 idx = st.selectbox("Select payout", range(len(active_pos)),
                                    format_func=lambda n: labels[n], key="correction_payout")
                 selp = active_pos[idx]; pid = selp.get("id")
-                st.warning("Only reverse a payout that was recorded in error — the amount is added back to group cash.")
+                st.warning("Only reverse a payout that was recorded in error. The amount is added back to group cash.")
                 reason_p = st.text_input("Reason", key="payout_correction_reason", placeholder="Why is this payout being reversed?")
-                if st.button("Confirm payout reversal", key="confirm_payout_correction"):
+                if st.button("Reverse this payout", key="confirm_payout_correction"):
                     if not reason_p.strip():
-                        st.error("Please enter a reason.")
+                        st.error("Enter a reason.")
                     else:
                         who_now = st.session_state.get("admin_name", ADMIN_NAME)
                         def _m(b, pid=pid, reason=reason_p.strip(), who_now=who_now, pools=pools):
@@ -1483,15 +1560,15 @@ with tab_money:
                         st.rerun()
 
 with tab_settings:
-    with st.expander("⚙️  Group Settings"):
+    with st.expander("Group settings"):
         c1,c2,c3 = st.columns(3)
-        with c1: new_start = st.text_input("Start Date (YYYY-MM-DD)", value=st.session_state.start_date)
-        with c2: new_base  = st.number_input("Base Monthly (GHS)", value=float(st.session_state.base_monthly), step=50.0)
-        with c3: new_fee   = st.number_input("Admin Fee (%)", value=float(st.session_state.admin_fee_percentage),
+        with c1: new_start = st.text_input("Start date (YYYY-MM-DD)", value=st.session_state.start_date)
+        with c2: new_base  = st.number_input("Base monthly (GHS)", value=float(st.session_state.base_monthly), step=50.0)
+        with c3: new_fee   = st.number_input("Admin fee (%)", value=float(st.session_state.admin_fee_percentage),
                                              min_value=0.0, max_value=100.0, step=0.5)
         new_names = st.text_area("Members (comma-separated)", value=st.session_state.names_input)
         html(f'<p style="font-size:13px;color:{T["sub_color"]}">Payment records are kept when you add or reorder members. '
-             f'To remove someone mid-cycle use Member Status below — deleting the name here shifts every payout date.</p>')
+             f'To remove someone mid-cycle use Member status below — deleting the name here shifts every payout date.</p>')
 
         def save_settings(vals, changes):
             st.session_state.start_date           = vals["start"]
@@ -1503,7 +1580,7 @@ with tab_settings:
                 return {"type":"setting","text":"Group settings updated","detail":changes}
             if commit(gsheet,_m): flash("Settings saved")
 
-        if st.button("Save Settings", key="save_settings"):
+        if st.button("Save settings", key="save_settings"):
             try: datetime.strptime(new_start,"%Y-%m-%d")
             except ValueError: st.error("Date format must be YYYY-MM-DD."); st.stop()
             changes, structural = [], []
@@ -1527,29 +1604,29 @@ with tab_settings:
 
         if st.session_state.get("confirm_settings"):
             pending = st.session_state.get("pending_settings", {})
-            st.warning("⚠️ This changes the cycle structure (" + ", ".join(pending.get("structural", [])) +
+            st.warning("This changes the cycle structure (" + ", ".join(pending.get("structural", [])) +
                        "). Payment history is preserved, but payout dates or the rotation order can move. "
                        "Confirm only if that is intended.")
             sc1,sc2 = st.columns(2)
             with sc1:
-                if st.button("✓ Confirm change", key="confirm_settings_yes"):
+                if st.button("Confirm change", key="confirm_settings_yes"):
                     st.session_state.confirm_settings = False
                     p = st.session_state.pop("pending_settings", None)
                     if p: save_settings(p["vals"], p["changes"])
                     st.rerun()
             with sc2:
-                if st.button("✗ Cancel", key="confirm_settings_no", type="secondary"):
+                if st.button("Cancel", key="confirm_settings_no", type="secondary"):
                     st.session_state.pop("pending_settings", None)
                     st.session_state.confirm_settings = False
                     st.rerun()
 
-    with st.expander("💰  Custom Member Tiers"):
+    with st.expander("Custom member tiers"):
         tier_cols = st.columns(min(num_members,4))
         new_tiers = {}
         for idx,m in enumerate(members):
             with tier_cols[idx%4]:
                 new_tiers[m] = st.number_input(m, value=float(tier(m)), step=50.0, key=f"tier_{m}")
-        if st.button("Save Tiers", key="save_tiers"):
+        if st.button("Save tiers", key="save_tiers"):
             diffs = [f"{m}: GHS {fmt_num(tier(m))} → GHS {fmt_num(v)}" for m,v in new_tiers.items() if float(v)!=float(tier(m))]
             def _m(b):
                 b.setdefault("tiers",{}).update({k:float(v) for k,v in new_tiers.items()})
@@ -1557,7 +1634,7 @@ with tab_settings:
             if commit(gsheet,_m): flash("Tiers saved" if diffs else "No tier changes")
             st.rerun()
 
-    with st.expander("👤  Member Status"):
+    with st.expander("Member status"):
         html(f'<p style="font-size:13px;color:{T["sub_color"]};margin-bottom:8px">Mark a member as exited instead of '
              f'deleting them. Their history and rotation slot stay intact; they simply stop owing from the exit week onward.</p>')
         ms1,ms2,ms3 = st.columns([2,1,1])
@@ -1567,7 +1644,7 @@ with tab_settings:
         with ms3: new_exit_wk = st.number_input("Exit week", min_value=1, max_value=total_weeks,
                                                 value=int(mstat(sm).get("exit_week") or max(1,current_elapsed_week)),
                                                 step=1, key="status_week", label_visibility="collapsed")
-        if st.button("Save Member Status", key="save_status"):
+        if st.button("Save member status", key="save_status"):
             before = mstat(sm)
             after  = {"status":new_status,"exit_week":int(new_exit_wk) if new_status=="exited" else None}
             def _m(b):
@@ -1578,18 +1655,18 @@ with tab_settings:
             if commit(gsheet,_m): flash("Member status saved")
             st.rerun()
 
-    with st.expander("🔑  Change Passcode"):
+    with st.expander("Change passcode"):
         html(f'<p style="font-size:13px;color:{T["sub_color"]};margin-bottom:8px">Enter the current passcode to confirm, '
              f'then set a new one. Passcodes are stored as salted scrypt hashes.</p>')
         cp1,cp2,cp3 = st.columns(3)
-        with cp1: old_pw  = st.text_input("Current Passcode", type="password", key="old_pw")
-        with cp2: new_pw1 = st.text_input("New Passcode", type="password", key="new_pw1")
-        with cp3: new_pw2 = st.text_input("Confirm New Passcode", type="password", key="new_pw2")
-        if st.button("Update Passcode", key="update_pw"):
+        with cp1: old_pw  = st.text_input("Current passcode", type="password", key="old_pw")
+        with cp2: new_pw1 = st.text_input("New passcode", type="password", key="new_pw1")
+        with cp3: new_pw2 = st.text_input("Confirm new passcode", type="password", key="new_pw2")
+        if st.button("Update passcode", key="update_pw"):
             stored_pw = st.session_state.get("admin_passcode", "")
-            if not check_pw(old_pw, stored_pw): st.error("Current passcode is incorrect.")
-            elif len(new_pw1) < 8: st.error("New passcode must be at least 8 characters.")
-            elif new_pw1 != new_pw2: st.error("New passcodes do not match.")
+            if not check_pw(old_pw, stored_pw): st.error("The current passcode is not correct.")
+            elif len(new_pw1) < 8: st.error("The new passcode must be at least 8 characters.")
+            elif new_pw1 != new_pw2: st.error("The two new passcodes do not match.")
             else:
                 def _m(b):
                     b["passcode"] = hash_pw(new_pw1)
@@ -1598,7 +1675,7 @@ with tab_settings:
                 st.rerun()
 
 with tab_tools:
-    with st.expander("👤  Member Profile"):
+    with st.expander("Member profile"):
         profile_member = st.selectbox("Member", members, key="profile_member")
         prow  = next(r for r in contrib_rows if r["member"]==profile_member)
         banked_total = money(sum(paid_amount(profile_member,w) for w in range(1,total_weeks+1)))
@@ -1614,18 +1691,18 @@ with tab_tools:
         else:
             st.info("No itemised transactions for this member yet — any amounts above come from the legacy week grid.")
 
-    with st.expander("🧮  Cash Reconciliation"):
+    with st.expander("Cash reconciliation"):
         html(f'<div style="font-size:14px;color:{T["td_color"]};line-height:1.8">System cash held: '
              f'<strong style="color:{T["sec_title"]}">GHS {fmt_num(total_cash_held)}</strong><br>'
-             f'Enter the physical cash plus verified mobile/bank balance actually held by the group.</div>')
-        actual_cash = st.number_input("Actual cash / account balance (GHS)", min_value=0.0,
+             f'Enter the physical cash plus verified mobile or bank balance actually held by the group.</div>')
+        actual_cash = st.number_input("Actual cash or account balance (GHS)", min_value=0.0,
                                       value=float(total_cash_held), step=10.0, key="recon_actual")
         recon_diff = money(actual_cash - total_cash_held)
-        if abs(recon_diff) < 0.005: st.success("Reconciled — actual balance matches the system.")
+        if abs(recon_diff) < 0.005: st.success("Reconciled — the actual balance matches the system.")
         elif recon_diff > 0:        st.warning(f"GHS {fmt_num(recon_diff)} more than the system balance.")
         else:                       st.error(f"GHS {fmt_num(abs(recon_diff))} less than the system balance.")
-        recon_note = st.text_input("Reconciliation note", key="recon_note", placeholder="e.g. Cash counted + MoMo balance checked")
-        if st.button("Save Reconciliation", key="save_recon"):
+        recon_note = st.text_input("Reconciliation note", key="recon_note", placeholder="e.g. Cash counted and MoMo balance checked")
+        if st.button("Save reconciliation", key="save_recon"):
             def _m(b):
                 rec = {"date":now_str(),"actual":money(actual_cash),"system":money(total_cash_held),
                        "difference":money(recon_diff),"note":recon_note.strip(),
@@ -1642,7 +1719,7 @@ with tab_tools:
             rec_html = ""
             for rec in recs:
                 diff = money(rec.get("difference",0))
-                col  = "#34d399" if abs(diff)<0.005 else ("#fbbf24" if diff>0 else "#f87171")
+                col  = "#5BC490" if abs(diff)<0.005 else ("#E8B15C" if diff>0 else "#E8795A")
                 rec_html += (f'<div class="log-entry"><div class="log-dot log-dot-setting"></div>'
                              f'<div class="log-text"><strong>Actual GHS {fmt_num(rec.get("actual",0))} vs system '
                              f'GHS {fmt_num(rec.get("system",0))}</strong>'
@@ -1651,8 +1728,8 @@ with tab_tools:
                              f'<div class="log-time">{rec.get("date","")}</div></div>')
             html(rec_html)
 
-    with st.expander("🔄  Convert Legacy Weeks"):
-        st.caption("Weeks recorded as a plain tick (before receipts existed) count towards the totals but have no "
+    with st.expander("Convert legacy weeks"):
+        st.caption("Weeks recorded as a plain tick, before receipts existed, count towards the totals but have no "
                    "transaction behind them. Converting writes one transaction per week so every cedi has a record.")
         legacy_pairs = []
         for m in members:
@@ -1689,15 +1766,15 @@ with tab_tools:
                 if commit(gsheet,_m): flash(f"{len(legacy_pairs)} week(s) converted")
                 st.rerun()
 
-    with st.expander("💾  Backups"):
+    with st.expander("Backups"):
         st.caption(f"A copy of the whole group record is saved to the {BACKUP_WS} worksheet on every change. "
                    f"The last {BACKUP_KEEP} are kept.")
-        if st.button("↻ Load backup list", key="load_backups"):
+        if st.button("Load backup list", key="load_backups"):
             st.session_state.backup_list = list_backups(gsheet)
             st.rerun()
         blist = st.session_state.get("backup_list")
         if blist is None:
-            st.info("Press the button above to read the backup list from Google Sheets.")
+            st.info("Load the backup list to read it from Google Sheets.")
         elif not blist:
             st.warning("No backups yet — the next save will create the first one.")
         else:
@@ -1728,26 +1805,26 @@ with tab_tools:
                         flash("Backup restored","warning")
                         st.rerun()
 
-    with st.expander("🧾  Payment Audit"):
+    with st.expander("Payment audit"):
         ledger = st.session_state.get("payment_ledger", [])
         if not ledger:
-            st.info("No payment audit entries yet.")
+            st.info("Payment audit entries appear here once money is recorded.")
         else:
             led_html = ""
             for entry in ledger[:30]:
                 act    = entry.get("action","paid")
-                action = {"paid":"PAID","reversed":"REVERSED","corrected":"CORRECTED"}.get(act, act.upper())
+                action = {"paid":"Paid","reversed":"Reversed","corrected":"Corrected"}.get(act, act.title())
                 dot    = "log-dot" if act == "paid" else "log-dot log-dot-payout"
                 extra  = " · ".join(x for x in [entry.get("method",""), entry.get("reference",""), entry.get("reason","")] if x)
                 led_html += (f'<div class="log-entry"><div class="{dot}"></div>'
                              f'<div class="log-text"><strong>{entry.get("member","—")} · Week {int(entry.get("week",0)):02d} · '
                              f'GHS {fmt_num(entry.get("amount",0))}</strong>'
-                             f'<div class="diff-line">{action} · by {entry.get("who","")}{" · " + extra if extra else ""}</div></div>'
+                             f'<div class="diff-line">{action} by {entry.get("who","")}{" · " + extra if extra else ""}</div></div>'
                              f'<div class="log-time">{entry.get("time","")}</div></div>')
             html(led_html)
 
     if st.session_state.history:
-        with st.expander("🕒  Activity Log"):
+        with st.expander("Activity log"):
             dot_map = {"payment":"log-dot","payout":"log-dot log-dot-payout","setting":"log-dot log-dot-setting"}
             log_html = ""
             for entry in st.session_state.history[:25]:
@@ -1764,8 +1841,8 @@ with tab_tools:
             html(log_html)
 
 html('<div class="gdivider"></div>')
-if st.button("🔒  Lock Dashboard", key="logout", type="secondary"):
+if st.button("Lock dashboard", key="logout", type="secondary"):
     st.session_state.authenticated=False; st.session_state.admin_name=ADMIN_NAME
     st.session_state.last_activity=now_dt(); st.rerun()
 
-html('<div class="foot">Susu Savings · Backed by Google Sheets · Secured with passcode</div>')
+html('<div class="foot">Susu Savings · Backed by Google Sheets · Secured with a passcode</div>')
