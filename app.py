@@ -36,24 +36,24 @@ def html(s):
 # Petrol-ink canvas, brass accent (money), green for settled, clay for behind.
 # Keys are kept stable because inline styles elsewhere in the file read from T.
 T = {
-    "bg":"#0F1B1E",
-    "card_bg":"#15262A","card_border":"rgba(160,205,205,0.14)",
+    "bg":"#141619",
+    "card_bg":"#1B1E22","card_border":"rgba(255,255,255,0.10)",
     "card_shadow":"none",
-    "chip_bg":"#15262A","chip_border":"rgba(160,205,205,0.14)",
-    "status_bg":"transparent","status_border":"rgba(160,205,205,0.14)",
-    "sync_color":"#6E8A8C","title_color":"#EFF6F3","sub_color":"#9BB4B5",
-    "label_color":"#9BB4B5","sec_title":"#EFF6F3","th_color":"#6E8A8C",
-    "td_color":"#CFE0DE","td_border":"rgba(160,205,205,0.10)","th_border":"rgba(160,205,205,0.16)",
-    "member_name":"#EFF6F3","input_bg":"#1A2F34","input_border":"rgba(160,205,205,0.18)",
-    "input_color":"#EFF6F3","lock_bg":"#15262A","lock_border":"rgba(160,205,205,0.16)",
-    "lock_title":"#EFF6F3","lock_sub":"#9BB4B5","exp_bg":"#15262A",
-    "exp_border":"rgba(160,205,205,0.14)","exp_color":"#CFE0DE","exp_content":"#122125",
-    "gdiv":"rgba(160,205,205,0.20)","foot_color":"#6E8A8C","foot_border":"rgba(160,205,205,0.12)",
+    "chip_bg":"#1B1E22","chip_border":"rgba(255,255,255,0.10)",
+    "status_bg":"transparent","status_border":"rgba(255,255,255,0.10)",
+    "sync_color":"#767E86","title_color":"#ECEEF0","sub_color":"#A2AAB2",
+    "label_color":"#A2AAB2","sec_title":"#ECEEF0","th_color":"#767E86",
+    "td_color":"#CFD4D9","td_border":"rgba(255,255,255,0.07)","th_border":"rgba(255,255,255,0.12)",
+    "member_name":"#ECEEF0","input_bg":"#23272C","input_border":"rgba(255,255,255,0.13)",
+    "input_color":"#ECEEF0","lock_bg":"#1B1E22","lock_border":"rgba(255,255,255,0.12)",
+    "lock_title":"#ECEEF0","lock_sub":"#A2AAB2","exp_bg":"#1B1E22",
+    "exp_border":"rgba(255,255,255,0.10)","exp_color":"#CFD4D9","exp_content":"#191B1F",
+    "gdiv":"rgba(255,255,255,0.14)","foot_color":"#767E86","foot_border":"rgba(255,255,255,0.08)",
     "btn_bg":"#E8B15C","btn_border":"#E8B15C",
-    "btn2_bg":"transparent","btn2_color":"#CFE0DE","btn2_border":"rgba(160,205,205,0.20)",
+    "btn2_bg":"transparent","btn2_color":"#CFD4D9","btn2_border":"rgba(255,255,255,0.14)",
     "dl_bg":"transparent","dl_border":"rgba(232,177,92,0.40)",
-    "log_border":"rgba(160,205,205,0.10)","log_color":"#9BB4B5","log_strong":"#EFF6F3","log_time":"#6E8A8C",
-    "ring_track":"rgba(160,205,205,0.14)","bar_bg":"rgba(160,205,205,0.14)",
+    "log_border":"rgba(255,255,255,0.07)","log_color":"#A2AAB2","log_strong":"#ECEEF0","log_time":"#767E86",
+    "ring_track":"rgba(255,255,255,0.10)","bar_bg":"rgba(255,255,255,0.10)",
     "streak_bg":"rgba(232,121,90,0.14)","streak_color":"#E8795A","streak_border":"rgba(232,121,90,0.32)",
 }
 
@@ -64,11 +64,11 @@ st.markdown(f"""
     @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif&display=swap');
 
     :root{{
-      --canvas:#0F1B1E; --panel:#15262A; --panel-2:#1A2F34;
-      --line:rgba(160,205,205,0.14); --line-soft:rgba(160,205,205,0.09);
-      --ink:#EFF6F3; --ink-2:#9BB4B5; --ink-3:#6E8A8C;
+      --canvas:#141619; --panel:#1B1E22; --panel-2:#23272C;
+      --line:rgba(255,255,255,0.10); --line-soft:rgba(255,255,255,0.06);
+      --ink:#ECEEF0; --ink-2:#A2AAB2; --ink-3:#767E86;
       --brass:#E8B15C; --paid:#5BC490; --short:#E8795A;
-      --exp-content:#122125;
+      --exp-content:#191B1F;
       --r-sm:8px; --r-md:12px; --r-lg:18px;
     }}
 
@@ -123,6 +123,7 @@ st.markdown(f"""
     .cash-figure{{font-family:'Instrument Serif',Georgia,serif;font-size:52px;line-height:1;color:var(--ink);
         letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
     .cash-figure small{{font-size:22px;color:var(--ink-2);margin-right:8px;letter-spacing:0;}}
+    .cash-spacer{{margin-top:auto;}}
     .cash-note{{font-size:13px;color:var(--ink-2);margin-top:10px;line-height:1.5;}}
     .cash-note b{{color:var(--ink);font-weight:600;}}
 
@@ -133,10 +134,10 @@ st.markdown(f"""
     .legend{{display:flex;flex-wrap:wrap;gap:16px;font-size:12.5px;color:var(--ink-2);}}
     .legend span{{display:inline-flex;align-items:center;gap:7px;}}
     .legend i{{width:8px;height:8px;border-radius:2px;display:inline-block;}}
-    .cash-foot{{margin-top:auto;padding-top:16px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;
+    .cash-foot{{margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft);display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;
         font-size:12.5px;color:var(--ink-2);}}
     .recon-ok{{color:var(--paid);}} .recon-off{{color:var(--brass);}}
-    .spark{{width:140px;height:26px;display:block;overflow:visible;margin-left:auto;}}
+    .spark{{width:100%;height:46px;display:block;overflow:visible;margin-top:auto;padding-top:18px;}}
 
     .next-name{{font-family:'Instrument Serif',Georgia,serif;font-size:34px;color:var(--ink);line-height:1.1;
         letter-spacing:-0.015em;margin-bottom:4px;}}
@@ -156,16 +157,22 @@ st.markdown(f"""
 
     /* ── rotation rail ────────────────────────────────────────────────────── */
     .rail-wrap{{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
-        padding:20px 24px 22px;margin-bottom:26px;}}
+        padding:20px 24px 20px;margin-bottom:26px;}}
     .rail{{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}}
-    .turn{{flex:1 0 132px;min-width:132px;border-top:2px solid var(--line);padding-top:12px;}}
+    .turn{{flex:1 0 132px;min-width:132px;border-top:2px solid var(--line);padding-top:12px;
+        display:flex;flex-direction:column;}}
     .turn.done{{border-top-color:var(--paid);}}
     .turn.now{{border-top-color:var(--brass);}}
     .turn-no{{font-size:12px;color:var(--ink-3);margin-bottom:5px;}}
     .turn-name{{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:3px;}}
     .turn.upcoming .turn-name{{color:var(--ink-2);font-weight:500;}}
     .turn-date{{font-size:12.5px;color:var(--ink-3);}}
-    .turn-state{{font-size:12.5px;margin-top:6px;}}
+    .turn-state{{font-size:12.5px;margin-top:6px;margin-bottom:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+    .turn-meter{{height:4px;border-radius:99px;background:var(--line-soft);margin-top:auto;overflow:hidden;
+        margin-bottom:0;}}
+    .turn-meter i{{display:block;height:100%;border-radius:99px;background:var(--ink-3);}}
+    .turn.done .turn-meter i{{background:var(--paid);}}
+    .turn.now .turn-meter i{{background:var(--brass);}}
     .turn.done .turn-state{{color:var(--paid);}}
     .turn.now .turn-state{{color:var(--brass);}}
     .turn.upcoming .turn-state{{color:var(--ink-3);}}
@@ -181,7 +188,7 @@ st.markdown(f"""
         white-space:nowrap;border-bottom:1px solid rgba(232,177,92,0.35);padding-bottom:1px;}}
 
     /* ── member rows with contribution cards ──────────────────────────────── */
-    .mrow{{display:grid;grid-template-columns:minmax(140px,0.9fr) minmax(200px,1.7fr) minmax(96px,auto);gap:20px;
+    .mrow{{display:grid;grid-template-columns:minmax(130px,0.6fr) minmax(220px,2fr) minmax(96px,auto);gap:20px;
         align-items:center;padding:14px 2px;border-bottom:1px solid var(--line-soft);}}
     .mrow:last-child{{border-bottom:none;}}
     .mname{{font-size:15px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:9px;}}
@@ -190,14 +197,21 @@ st.markdown(f"""
         border-radius:50%;background:rgba(232,177,92,0.14);color:var(--brass);font-size:12px;font-weight:600;
         flex-shrink:0;}}
     .strip{{display:grid;gap:3px;min-width:0;}}
-    .wk{{height:17px;border-radius:3px;background:rgba(160,205,205,0.07);}}
+    .wk{{height:17px;border-radius:3px;background:rgba(255,255,255,0.055);}}
     .wk-paid{{background:var(--paid);}}
     .wk-part{{background:rgba(91,196,144,0.42);}}
     .wk-owed{{background:rgba(232,121,90,0.10);box-shadow:inset 0 0 0 1px rgba(232,121,90,0.55);}}
     .wk-exempt{{background:transparent;box-shadow:inset 0 0 0 1px var(--line-soft);}}
     .wk-turnend{{margin-right:6px;}}
     .wk-now{{outline:1.5px solid var(--brass);outline-offset:1.5px;}}
-    .strip-key{{font-size:12px;color:var(--ink-3);margin-top:8px;}}
+    .key{{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12.5px;color:var(--ink-3);margin:12px 0 2px;}}
+    .key span{{display:inline-flex;align-items:center;gap:7px;}}
+    .key i{{width:13px;height:13px;border-radius:3px;display:inline-block;}}
+    .scale{{display:grid;gap:3px;min-width:0;}}
+    .scale span{{font-size:11.5px;color:var(--ink-3);border-left:1px solid var(--line);padding-left:6px;
+        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
+    .scale span.on{{color:var(--brass);border-left-color:rgba(232,177,92,0.55);}}
+    .mrow-head{{padding-bottom:8px;border-bottom:1px solid var(--line);}}
     .mstat{{display:flex;flex-direction:column;align-items:flex-end;gap:6px;text-align:right;}}
     .exit-tag{{font-size:11.5px;color:var(--ink-3);font-weight:500;margin-left:7px;}}
 
@@ -209,9 +223,11 @@ st.markdown(f"""
     .streak-badge{{background:{T['streak_bg']};color:{T['streak_color']};border:1px solid {T['streak_border']};
         border-radius:99px;padding:1px 8px;font-size:11.5px;font-weight:600;white-space:nowrap;}}
 
-    .owing-strip{{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;padding:12px 0 2px;
-        font-size:13px;color:var(--ink-2);}}
-    .owing-strip b{{color:var(--short);font-weight:600;font-size:15px;font-variant-numeric:tabular-nums;}}
+    .owing-strip{{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;padding:14px 18px;
+        font-size:13.5px;color:var(--ink-2);border-radius:var(--r-md);margin:16px 0 6px;
+        background:rgba(232,121,90,0.09);border:1px solid rgba(232,121,90,0.26);}}
+    .owing-strip b{{color:var(--short);font-weight:600;font-size:18px;font-variant-numeric:tabular-nums;}}
+    .owing-clear{{background:rgba(91,196,144,0.06);border-color:rgba(91,196,144,0.20);}}
 
     /* ── tables ───────────────────────────────────────────────────────────── */
     .data-table{{width:100%;border-collapse:collapse;}}
@@ -258,7 +274,7 @@ st.markdown(f"""
     div[data-testid="stButton"]{{width:100%!important;}}
     .block-container div[data-testid="stHorizontalBlock"]:first-of-type button{{padding:9px 0!important;
         font-size:16px!important;}}
-    .stButton > button{{background:var(--brass)!important;color:#12201F!important;border:1px solid var(--brass)!important;
+    .stButton > button{{background:var(--brass)!important;color:#17191C!important;border:1px solid var(--brass)!important;
         border-radius:var(--r-sm)!important;font-weight:600!important;font-size:15px!important;padding:10px 20px!important;
         width:100%;box-shadow:none!important;transition:filter 0.15s ease!important;}}
     .stButton > button:hover{{filter:brightness(1.08);}}
@@ -278,7 +294,7 @@ st.markdown(f"""
         font-size:15px!important;font-weight:600!important;}}
     details[data-testid="stExpander"] summary:hover{{color:{dl_color}!important;}}
     details[data-testid="stExpander"] summary svg{{fill:var(--ink-2)!important;color:var(--ink-2)!important;}}
-    details[data-testid="stExpander"] > div:not(summary){{background:var(--exp-content,#122125)!important;
+    details[data-testid="stExpander"] > div:not(summary){{background:var(--exp-content,#191B1F)!important;
         border-top:1px solid var(--line)!important;padding:20px 18px!important;}}
     details[data-testid="stExpander"] p,details[data-testid="stExpander"] label,
     details[data-testid="stExpander"] .stCheckbox span{{color:{T['td_color']};}}
@@ -288,7 +304,7 @@ st.markdown(f"""
         border-radius:var(--r-sm)!important;color:var(--short)!important;font-size:14px!important;}}
     div[data-testid="stWarning"]{{background:rgba(232,177,92,0.08)!important;border:1px solid rgba(232,177,92,0.30)!important;
         border-radius:var(--r-sm)!important;color:var(--brass)!important;font-size:14px!important;}}
-    div[data-testid="stInfo"]{{background:rgba(160,205,205,0.06)!important;border:1px solid var(--line)!important;
+    div[data-testid="stInfo"]{{background:rgba(255,255,255,0.05)!important;border:1px solid var(--line)!important;
         border-radius:var(--r-sm)!important;color:var(--ink-2)!important;font-size:14px!important;}}
     div[data-testid="stMetricValue"]{{color:var(--ink)!important;font-size:24px!important;}}
     div[data-testid="stMetricLabel"] p{{color:var(--ink-2)!important;font-size:13px!important;}}
@@ -317,7 +333,7 @@ st.markdown(f"""
     @media (max-width:700px){{
         .mrow{{grid-template-columns:1fr auto;gap:12px;padding:16px 2px;}}
         .mstat{{grid-row:1;grid-column:2;}}
-        .strip{{grid-row:2;grid-column:1 / -1;}}
+        .strip,.scale{{grid-row:2;grid-column:1 / -1;}}
     }}
     @media (max-width:600px){{
         .block-container{{padding-left:12px!important;padding-right:12px!important;}}
@@ -332,6 +348,9 @@ st.markdown(f"""
         .turn{{flex:0 0 118px;min-width:118px;}}
         .section-head h2{{font-size:17px;}}
         .wk{{height:15px;}}
+        .scale-date{{display:none;}}
+        .scale span{{padding-left:5px;}}
+        .key{{gap:6px 14px;}}
         .data-table{{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}}
         .data-table th,.data-table td{{padding:10px 10px!important;font-size:13.5px!important;}}
         .tbl-payout.has-fee th:nth-child(4),.tbl-payout.has-fee td:nth-child(4),
@@ -885,7 +904,7 @@ if len(hist) >= 2:
     vals   = [v for _, v in hist]
     lo, hi = min(vals), max(vals)
     span   = (hi-lo) or 1
-    w_px, h_px = 140, 26
+    w_px, h_px = 300, 46
     step   = w_px/(len(vals)-1)
     pts    = " ".join(f"{i*step:.1f},{h_px-2-((v-lo)/span)*(h_px-6):.1f}" for i, v in enumerate(vals))
     last_x = (len(vals)-1)*step
@@ -893,7 +912,7 @@ if len(hist) >= 2:
     spark_html = (f'<svg class="spark" viewBox="0 0 {w_px} {h_px}" preserveAspectRatio="none" aria-hidden="true">'
                   f'<polyline points="{pts}" fill="none" stroke="rgba(232,177,92,0.85)" stroke-width="1.6" '
                   f'stroke-linecap="round" stroke-linejoin="round"/>'
-                  f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="2.4" fill="#5BC490"/></svg>')
+                  f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="2.6" fill="#5BC490"/></svg>')
 else:
     spark_html = ""
 
@@ -935,17 +954,25 @@ cash_panel = f"""
     <span><i style="background:rgba(232,177,92,0.55)"></i>Paid out GHS {fmt_num(total_payouts_dist)}</span>
     <span>Collected GHS {fmt_num(total_cash_collected)}</span>
   </div>
+  {spark_html or '<div class="cash-spacer"></div>'}
   <div class="cash-foot">
     <span>{delta_html}</span>
-    <span>{recon_line}</span>{spark_html}
+    <span>{recon_line}</span>
   </div>
 </div>
 """
 
 if next_turn:
     gap_to_fund = money(max(0.0, next_turn["net_pool_amt"] - next_turn["funded"]))
-    fund_note   = (f"GHS {next_turn['funded_s']} banked, GHS {fmt_num(gap_to_fund)} still to come in"
-                   if gap_to_fund > 0 else f"GHS {next_turn['funded_s']} banked — the full pool is ready")
+    if gap_to_fund <= 0:
+        fund_note = f"GHS {next_turn['funded_s']} banked — the full pool is ready to pay"
+    elif next_turn["days_away"] is None or next_turn["days_away"] <= 0:
+        fund_note = (f"GHS {next_turn['funded_s']} banked, GHS {fmt_num(gap_to_fund)} short with the date already here")
+    else:
+        weeks_left = max(1, -(-next_turn["days_away"]//7))
+        rate       = money(gap_to_fund/weeks_left)
+        fund_note  = (f"GHS {fmt_num(gap_to_fund)} short. Collecting GHS {fmt_num(rate)} a week for the next "
+                      f"{weeks_left} week{'s' if weeks_left > 1 else ''} closes it in time.")
     if next_turn["days_away"] is None:
         days_label, chip_cls = "past due", "chip-soon"
     elif next_turn["days_away"] == 0:
@@ -980,23 +1007,26 @@ html(f'<div class="hero">{cash_panel}{next_panel}</div>')
 # ── rotation rail ─────────────────────────────────────────────────────────────
 rail = ""
 for r in schedule_rows:
+    pct = int(min(r["funded"]/r["net_pool_amt"], 1)*100) if r["net_pool_amt"] else 0
     if r["disbursed"]:
-        cls, state = "done", "Collected in full"
+        cls, state, bar = "done", "Collected in full", 100
     elif r is next_turn:
-        pct = int(min(r["funded"]/r["net_pool_amt"], 1)*100) if r["net_pool_amt"] else 0
-        cls, state = "now", (f"Part collected, GHS {r['remaining']} left" if r["collected_v"] > 0
-                             else f"{pct}% funded")
+        cls, bar = "now", pct
+        state = (f"GHS {r['remaining']} still to collect" if r["collected_v"] > 0
+                 else f"{pct}% of GHS {r['pool']}")
     else:
-        cls, state = "upcoming", f"GHS {r['pool']}"
+        cls, bar = "upcoming", pct
+        state = (f"{pct}% of GHS {r['pool']}" if r["funded"] > 0 else f"GHS {r['pool']} to raise")
     rail += (f'<div class="turn {cls}"><div class="turn-no">{r["turn"]}</div>'
              f'<div class="turn-name">{r["recipient"]}</div>'
              f'<div class="turn-date">{format_short(r["payout_date"])}</div>'
-             f'<div class="turn-state">{state}</div></div>')
+             f'<div class="turn-state">{state}</div>'
+             f'<div class="turn-meter"><i style="width:{bar}%"></i></div></div>')
 
 turns_done = sum(1 for r in schedule_rows if r["disbursed"])
 html(f"""
 <div class="rail-wrap">
-  <div class="section-head" style="border:none;padding-bottom:14px;margin-bottom:0">
+  <div class="section-head" style="border:none;padding-bottom:0;margin-bottom:16px">
     <div><h2>The rotation</h2>
       <p>{turns_done} of {num_members} turns collected. Each turn runs four weeks and the order never shifts.</p></div>
   </div>
@@ -1051,22 +1081,139 @@ if owing_rows:
     owing_strip = (f'<div class="owing-strip"><b>GHS {fmt_num(collection_gap)}</b> outstanding to the end of week '
                    f'{current_elapsed_week} — {names}.</div>')
 else:
-    owing_strip = (f'<div class="owing-strip">Nothing outstanding. Everyone has paid up to week '
+    owing_strip = (f'<div class="owing-strip owing-clear">Nothing outstanding. Everyone has paid up to week '
                    f'{current_elapsed_week}.</div>')
 if paid_ahead > 0:
     owing_strip = owing_strip[:-6] + f'<span>GHS {fmt_num(paid_ahead)} has been paid ahead.</span></div>'
+
+key_row = ('<div class="key">'
+           '<span><i style="background:var(--paid)"></i>Paid in full</span>'
+           '<span><i style="background:rgba(91,196,144,0.42)"></i>Part paid</span>'
+           '<span><i style="background:rgba(232,121,90,0.10);box-shadow:inset 0 0 0 1px rgba(232,121,90,0.55)"></i>Owed</span>'
+           '<span><i style="background:rgba(255,255,255,0.055)"></i>Not due yet</span>'
+           '<span><i style="box-shadow:inset 0 0 0 1px rgba(255,255,255,0.10)"></i>Not owed</span>'
+           '<span><i style="outline:1.5px solid var(--brass);outline-offset:1px"></i>This week</span>'
+           '</div>')
+
+cur_turn_idx = (current_elapsed_week-1)//4 if current_elapsed_week else -1
+scale = "".join(
+    f'<span class="{"on" if i == cur_turn_idx else ""}">T{i+1}'
+    f'<span class="scale-date"> pays {format_short(schedule_rows[i]["payout_date"])}</span></span>'
+    for i in range(num_members))
+scale_row = (f'<div class="mrow mrow-head"><div></div>'
+             f'<div class="scale" style="grid-template-columns:repeat({num_members},1fr)">{scale}</div>'
+             f'<div></div></div>')
 
 html(f"""
 <div class="section">
   <div class="section-head">
     <div><h2>Members</h2>
-      <p>One block per week. Filled means paid, outlined means owed, faint means not due yet.</p></div>
-    <a class="quiet-link" href="#section-payments">Record a payment</a>
+      <p>Each block is one week of the cycle, running left to right.</p></div>
+    <a class="quiet-link" href="#section-payments">Itemised entry</a>
   </div>
   {owing_strip}
+  {key_row}
+  {scale_row}
   {rows_html}
 </div>
 """)
+
+html('<span class="anchor" id="section-week"></span>')
+with st.expander(f"Record week {max(1,current_elapsed_week):02d} payments", expanded=True):
+    st.caption("Tick everyone who has paid for a week and save once. Each tick writes a real payment "
+               "with a receipt, and unticking reverses it.")
+    bc1,bc2,bc3 = st.columns([1,1,1])
+    with bc1: bulk_week   = st.number_input("Week", min_value=1, max_value=total_weeks,
+                                            value=max(1,current_elapsed_week), step=1, key="bulk_week")
+    with bc2: bulk_method = st.selectbox("Method for new ticks", ["Cash","MoMo","Bank transfer","Other"], key="bulk_method")
+    with bc3: bulk_date   = st.date_input("Payment date", value=today.date(), key="bulk_date")
+    bw = int(bulk_week)
+
+    ticks, rows_meta = {}, {}
+    cols = st.columns(2)
+    for idx, m in enumerate(members):
+        already = paid_amount(m, bw)
+        target  = weekly(m)
+        rows_meta[m] = {"already":already, "target":target, "was":paid(m,bw)}
+        with cols[idx % 2]:
+            if not liable(m,bw) and already <= 0:
+                html(f'<div style="font-size:13px;color:{T["sub_color"]};padding:9px 0">{m} — not owed</div>')
+                continue
+            part = f" · GHS {fmt_num(already)} banked" if 0 < already < target else ""
+            ticks[m] = st.checkbox(f"{m} · GHS {fmt_num(target)}{part}",
+                                   value=rows_meta[m]["was"], key=f"bulk_{bw}_{m}")
+
+    adds    = [(m, money(rows_meta[m]["target"]-rows_meta[m]["already"]))
+               for m,t in ticks.items() if t and not rows_meta[m]["was"]]
+    removes = [m for m,t in ticks.items() if not t and rows_meta[m]["was"]]
+    if adds or removes:
+        summary = []
+        if adds:    summary.append(f"{len(adds)} to record (GHS {fmt_num(sum(a for _,a in adds))})")
+        if removes: summary.append(f"{len(removes)} to reverse")
+        st.caption(" · ".join(summary))
+
+    def save_bulk(adds, removes):
+        who_now = st.session_state.get("admin_name", ADMIN_NAME)
+        bdate   = bulk_date.strftime("%d %b %Y")
+        def _m(b, adds=adds, removes=removes, bw=bw, who_now=who_now, bdate=bdate, method=bulk_method):
+            detail, touched = [], set()
+            for m, amt in adds:
+                if amt <= 0: continue
+                tx = {"id":new_id("PAY"),"member":m,"week":bw,"amount":money(amt),"date":bdate,
+                      "time":now_str(),"method":method,"reference":"Bulk entry",
+                      "status":"completed","who":who_now}
+                b.setdefault("payment_transactions",[]).insert(0, tx)
+                b.setdefault("payment_ledger",[]).insert(0,{"member":m,"week":bw,"amount":tx["amount"],
+                    "action":"paid","time":tx["time"],"who":who_now,"reference":"Bulk entry","method":method})
+                detail.append(f"{m} Wk {bw:02d}: recorded GHS {fmt_num(amt)}")
+                touched.add(m)
+            for m in removes:
+                reversed_any = 0.0
+                for row in b.get("payment_transactions",[]):
+                    if row.get("member")==m and int(row.get("week",0))==bw and row.get("status","completed")=="completed":
+                        row["status"]="reversed"; row["reversed_at"]=now_str()
+                        row["reversed_by"]=who_now; row["reversal_reason"]="Bulk untick"
+                        reversed_any += money(row.get("amount",0))
+                if reversed_any:
+                    b.setdefault("payment_ledger",[]).insert(0,{"member":m,"week":bw,"amount":money(reversed_any),
+                        "action":"reversed","time":now_str(),"who":who_now,
+                        "reference":"Bulk untick","method":"","reason":"Bulk untick"})
+                    detail.append(f"{m} Wk {bw:02d}: reversed GHS {fmt_num(reversed_any)}")
+                else:
+                    detail.append(f"{m} Wk {bw:02d}: earlier tick cleared")
+                touched.add(m)
+            for m in touched:
+                banked = money(sum(float(x.get("amount",0) or 0) for x in b.get("payment_transactions",[])
+                                   if x.get("member")==m and int(x.get("week",0))==bw
+                                   and x.get("status","completed")=="completed"))
+                tgt = money(b.get("tiers",{}).get(m, b["settings"]["base_monthly"])/4.0)
+                b.setdefault("payments",{}).setdefault(m,{})[str(bw)] = banked >= tgt-0.005
+            b["payment_ledger"] = b.get("payment_ledger",[])[:500]
+            return {"type":"payment",
+                    "text":f"Week {bw:02d} bulk entry — {len(adds)} recorded, {len(removes)} reversed",
+                    "detail":detail}
+        if commit(gsheet,_m): flash(f"Week {bw:02d} saved")
+        st.session_state.bulk_confirm = False
+        st.rerun()
+
+    if st.session_state.get("bulk_confirm") and removes:
+        st.warning("These members will be marked unpaid for week %02d and their payments reversed:\n\n" % bw
+                   + "\n".join(f"• {m}" for m in removes))
+        uc1,uc2 = st.columns(2)
+        with uc1:
+            if st.button("Confirm and save", key="bulk_confirm_yes"):
+                save_bulk(adds, removes)
+        with uc2:
+            if st.button("Cancel", key="bulk_confirm_no", type="secondary"):
+                st.session_state.bulk_confirm = False; st.rerun()
+    else:
+        if st.button(f"Save week {bw:02d} payments", key="bulk_save"):
+            if not adds and not removes:
+                flash("No changes to save","info"); st.rerun()
+            elif removes:
+                st.session_state.bulk_confirm = True; st.rerun()
+            else:
+                save_bulk(adds, removes)
 
 # ── payout schedule ───────────────────────────────────────────────────────────
 show_fee     = fee_frac > 0
@@ -1262,102 +1409,6 @@ with tab_money:
             if tx.get("status","completed") == "completed":
                 st.caption("To reverse or correct this, use Undo or correct a record below. A reason is required.")
             st.divider()
-
-    with st.expander("Bulk payment entry", expanded=True):
-        st.caption("Tick everyone who has paid for a week and save once. Each tick writes a real payment "
-                   "with a receipt, and unticking reverses it.")
-        bc1,bc2,bc3 = st.columns([1,1,1])
-        with bc1: bulk_week   = st.number_input("Week", min_value=1, max_value=total_weeks,
-                                                value=max(1,current_elapsed_week), step=1, key="bulk_week")
-        with bc2: bulk_method = st.selectbox("Method for new ticks", ["Cash","MoMo","Bank transfer","Other"], key="bulk_method")
-        with bc3: bulk_date   = st.date_input("Payment date", value=today.date(), key="bulk_date")
-        bw = int(bulk_week)
-
-        ticks, rows_meta = {}, {}
-        cols = st.columns(2)
-        for idx, m in enumerate(members):
-            already = paid_amount(m, bw)
-            target  = weekly(m)
-            rows_meta[m] = {"already":already, "target":target, "was":paid(m,bw)}
-            with cols[idx % 2]:
-                if not liable(m,bw) and already <= 0:
-                    html(f'<div style="font-size:13px;color:{T["sub_color"]};padding:9px 0">{m} — not owed</div>')
-                    continue
-                part = f" · GHS {fmt_num(already)} banked" if 0 < already < target else ""
-                ticks[m] = st.checkbox(f"{m} · GHS {fmt_num(target)}{part}",
-                                       value=rows_meta[m]["was"], key=f"bulk_{bw}_{m}")
-
-        adds    = [(m, money(rows_meta[m]["target"]-rows_meta[m]["already"]))
-                   for m,t in ticks.items() if t and not rows_meta[m]["was"]]
-        removes = [m for m,t in ticks.items() if not t and rows_meta[m]["was"]]
-        if adds or removes:
-            summary = []
-            if adds:    summary.append(f"{len(adds)} to record (GHS {fmt_num(sum(a for _,a in adds))})")
-            if removes: summary.append(f"{len(removes)} to reverse")
-            st.caption(" · ".join(summary))
-
-        def save_bulk(adds, removes):
-            who_now = st.session_state.get("admin_name", ADMIN_NAME)
-            bdate   = bulk_date.strftime("%d %b %Y")
-            def _m(b, adds=adds, removes=removes, bw=bw, who_now=who_now, bdate=bdate, method=bulk_method):
-                detail, touched = [], set()
-                for m, amt in adds:
-                    if amt <= 0: continue
-                    tx = {"id":new_id("PAY"),"member":m,"week":bw,"amount":money(amt),"date":bdate,
-                          "time":now_str(),"method":method,"reference":"Bulk entry",
-                          "status":"completed","who":who_now}
-                    b.setdefault("payment_transactions",[]).insert(0, tx)
-                    b.setdefault("payment_ledger",[]).insert(0,{"member":m,"week":bw,"amount":tx["amount"],
-                        "action":"paid","time":tx["time"],"who":who_now,"reference":"Bulk entry","method":method})
-                    detail.append(f"{m} Wk {bw:02d}: recorded GHS {fmt_num(amt)}")
-                    touched.add(m)
-                for m in removes:
-                    reversed_any = 0.0
-                    for row in b.get("payment_transactions",[]):
-                        if row.get("member")==m and int(row.get("week",0))==bw and row.get("status","completed")=="completed":
-                            row["status"]="reversed"; row["reversed_at"]=now_str()
-                            row["reversed_by"]=who_now; row["reversal_reason"]="Bulk untick"
-                            reversed_any += money(row.get("amount",0))
-                    if reversed_any:
-                        b.setdefault("payment_ledger",[]).insert(0,{"member":m,"week":bw,"amount":money(reversed_any),
-                            "action":"reversed","time":now_str(),"who":who_now,
-                            "reference":"Bulk untick","method":"","reason":"Bulk untick"})
-                        detail.append(f"{m} Wk {bw:02d}: reversed GHS {fmt_num(reversed_any)}")
-                    else:
-                        detail.append(f"{m} Wk {bw:02d}: earlier tick cleared")
-                    touched.add(m)
-                for m in touched:
-                    banked = money(sum(float(x.get("amount",0) or 0) for x in b.get("payment_transactions",[])
-                                       if x.get("member")==m and int(x.get("week",0))==bw
-                                       and x.get("status","completed")=="completed"))
-                    tgt = money(b.get("tiers",{}).get(m, b["settings"]["base_monthly"])/4.0)
-                    b.setdefault("payments",{}).setdefault(m,{})[str(bw)] = banked >= tgt-0.005
-                b["payment_ledger"] = b.get("payment_ledger",[])[:500]
-                return {"type":"payment",
-                        "text":f"Week {bw:02d} bulk entry — {len(adds)} recorded, {len(removes)} reversed",
-                        "detail":detail}
-            if commit(gsheet,_m): flash(f"Week {bw:02d} saved")
-            st.session_state.bulk_confirm = False
-            st.rerun()
-
-        if st.session_state.get("bulk_confirm") and removes:
-            st.warning("These members will be marked unpaid for week %02d and their payments reversed:\n\n" % bw
-                       + "\n".join(f"• {m}" for m in removes))
-            uc1,uc2 = st.columns(2)
-            with uc1:
-                if st.button("Confirm and save", key="bulk_confirm_yes"):
-                    save_bulk(adds, removes)
-            with uc2:
-                if st.button("Cancel", key="bulk_confirm_no", type="secondary"):
-                    st.session_state.bulk_confirm = False; st.rerun()
-        else:
-            if st.button(f"Save week {bw:02d} payments", key="bulk_save"):
-                if not adds and not removes:
-                    flash("No changes to save","info"); st.rerun()
-                elif removes:
-                    st.session_state.bulk_confirm = True; st.rerun()
-                else:
-                    save_bulk(adds, removes)
 
     html('<span class="anchor" id="section-payouts"></span>')
     with st.expander("Record a payout"):
