@@ -94,10 +94,10 @@ st.markdown(f"""
     @keyframes pulse{{0%,100%{{opacity:1}}50%{{opacity:0.35}}}}
 
     /* ── lock screen ──────────────────────────────────────────────────────── */
-    .lock-outer{{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
-        padding:40px 20px;margin-top:-2rem;}}
+    .lock-outer{{display:flex;flex-direction:column;align-items:center;justify-content:center;
+        padding:56px 20px 8px;}}
     .lock-card{{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);
-        padding:44px 38px;text-align:left;width:100%;max-width:380px;}}
+        padding:44px 38px;text-align:left;width:100%;max-width:380px;margin-bottom:4px;}}
     .lock-icon{{font-size:34px;margin-bottom:18px;display:block;}}
     .lock-title{{font-family:'Instrument Serif',Georgia,serif;font-size:32px;color:var(--ink);
         margin-bottom:8px;line-height:1.1;}}
