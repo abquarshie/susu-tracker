@@ -70,6 +70,8 @@ st.markdown(f"""
       --brass:#E8B15C; --paid:#5BC490; --short:#E8795A;
       --exp-content:#191B1F;
       --r-sm:8px; --r-md:12px; --r-lg:18px;
+      --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px; --sp-6:24px; --sp-7:32px;
+      --ease:cubic-bezier(.4,0,.2,1); --dur:0.16s; --dur-slow:0.24s;
     }}
 
     header{{visibility:hidden!important;height:0!important;}} #MainMenu{{visibility:hidden!important;}}
@@ -118,7 +120,9 @@ st.markdown(f"""
     /* ── hero: cash + next payout ─────────────────────────────────────────── */
     .hero{{display:grid;grid-template-columns:1.45fr 1fr;gap:14px;margin-bottom:14px;align-items:stretch;}}
     .panel{{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px 24px;
-        display:flex;flex-direction:column;min-width:0;}}
+        display:flex;flex-direction:column;min-width:0;
+        transition:border-color var(--dur) var(--ease), transform var(--dur) var(--ease);}}
+    .panel:hover{{border-color:rgba(255,255,255,0.16);transform:translateY(-1px);}}
     .panel-label{{font-size:13px;color:var(--ink-2);margin:0 0 10px;}}
     .cash-figure{{font-family:'Instrument Serif',Georgia,serif;font-size:52px;line-height:1;color:var(--ink);
         letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
@@ -151,7 +155,8 @@ st.markdown(f"""
     .fund-row{{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--ink-2);
         margin-top:auto;padding-top:16px;}}
     .meter{{height:6px;border-radius:99px;background:var(--line-soft);overflow:hidden;margin-top:8px;}}
-    .meter i{{display:block;height:100%;background:var(--brass);border-radius:99px;}}
+    .meter i{{display:block;height:100%;background:var(--brass);border-radius:99px;
+        transition:width var(--dur-slow) var(--ease);}}
     .meter.green i{{background:var(--paid);}}
     .fund-note{{font-size:12.5px;color:var(--ink-3);margin-top:8px;line-height:1.45;}}
 
@@ -160,7 +165,8 @@ st.markdown(f"""
         padding:20px 24px 20px;margin-bottom:26px;}}
     .rail{{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}}
     .turn{{flex:1 0 132px;min-width:132px;border-top:2px solid var(--line);padding-top:12px;
-        display:flex;flex-direction:column;}}
+        display:flex;flex-direction:column;transition:transform var(--dur) var(--ease);}}
+    .turn:hover{{transform:translateY(-2px);}}
     .turn.done{{border-top-color:var(--paid);}}
     .turn.now{{border-top-color:var(--brass);}}
     .turn-no{{font-size:12px;color:var(--ink-3);margin-bottom:5px;}}
@@ -185,12 +191,19 @@ st.markdown(f"""
     .section-head p{{font-size:13px;color:var(--ink-2);margin:0;line-height:1.5;}}
     .section-head p b{{color:var(--ink);font-weight:600;}}
     .quiet-link{{font-size:13px;font-weight:600;color:var(--brass)!important;text-decoration:none!important;
-        white-space:nowrap;border-bottom:1px solid rgba(232,177,92,0.35);padding-bottom:1px;}}
+        white-space:nowrap;border-bottom:1px solid rgba(232,177,92,0.35);padding-bottom:1px;
+        transition:opacity var(--dur) var(--ease);}}
+    .quiet-link:hover{{opacity:0.78;}}
 
     /* ── member rows with contribution cards ──────────────────────────────── */
     .mrow{{display:grid;grid-template-columns:minmax(130px,0.6fr) minmax(220px,2fr) minmax(96px,auto);gap:20px;
-        align-items:center;padding:14px 2px;border-bottom:1px solid var(--line-soft);}}
+        align-items:center;padding:14px 2px;border-bottom:1px solid var(--line-soft);
+        margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:var(--r-sm);
+        transition:background var(--dur) var(--ease);}}
     .mrow:last-child{{border-bottom:none;}}
+    .mrow:hover{{background:rgba(255,255,255,0.025);}}
+    .mrow-head{{margin:0;padding-left:2px;padding-right:2px;}}
+    .mrow-head:hover{{background:transparent;}}
     .mname{{font-size:15px;font-weight:600;color:var(--ink);display:flex;align-items:center;gap:9px;}}
     .mmeta{{font-size:12.5px;color:var(--ink-3);margin-top:3px;}}
     .member-avatar{{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;
@@ -236,6 +249,8 @@ st.markdown(f"""
     .data-table td{{font-size:14.5px;color:{T['td_color']};padding:13px 12px;border-bottom:1px solid var(--line-soft);
         vertical-align:middle;font-variant-numeric:tabular-nums;}}
     .data-table tr:last-child td{{border-bottom:none;}}
+    .data-table tbody tr{{transition:background var(--dur) var(--ease);}}
+    .data-table tbody tr:hover{{background:rgba(255,255,255,0.025);}}
     .data-table .num,.data-table th.num{{text-align:right;}}
     .cell-name{{font-weight:600;color:var(--ink);}}
     .cell-sub{{font-size:12px;color:var(--ink-3);margin-top:3px;}}
@@ -244,7 +259,7 @@ st.markdown(f"""
     .days-badge.urgent{{color:var(--brass);}}
     .diff-line{{font-size:12.5px;color:var(--ink-2);}}
     .pbar-wrap{{margin-top:7px;background:var(--line-soft);border-radius:99px;height:4px;overflow:hidden;}}
-    .pbar-fill{{height:4px;border-radius:99px;background:var(--paid);}}
+    .pbar-fill{{height:4px;border-radius:99px;background:var(--paid);transition:width var(--dur-slow) var(--ease);}}
     .early-eligible{{font-size:12px;color:var(--paid);margin-top:4px;text-align:right;}}
 
     /* ── activity log ─────────────────────────────────────────────────────── */
@@ -263,7 +278,7 @@ st.markdown(f"""
     /* ── Streamlit controls ───────────────────────────────────────────────── */
     .stTextInput input,.stNumberInput input,.stTextArea textarea{{background:var(--panel-2)!important;
         border:1px solid var(--line)!important;color:var(--ink)!important;border-radius:var(--r-sm)!important;
-        font-size:15px!important;}}
+        font-size:15px!important;transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease)!important;}}
     .stTextInput input:focus,.stNumberInput input:focus,.stTextArea textarea:focus{{
         border-color:rgba(232,177,92,0.55)!important;box-shadow:0 0 0 3px rgba(232,177,92,0.12)!important;}}
     .stTextInput label,.stNumberInput label,.stTextArea label,.stSelectbox label,.stDateInput label,
@@ -276,8 +291,11 @@ st.markdown(f"""
         font-size:16px!important;}}
     .stButton > button{{background:var(--brass)!important;color:#17191C!important;border:1px solid var(--brass)!important;
         border-radius:var(--r-sm)!important;font-weight:600!important;font-size:15px!important;padding:10px 20px!important;
-        width:100%;box-shadow:none!important;transition:filter 0.15s ease!important;}}
+        width:100%;box-shadow:none!important;
+        transition:filter var(--dur) var(--ease),border-color var(--dur) var(--ease),
+                   color var(--dur) var(--ease),transform var(--dur) var(--ease)!important;}}
     .stButton > button:hover{{filter:brightness(1.08);}}
+    .stButton > button:active{{transform:scale(0.98);}}
     .stButton > button[kind="secondary"]{{background:transparent!important;color:var(--ink-2)!important;
         border:1px solid var(--line)!important;}}
     .stButton > button[kind="secondary"]:hover{{color:var(--ink)!important;border-color:var(--ink-3)!important;
@@ -285,14 +303,19 @@ st.markdown(f"""
     div[data-testid="stDownloadButton"],.stDownloadButton{{width:100%!important;}}
     div[data-testid="stDownloadButton"] > button,.stDownloadButton > button{{background:transparent!important;
         color:{dl_color}!important;border:1px solid {T['dl_border']}!important;border-radius:var(--r-sm)!important;
-        font-size:15px!important;font-weight:600!important;padding:10px 20px!important;width:100%!important;}}
+        font-size:15px!important;font-weight:600!important;padding:10px 20px!important;width:100%!important;
+        transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease)!important;}}
     div[data-testid="stDownloadButton"] > button:hover{{background:rgba(232,177,92,0.08)!important;}}
     details[data-testid="stExpander"]{{background:var(--panel)!important;border:1px solid var(--line)!important;
-        border-radius:var(--r-md)!important;margin-bottom:10px!important;overflow:hidden;}}
-    details[data-testid="stExpander"] summary{{background:transparent!important;padding:14px 18px!important;}}
+        border-radius:var(--r-md)!important;margin-bottom:10px!important;overflow:hidden;
+        transition:border-color var(--dur) var(--ease)!important;}}
+    details[data-testid="stExpander"]:hover{{border-color:rgba(255,255,255,0.16)!important;}}
+    details[data-testid="stExpander"] summary{{background:transparent!important;padding:14px 18px!important;
+        transition:color var(--dur) var(--ease)!important;}}
     details[data-testid="stExpander"] summary,details[data-testid="stExpander"] summary *{{color:var(--ink)!important;
         font-size:15px!important;font-weight:600!important;}}
-    details[data-testid="stExpander"] summary:hover{{color:{dl_color}!important;}}
+    details[data-testid="stExpander"] summary:hover,
+    details[data-testid="stExpander"] summary:hover *{{color:{dl_color}!important;}}
     details[data-testid="stExpander"] summary svg{{fill:var(--ink-2)!important;color:var(--ink-2)!important;}}
     details[data-testid="stExpander"] > div:not(summary){{background:var(--exp-content,#191B1F)!important;
         border-top:1px solid var(--line)!important;padding:20px 18px!important;}}
@@ -310,7 +333,9 @@ st.markdown(f"""
     div[data-testid="stMetricLabel"] p{{color:var(--ink-2)!important;font-size:13px!important;}}
     .stTabs [data-baseweb="tab-list"]{{gap:4px;background:transparent;border-bottom:1px solid var(--line);}}
     .stTabs [data-baseweb="tab"]{{background:transparent;border:none;border-radius:0;padding:10px 4px;margin-right:18px;
-        color:var(--ink-2);font-size:14px;font-weight:500;}}
+        color:var(--ink-2);font-size:14px;font-weight:500;
+        transition:color var(--dur) var(--ease),box-shadow var(--dur-slow) var(--ease);}}
+    .stTabs [data-baseweb="tab"]:hover{{color:var(--ink)!important;}}
     .stTabs [aria-selected="true"]{{color:var(--ink)!important;box-shadow:inset 0 -2px 0 var(--brass);font-weight:600;}}
     .stTabs [data-baseweb="tab-highlight"],.stTabs [data-baseweb="tab-border"]{{display:none;}}
     div[data-testid="stCode"] pre,div[data-testid="stCodeBlock"] pre{{background:var(--panel-2)!important;
