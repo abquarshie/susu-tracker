@@ -124,9 +124,9 @@ st.markdown(f"""
         transition:border-color var(--dur) var(--ease), transform var(--dur) var(--ease);}}
     .panel:hover{{border-color:rgba(255,255,255,0.16);transform:translateY(-1px);}}
     .panel-label{{font-size:13px;color:var(--ink-2);margin:0 0 10px;}}
-    .cash-figure{{font-family:'Instrument Serif',Georgia,serif;font-size:52px;line-height:1;color:var(--ink);
+    .cash-figure{{font-family:'Instrument Serif',Georgia,serif;font-size:40px;line-height:1;color:var(--ink);
         letter-spacing:-0.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}}
-    .cash-figure small{{font-size:22px;color:var(--ink-2);margin-right:8px;letter-spacing:0;}}
+    .cash-figure small{{font-size:18px;color:var(--ink-2);margin-right:8px;letter-spacing:0;}}
     .cash-spacer{{margin-top:auto;}}
     .cash-note{{font-size:13px;color:var(--ink-2);margin-top:10px;line-height:1.5;}}
     .cash-note b{{color:var(--ink);font-weight:600;}}
@@ -143,7 +143,7 @@ st.markdown(f"""
     .recon-ok{{color:var(--paid);}} .recon-off{{color:var(--brass);}}
     .spark{{width:100%;height:46px;display:block;overflow:visible;margin-top:auto;padding-top:18px;}}
 
-    .next-name{{font-family:'Instrument Serif',Georgia,serif;font-size:34px;color:var(--ink);line-height:1.1;
+    .next-name{{font-family:'Instrument Serif',Georgia,serif;font-size:27px;color:var(--ink);line-height:1.1;
         letter-spacing:-0.015em;margin-bottom:4px;}}
     .next-when{{font-size:13.5px;color:var(--ink-2);margin-bottom:18px;}}
     .next-amount{{font-size:22px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;}}
@@ -367,8 +367,8 @@ st.markdown(f"""
         .pagehead h1{{font-size:29px;}}
         .pagehead p{{font-size:13px;}}
         .panel{{padding:18px 16px;}}
-        .cash-figure{{font-size:40px;}} .cash-figure small{{font-size:18px;}}
-        .next-name{{font-size:27px;}}
+        .cash-figure{{font-size:32px;}} .cash-figure small{{font-size:15px;}}
+        .next-name{{font-size:22px;}}
         .rail-wrap{{padding:16px 16px 18px;}}
         .turn{{flex:0 0 118px;min-width:118px;}}
         .section-head h2{{font-size:17px;}}
