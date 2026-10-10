@@ -470,6 +470,10 @@ def apply_blob(b):
     st.session_state.last_sync = now_dt()
 
 
+class Refused(Exception):
+    """Raised inside a commit when the fresh record shows the change is unsafe. Nothing is written."""
+
+
 def commit(mutate):
     """Re-read; refuse if someone else wrote since we loaded; else apply, log, bump rev, write."""
     current = read_blob_fresh()
@@ -478,7 +482,12 @@ def commit(mutate):
         flash("Someone else updated the group since you loaded this page. Your view has been refreshed. "
               "Please re-apply your change.", "warning")
         return False
-    entries = mutate(current) or []
+    try:
+        entries = mutate(current) or []
+    except Refused as e:
+        apply_blob(current)
+        flash(str(e), "warning")
+        return False
     for e in [entries] if isinstance(entries, dict) else entries:
         e.setdefault("who", who())
         e.setdefault("time", now_str())
@@ -498,11 +507,65 @@ def ps_collected(ps):
     return money(ps.get("collected", ps.get("disbursed_amount", ps.get("amount_collected", 0.0))))
 
 
+def parse_names(txt):
+    """Split the members box; tidy spacing so 'Kofi ' and 'Kofi' are the same person."""
+    return [re.sub(r"\s+", " ", n).strip() for n in str(txt).split(",") if n.strip()]
+
+
+def turn_no(lbl):
+    m = re.fullmatch(r"Turn (\d+)", str(lbl))
+    return int(m[1]) - 1 if m else None
+
+
+def locked_turns(b):
+    """0-based turn slots with any payout recorded. Their recipient must never change."""
+    locked = {turn_no(k) for k, ps in b.get("payout_status", {}).items() if ps_collected(ps) > 0 or ps.get("disbursed")}
+    locked |= {turn_no(p.get("turn")) for p in b.get("payout_ledger", []) if p.get("status", "active") != "reversed"}
+    return locked - {None}
+
+
+def has_records(b, m):
+    return (any(b.get("payments", {}).get(m, {}).values()) or m in b.get("tiers", {})
+            or m in b.get("member_status", {}) or any(t.get("member") == m for t in b.get("payment_transactions", [])))
+
+
+def member_list_problems(b, old, new, start_changed=False):
+    """Reasons a member-list or start-date change would corrupt records. Empty list means safe."""
+    errs, low = [], [n.lower() for n in new]
+    dups = sorted({n for n in new if low.count(n.lower()) > 1})
+    if dups:
+        errs.append(f"Each name must be unique. Duplicated: {', '.join(dups)}.")
+    if len(new) < 2:
+        errs.append("The group needs at least 2 members.")
+    gone = [m for m in old if m not in new and has_records(b, m)]
+    if gone:
+        errs.append(f"{', '.join(gone)} would lose their payment history. To fix a spelling use Rename member. "
+                    f"To remove someone mid-cycle use Member status.")
+    locked = locked_turns(b)
+    if locked and len(new) != len(old):
+        errs.append("Payouts have already been made this cycle, so members can't be added or removed. "
+                    "That would move every payout date and change every pool.")
+    elif locked:
+        moved = [f"Turn {i + 1} ({old[i]})" for i in sorted(locked) if i < len(old) and (i >= len(new) or new[i] != old[i])]
+        if moved:
+            errs.append(f"{', '.join(moved)} already has a payout recorded, so its recipient can't change.")
+    if locked and start_changed:
+        errs.append("Payouts have already been made this cycle, so the start date can't change.")
+    return errs
+
+
+def order_changes(old, new):
+    pos = {m: i for i, m in enumerate(old)}
+    out = [f"{m}: Turn {pos[m] + 1} → Turn {i + 1}" if m in pos else f"{m}: added as Turn {i + 1}"
+           for i, m in enumerate(new) if pos.get(m) != i]
+    return out + [f"{m}: removed" for m in old if m not in new]
+
+
 class Group:
     def __init__(self, b, today):
         s = b["settings"]
         self.b, self.today = b, today
-        self.members = [n.strip() for n in str(s["names_input"]).split(",") if n.strip()]
+        self.members = parse_names(s["names_input"])
         self.n = len(self.members)
         self.weeks = self.n * 4                       # fixed rotation: exits never shift dates
         self.base = float(s["base_monthly"])
@@ -574,12 +637,19 @@ class Group:
     def _turn_row(self, i, m):
         lbl = f"Turn {i + 1}"
         date = self.start + timedelta(weeks=4 * (i + 1))
-        gross = money(self.tier(m) * self.n)
-        fee = money(gross * self.fee)
-        net = money(gross - fee)
-        col = self.turn_collected(lbl)
-        funded = money(sum(self.amt[x, w] for x in self.members for w in range(4 * i + 1, 4 * i + 5)) * (1 - self.fee))
         ps = self.b["payout_status"].get(lbl, {})
+        col = ps_collected(ps)
+        if col > 0 and ps.get("net"):
+            # Pool frozen at first payout, so later tier, fee or member changes can't reopen a paid turn.
+            net, fee = money(ps["net"]), money(ps.get("fee", 0))
+        elif col > 0 and ps.get("disbursed"):
+            # Fully paid before pools were frozen: what was taken was the whole pool.
+            net, fee = col, money(col / (1 - self.fee) * self.fee) if self.fee < 1 else 0.0
+        else:
+            gross = money(self.tier(m) * self.n)
+            fee = money(gross * self.fee)
+            net = money(gross - fee)
+        funded = money(sum(self.amt[x, w] for x in self.members for w in range(4 * i + 1, 4 * i + 5)) * (1 - self.fee))
         rem = money(max(0.0, net - col))
         return {"turn": lbl, "recipient": m, "date": date, "date_s": format_date(date), "fee": fee, "net": net,
                 "collected": col, "remaining": rem, "funded": funded,
@@ -1074,15 +1144,19 @@ def save_payout(r, new_amt, coll_date, method, ref):
     by = who()
 
     def _m(b):
+        fresh = Group(b, now_dt())
+        if fresh.schedule[turn_no(tkey)]["recipient"] != rec:
+            raise Refused(f"The rotation changed since you loaded this page, so {tkey} no longer belongs to {rec}. Nothing was saved.")
         ps = b["payout_status"].setdefault(tkey, {})
         before = ps_collected(ps)
         delta = money(new_amt - before)
-        if money(Group(b, now_dt()).cash_held - delta) < -EPS:   # checked against the fresh record
-            raise ValueError("would overdraw the group")
+        if money(fresh.cash_held - delta) < -EPS:   # checked against the fresh record
+            raise Refused("Save cancelled. That payout would overdraw the group's cash.")
         ps.pop("amount_collected", None)
         ps.pop("disbursed_amount", None)
         full = new_amt > 0 and money(new_amt) >= net - EPS
-        ps.update(collected=money(new_amt), disbursed=full, disbursed_date=dstr)
+        ps.update(collected=money(new_amt), disbursed=full, disbursed_date=dstr, net=net, fee=r["fee"],
+                  recipient=rec)
         if delta > 0:
             b["payout_ledger"].insert(0, {"id": new_id("PAYOUT"), "turn": tkey, "recipient": rec, "amount": delta,
                                           "date": dstr, "method": method, "reference": ref, "who": by, "time": now_str()})
@@ -1094,11 +1168,8 @@ def save_payout(r, new_amt, coll_date, method, ref):
                            f"balance owed to {rec}: GHS {fmt_num(net - new_amt)}",
                            f"method: {method}", f"date: {dstr or '—'}"]}
 
-    try:
-        if commit(_m):
-            flash(f"Payout for {rec} saved")
-    except ValueError:
-        flash("Save cancelled. That payout would overdraw the group's cash.", "warning")
+    if commit(_m):
+        flash(f"Payout for {rec} saved")
     st.rerun()
 
 
@@ -1115,6 +1186,11 @@ def confirm_payout(r, new_amt, coll_date, method, ref):
 
 def save_settings(vals, changes):
     def _m(b):
+        old = b["settings"]
+        errs = member_list_problems(b, parse_names(old["names_input"]), parse_names(vals["names_input"]),
+                                    vals["start_date"] != old["start_date"])
+        if errs:
+            raise Refused("Settings not saved. " + " ".join(errs))
         b["settings"] = dict(vals)
         return {"type": "setting", "text": "Group settings updated", "detail": changes}
     if commit(_m):
@@ -1126,9 +1202,69 @@ def save_settings(vals, changes):
 def confirm_settings(vals, changes, structural):
     st.write(f"This changes {', '.join(structural)}. Payment history is kept, but payout dates or the rotation "
              f"order can move. Confirm only if that is intended.")
+    st.markdown("\n".join(f"- {c}" for c in changes))
     c1, c2 = st.columns(2)
     if c1.button("Confirm change", type="primary", use_container_width=True):
         save_settings(vals, changes)
+    if c2.button("Cancel", use_container_width=True):
+        st.rerun()
+
+
+def rename_member(old, new):
+    def _m(b):
+        names = parse_names(b["settings"]["names_input"])
+        if old not in names:
+            raise Refused(f"{old} is no longer in the member list. Nothing was renamed.")
+        if new.lower() in [n.lower() for n in names if n != old]:
+            raise Refused(f"There is already a member called {new}.")
+        names[names.index(old)] = new
+        b["settings"]["names_input"] = ", ".join(names)
+        for key in ("tiers", "payments", "member_status"):
+            if old in b[key]:
+                b[key][new] = b[key].pop(old)
+        n = 0
+        for row in b["payment_transactions"] + b["payment_ledger"]:
+            if row.get("member") == old:
+                row["member"] = new
+                n += 1
+        for row in b["payout_ledger"]:
+            if row.get("recipient") == old:
+                row["recipient"] = new
+        for ps in b["payout_status"].values():
+            if ps.get("recipient") == old:
+                ps["recipient"] = new
+        return {"type": "setting", "text": f"Member renamed: {old} → {new}",
+                "detail": [f"{n} payment record(s) moved to the new name", "tier, status and payouts carried over"]}
+    if commit(_m):
+        flash(f"{old} renamed to {new}")
+    st.rerun()
+
+
+@st.dialog("Swap payout turns?")
+def confirm_swap(i, j):
+    a, b_ = g.schedule[i], g.schedule[j]
+    st.write(f"**{a['recipient']}** moves from {a['turn']} ({a['date_s']}) to {b_['turn']} ({b_['date_s']}).")
+    st.write(f"**{b_['recipient']}** moves from {b_['turn']} ({b_['date_s']}) to {a['turn']} ({a['date_s']}).")
+    if g.tier(a["recipient"]) != g.tier(b_["recipient"]):
+        st.info("These two are on different tiers, so the pool for each turn changes with its recipient.")
+    st.caption("Contributions stay with each member. Send the group the updated Onboarding message afterwards.")
+    c1, c2 = st.columns(2)
+    if c1.button("Swap them", type="primary", use_container_width=True):
+        ma, mb = a["recipient"], b_["recipient"]
+
+        def _m(b):
+            names = parse_names(b["settings"]["names_input"])
+            if len(names) <= max(i, j) or names[i] != ma or names[j] != mb:
+                raise Refused("The member list changed since you loaded this page. Nothing was swapped.")
+            if {i, j} & locked_turns(b):
+                raise Refused("One of those turns now has a payout recorded, so it can't be swapped.")
+            names[i], names[j] = mb, ma
+            b["settings"]["names_input"] = ", ".join(names)
+            return {"type": "setting", "text": f"Turns swapped: {ma} ⇄ {mb}",
+                    "detail": [f"{ma}: Turn {i + 1} → Turn {j + 1}", f"{mb}: Turn {j + 1} → Turn {i + 1}"]}
+        if commit(_m):
+            flash(f"{ma} and {mb} swapped turns")
+        st.rerun()
     if c2.button("Cancel", use_container_width=True):
         st.rerun()
 
@@ -1326,7 +1462,8 @@ with tab_money:
                             new = money(max(0.0, cur - amt))
                             ps.update(collected=new, disbursed=new > 0 and new >= pools.get(turn, 0) - EPS)
                             if new <= 0:
-                                ps["disbursed_date"] = ""
+                                for k in ("disbursed_date", "net", "fee", "recipient"):
+                                    ps.pop(k, None)
                             return {"type": "payout", "text": f"Payout reversed: {p.get('recipient')} · {turn} · GHS {fmt_num(amt)}",
                                     "detail": [f"receipt: {pid}", f"reason: {reason}",
                                                f"{turn} collected: GHS {fmt_num(cur)} → GHS {fmt_num(new)}"]}
@@ -1344,8 +1481,9 @@ with tab_settings:
             new_fee = c3.number_input("Admin fee (%)", value=float(s["admin_fee_percentage"]), min_value=0.0,
                                       max_value=100.0, step=0.5)
             new_names = st.text_area("Members (comma-separated)", value=s["names_input"])
-            html('<p class="note">Payment records are kept when you add or reorder members. To remove someone '
-                 'mid-cycle use Member status; deleting the name here shifts every payout date.</p>')
+            html('<p class="note">The order here is the payout order. Turns that have a payout recorded are locked. '
+                 'To fix a spelling use <b>Rename member</b>, to swap two turns use <b>Swap turns</b>, and to remove '
+                 'someone mid-cycle use <b>Member status</b>.</p>')
             ok = st.form_submit_button("Save settings", type="primary", use_container_width=True)
         if ok:
             try:
@@ -1361,17 +1499,60 @@ with tab_settings:
                     changes.append(f"base monthly {fmt_num(s['base_monthly'])} → {fmt_num(new_base)}")
                 if float(new_fee) != float(s["admin_fee_percentage"]):
                     changes.append(f"admin fee {s['admin_fee_percentage']}% → {new_fee}%")
-                if new_names.strip() != str(s["names_input"]).strip():
-                    changes.append("member list edited")
+                old_list, new_list = parse_names(s["names_input"]), parse_names(new_names)
+                if new_list != old_list:
+                    changes += order_changes(old_list, new_list) or ["member list tidied"]
                     structural.append("the member list")
                 vals = {"start_date": new_start, "base_monthly": float(new_base),
-                        "admin_fee_percentage": float(new_fee), "names_input": new_names}
-                if not changes:
+                        "admin_fee_percentage": float(new_fee), "names_input": ", ".join(new_list)}
+                errs = member_list_problems(blob(), old_list, new_list, new_start != s["start_date"])
+                if errs:
+                    for e in errs:
+                        st.error(e)
+                elif not changes:
                     st.toast("No setting changes", icon="ℹ️")
                 elif structural:
                     confirm_settings(vals, changes, structural)
                 else:
                     save_settings(vals, changes)
+
+    with st.expander("Swap turns"):
+        locked = locked_turns(blob())
+        free = [i for i in range(g.n) if i not in locked]
+        st.caption("Only turns with no payout recorded can be swapped. Each member keeps their own contributions.")
+        if len(free) < 2:
+            st.info("Fewer than two turns are still open, so there is nothing to swap.")
+        else:
+            lab = {i: f"{g.schedule[i]['turn']} · {g.members[i]} · {g.schedule[i]['date_s']}" for i in free}
+            with st.form("swap_form", border=False):
+                c1, c2 = st.columns(2)
+                si = c1.selectbox("First", free, format_func=lab.get)
+                sj = c2.selectbox("Second", free, index=1, format_func=lab.get)
+                ok = st.form_submit_button("Swap…", type="primary", use_container_width=True)
+            if ok:
+                if si == sj:
+                    st.error("Pick two different turns.")
+                else:
+                    confirm_swap(si, sj)
+
+    with st.expander("Rename member"):
+        st.caption("Fixes a spelling without losing anything. Payments, receipts, tier, status and payouts all move "
+                   "to the new name, and the turn order stays the same.")
+        with st.form("rename_form", border=False, clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            rn_old = c1.selectbox("Member", g.members, key="rename_pick")
+            rn_new = c2.text_input("New name", max_chars=40)
+            ok = st.form_submit_button("Rename", type="primary", use_container_width=True)
+        if ok:
+            clean = re.sub(r"\s+", " ", rn_new.replace(",", " ")).strip()
+            if not clean:
+                st.error("Enter the new name.")
+            elif clean == rn_old:
+                st.toast("That is already the name", icon="ℹ️")
+            elif clean.lower() in [m.lower() for m in g.members if m != rn_old]:
+                st.error(f"There is already a member called {clean}.")
+            else:
+                rename_member(rn_old, clean)
 
     with st.expander("Custom member tiers"):
         with st.form("tiers_form", border=False):
