@@ -1,13 +1,3 @@
-# Native dark theme: inputs, dropdown menus, date pickers, dialogs and toasts
-# all pick these up, so app.py no longer needs CSS overrides for them.
 [theme]
-base = "dark"
-primaryColor = "#E8B15C"
-backgroundColor = "#141619"
-secondaryBackgroundColor = "#23272C"
-textColor = "#ECEEF0"
+primaryColor = "#14A38F"
 font = "sans serif"
-
-[client]
-toolbarMode = "minimal"
-showSidebarNavigation = false
